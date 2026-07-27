@@ -36,7 +36,16 @@ function exigirBx24(): void {
 function inicializarBx24(): Promise<void> {
   exigirBx24()
   return new Promise((resolve) => {
-    window.BX24!.init(() => resolve())
+    window.BX24!.init(() => {
+      if (typeof window.BX24?.installFinish === 'function') {
+        try {
+          window.BX24.installFinish()
+        } catch {
+          // Ignora se já estiver finalizado
+        }
+      }
+      resolve()
+    })
   })
 }
 

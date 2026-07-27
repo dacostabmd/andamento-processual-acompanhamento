@@ -1,13 +1,24 @@
-// HashRouter em vez de BrowserRouter: o app roda embutido em iframe no Bitrix24,
-// que carrega a URL do handler via POST e com query string própria (DOMAIN,
-// APP_SID etc.). Rotas no hash não exigem fallback de SPA no servidor e não
-// mexem no path/query que o SDK BX24 lê.
+import { useEffect } from 'react'
 import { Navigate, Route, HashRouter as Router, Routes } from 'react-router-dom'
 import { ChangelogsPage } from './pages/ChangelogsPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { InstallationPage } from './pages/InstallationPage'
 
 function App() {
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.BX24 && typeof window.BX24.init === 'function') {
+      try {
+        window.BX24.init(() => {
+          if (typeof window.BX24?.installFinish === 'function') {
+            window.BX24.installFinish()
+          }
+        })
+      } catch {
+        // Ignora se estiver fora do iframe do Bitrix24
+      }
+    }
+  }, [])
+
   return (
     <Router>
       <Routes>
@@ -19,6 +30,5 @@ function App() {
     </Router>
   )
 }
-
 
 export default App
