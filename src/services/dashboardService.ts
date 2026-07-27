@@ -70,6 +70,8 @@ interface SnapshotMetadata {
 
 async function buscarTarefasDoSnapshot(): Promise<Tarefa[]> {
   const base = baseSyncApiUrl()
+  let erroConexao: string | null = null
+
   if (base) {
     try {
       const resposta = await fetch(`${base}/snapshot`)
@@ -78,12 +80,14 @@ async function buscarTarefasDoSnapshot(): Promise<Tarefa[]> {
         registrarSnapshotMetadata(corpo.metadata)
         return corpo.tarefas
       }
+      erroConexao = `Servidor de sincronização respondeu com status HTTP ${resposta.status}.`
     } catch (err) {
-      console.warn('Serviço de sync em VITE_SYNC_API_URL não respondeu. Usando fallback de dados mock em ambiente DEV:', err)
+      console.warn('Serviço de sync em VITE_SYNC_API_URL não respondeu:', err)
+      erroConexao = `Não foi possível conectar ao servidor em ${base}. Verifique se a VPS está ligada.`
     }
   }
 
-  // Em dev (ou se o backend de sync falhar), usa o snapshot mock local
+  // Em dev (ou se o modo mock dev estiver explicitamente ativo)
   if (import.meta.env.DEV || modoMockDevAtivo()) {
     const resposta = await fetch('/snapshot-mock.json')
     if (!resposta.ok) {
@@ -105,8 +109,12 @@ async function buscarTarefasDoSnapshot(): Promise<Tarefa[]> {
     }))
   }
 
+  if (erroConexao) {
+    throw new Error(erroConexao)
+  }
+
   throw new Error(
-    'Serviço de sincronização não configurado. Defina VITE_SYNC_API_URL apontando para o sync-service.',
+    'Serviço de sincronização não configurado. Defina a variável VITE_SYNC_API_URL no Vercel.',
   )
 }
 
