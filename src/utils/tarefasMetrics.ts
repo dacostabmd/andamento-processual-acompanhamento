@@ -20,7 +20,11 @@ import {
 } from '../types/domain'
 
 export function tarefaEstaAtrasada(tarefa: Tarefa, agora: Date): boolean {
-  return tarefa.status < STATUS_CONCLUIDO && new Date(tarefa.prazoFinal) < agora
+  return (
+    tarefa.prazoFinal !== null &&
+    tarefa.status < STATUS_CONCLUIDO &&
+    new Date(tarefa.prazoFinal) < agora
+  )
 }
 
 export function tarefaEstaConcluida(tarefa: Tarefa): boolean {
@@ -28,7 +32,10 @@ export function tarefaEstaConcluida(tarefa: Tarefa): boolean {
 }
 
 export function tarefaNoPrazo(tarefa: Tarefa, agora: Date): boolean {
-  return tarefa.status < STATUS_CONCLUIDO && new Date(tarefa.prazoFinal) >= agora
+  return (
+    tarefa.status < STATUS_CONCLUIDO &&
+    (tarefa.prazoFinal === null || new Date(tarefa.prazoFinal) >= agora)
+  )
 }
 
 export function calcularMetricas(
@@ -43,7 +50,7 @@ export function calcularMetricas(
 
   const tresDiasEmMs = 3 * 24 * 60 * 60 * 1000
   const vencemEmBreve = tarefas.filter((t) => {
-    if (t.status >= STATUS_CONCLUIDO) return false
+    if (t.status >= STATUS_CONCLUIDO || !t.prazoFinal) return false
     const prazo = new Date(t.prazoFinal).getTime()
     const diff = prazo - agora.getTime()
     return diff >= 0 && diff <= tresDiasEmMs
@@ -78,26 +85,24 @@ export function calcularMetricas(
 
 export function aplicarFiltros(tarefas: Tarefa[], filtros: FiltrosDashboard): Tarefa[] {
   const agora = new Date()
-  // Ambos os limites em horário local: "YYYY-MM-DD" puro seria interpretado como
-  // meia-noite UTC, deslocando o início do período em relação ao fim.
   const dataInicioLimite = filtros.dataInicio ? new Date(`${filtros.dataInicio}T00:00:00`) : null
-  // dataFim é inclusiva até o fim do dia informado.
   const dataFimLimite = filtros.dataFim ? new Date(`${filtros.dataFim}T23:59:59.999`) : null
 
   return tarefas.filter((tarefa) => {
-    const prazo = new Date(tarefa.prazoFinal)
+    const prazo = tarefa.prazoFinal ? new Date(tarefa.prazoFinal) : null
     const finalizado = tarefa.finalizadoEm ? new Date(tarefa.finalizadoEm) : null
 
-
+    if (filtros.filtroPrazo === 'com_prazo' && tarefa.prazoFinal === null) return false
+    if (filtros.filtroPrazo === 'sem_prazo' && tarefa.prazoFinal !== null) return false
 
     if (dataInicioLimite) {
-      const prazoValido = prazo >= dataInicioLimite
+      const prazoValido = prazo !== null && prazo >= dataInicioLimite
       const finalizadoValido = finalizado !== null && finalizado >= dataInicioLimite
       if (!prazoValido && !finalizadoValido) return false
     }
 
     if (dataFimLimite) {
-      const prazoValido = prazo <= dataFimLimite
+      const prazoValido = prazo !== null && prazo <= dataFimLimite
       const finalizadoValido = finalizado !== null && finalizado <= dataFimLimite
       if (!prazoValido && !finalizadoValido) return false
     }
@@ -111,20 +116,11 @@ export function aplicarFiltros(tarefas: Tarefa[], filtros: FiltrosDashboard): Ta
     if (filtros.responsavelId !== null && tarefa.responsavelId !== filtros.responsavelId) return false
     if (filtros.prioridade !== null && tarefa.prioridade !== filtros.prioridade) return false
     if (filtros.estado !== null && tarefa.estadoUf !== filtros.estado) return false
-    // "Indefinidos" cobre as 3 dimensões de identificação não resolvida: equipe
-    // (equipeAtendimento === 'indefinido'), fechado por e responsável pelo
-    // atendimento sem participante (ambos null) — os "Não informado"/"Sem
-    // responsável..." que aparecem nos rankings quando o dado não existe.
     if (filtros.ocultarIndefinidos) {
       if (tarefa.equipeAtendimento === 'indefinido') return false
       if (tarefa.responsavelAtendimentoId === null) return false
       if (tarefaEstaConcluida(tarefa) && tarefa.fechadoPorId === null) return false
     }
-    // Cobre quem fecha tarefas em um grupo monitorado sem pertencer a nenhum
-    // dos 4 departamentos de Andamento Processual (ex.: Victoria Persi) — não é
-    // "indefinido" (tem nome/departamento), só não é do Andamento Processual.
-    // .trim() porque o Bitrix retorna ao menos um desses nomes com espaço em
-    // branco à frente (confirmado ao vivo: " Andamento Simone Freitas").
     if (filtros.ocultarForaDasEquipes) {
       if (tarefa.equipeAtendimento === 'indefinido') return false
       if (
@@ -309,7 +305,7 @@ function calcularFaixasUrgencia(pacotes: PacoteAtendimento[], agora: Date): Faix
   }
   pacotes.forEach((pacote) => {
     pacote.cards.forEach((card) => {
-      if (card.status === STATUS_CONCLUIDO || card.status === 6) return
+      if (card.status === STATUS_CONCLUIDO || card.status === 6 || !card.prazoFinal) return
       const diff = new Date(card.prazoFinal).getTime() - agora.getTime()
       if (diff < 0) faixas.vencidas += 1
       else if (diff <= TRES_DIAS_MS) faixas.ateTresDias += 1
@@ -356,7 +352,7 @@ function calcularTendenciaMensal(pacotes: PacoteAtendimento[], agora: Date): Pon
 
   pacotes.forEach((pacote) => {
     pacote.cards.forEach((card) => {
-      if (!tarefaEstaConcluida(card) || !card.finalizadoEm) return
+      if (!tarefaEstaConcluida(card) || !card.finalizadoEm || !card.prazoFinal) return
       const chave = chaveMes(new Date(card.prazoFinal))
       const bucket = porMes.get(chave)
       if (!bucket) return // fora da janela de meses considerada

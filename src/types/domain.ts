@@ -43,7 +43,7 @@ export interface Projeto {
 export interface Tarefa {
   id: number
   titulo: string
-  prazoFinal: string
+  prazoFinal: string | null
   status: StatusTarefa
   finalizadoEm: string | null
   projetoId: number | null
@@ -70,7 +70,7 @@ export interface Tarefa {
 }
 
 /**
- * Equipes de atendimento reconhecidas — cada uma é o departamento (pelo ID no
+  Equipes de atendimento reconhecidas — cada uma é o departamento (pelo ID no
  * Bitrix24) da respectiva superiora. Um responsável cujo departamento não bate
  * com nenhum ID cai em "indefinido".
  */
@@ -216,6 +216,7 @@ export interface SessaoUsuario {
 }
 
 export type FiltroStatus = 'todos' | 'concluido' | 'atrasado' | 'no_prazo'
+export type FiltroPrazo = 'todas' | 'com_prazo' | 'sem_prazo'
 
 /**
  * dataInicio/dataFim usam o mesmo formato de string (YYYY-MM-DD) que o
@@ -225,6 +226,7 @@ export interface FiltrosDashboard {
   dataInicio: string | null
   dataFim: string | null
   status: FiltroStatus
+  filtroPrazo: FiltroPrazo
   setor: string | null
   projetoId: number | null
   fechadoPorId: number | null
@@ -238,8 +240,6 @@ export interface FiltrosDashboard {
   modoTaxaAtraso: 'ativas' | 'total'
 }
 
-
-
 /** Janela padrão de busca: evita baixar o histórico inteiro (grupos monitorados somam centenas de milhares de tarefas). */
 export const JANELA_PADRAO_DIAS = 90
 
@@ -250,6 +250,7 @@ export function filtrosVazios(_agora?: Date): FiltrosDashboard {
     dataInicio: null,
     dataFim: null,
     status: 'todos',
+    filtroPrazo: 'todas',
     setor: null,
     projetoId: null,
     fechadoPorId: null,

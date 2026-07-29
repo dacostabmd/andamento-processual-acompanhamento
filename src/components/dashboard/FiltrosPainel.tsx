@@ -10,6 +10,7 @@ import {
 } from '../../services/dashboardService'
 import {
   filtrosVazios,
+  type FiltroPrazo,
   type FiltroStatus,
   type FiltrosDashboard,
   type Projeto,
@@ -21,6 +22,12 @@ const OPCOES_STATUS: Array<{ value: FiltroStatus; label: string }> = [
   { value: 'concluido', label: 'Concluído' },
   { value: 'atrasado', label: 'Atrasado' },
   { value: 'no_prazo', label: 'No prazo' },
+]
+
+const OPCOES_PRAZO: Array<{ value: FiltroPrazo; label: string }> = [
+  { value: 'todas', label: 'Todas as tarefas' },
+  { value: 'com_prazo', label: 'Apenas com prazo' },
+  { value: 'sem_prazo', label: 'Apenas sem prazo' },
 ]
 
 const CLASSES_INPUT = {
@@ -58,6 +65,7 @@ export function FiltrosPainel({ filtros, onChange, projetosPermitidos }: Filtros
     dataInicio,
     dataFim,
     status,
+    filtroPrazo,
     setor,
     projetoId,
     fechadoPorId,
@@ -90,6 +98,7 @@ export function FiltrosPainel({ filtros, onChange, projetosPermitidos }: Filtros
         dataInicio,
         dataFim,
         status,
+        filtroPrazo,
         projetoId,
         fechadoPorId,
         responsavelId,
@@ -110,6 +119,7 @@ export function FiltrosPainel({ filtros, onChange, projetosPermitidos }: Filtros
     dataInicio,
     dataFim,
     status,
+    filtroPrazo,
     projetoId,
     fechadoPorId,
     responsavelId,
@@ -128,6 +138,7 @@ export function FiltrosPainel({ filtros, onChange, projetosPermitidos }: Filtros
         dataInicio,
         dataFim,
         status,
+        filtroPrazo,
         setor,
         projetoId,
         responsavelId,
@@ -148,6 +159,7 @@ export function FiltrosPainel({ filtros, onChange, projetosPermitidos }: Filtros
     dataInicio,
     dataFim,
     status,
+    filtroPrazo,
     setor,
     projetoId,
     responsavelId,
@@ -166,6 +178,7 @@ export function FiltrosPainel({ filtros, onChange, projetosPermitidos }: Filtros
         dataInicio,
         dataFim,
         status,
+        filtroPrazo,
         setor,
         projetoId,
         fechadoPorId,
@@ -186,6 +199,7 @@ export function FiltrosPainel({ filtros, onChange, projetosPermitidos }: Filtros
     dataInicio,
     dataFim,
     status,
+    filtroPrazo,
     setor,
     projetoId,
     fechadoPorId,
@@ -204,6 +218,7 @@ export function FiltrosPainel({ filtros, onChange, projetosPermitidos }: Filtros
         dataInicio,
         dataFim,
         status,
+        filtroPrazo,
         setor,
         projetoId,
         fechadoPorId,
@@ -224,6 +239,7 @@ export function FiltrosPainel({ filtros, onChange, projetosPermitidos }: Filtros
     dataInicio,
     dataFim,
     status,
+    filtroPrazo,
     setor,
     projetoId,
     fechadoPorId,
@@ -261,7 +277,7 @@ export function FiltrosPainel({ filtros, onChange, projetosPermitidos }: Filtros
             clearable
           />
         </Grid.Col>
-        <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
+        <Grid.Col span={{ base: 12, sm: 6, md: 2.4 }}>
           <Select
             radius="lg"
             classNames={CLASSES_INPUT}
@@ -270,6 +286,19 @@ export function FiltrosPainel({ filtros, onChange, projetosPermitidos }: Filtros
             value={filtros.status}
             onChange={(valor) =>
               onChange({ ...filtros, status: (valor as FiltroStatus | null) ?? 'todos' })
+            }
+            allowDeselect={false}
+          />
+        </Grid.Col>
+        <Grid.Col span={{ base: 12, sm: 6, md: 2.4 }}>
+          <Select
+            radius="lg"
+            classNames={CLASSES_INPUT}
+            label="Prazo"
+            data={OPCOES_PRAZO}
+            value={filtros.filtroPrazo}
+            onChange={(valor) =>
+              onChange({ ...filtros, filtroPrazo: (valor as FiltroPrazo | null) ?? 'todas' })
             }
             allowDeselect={false}
           />

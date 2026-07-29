@@ -11,6 +11,7 @@ interface TarefaDetalheModalProps {
 const DIA_MS = 24 * 60 * 60 * 1000
 
 function descreverSituacao(tarefa: Tarefa): string {
+  if (!tarefa.prazoFinal) return 'Sem prazo definido'
   const agora = new Date()
   const prazo = new Date(tarefa.prazoFinal)
 

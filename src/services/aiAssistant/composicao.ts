@@ -301,7 +301,8 @@ export function comporDetalhe(cards: Tarefa[], intencao: Intencao, agora: Date):
   return [cabecalho, ...linhas].join('\n') + rodapeSuposicoes(intencao)
 }
 
-function formatarData(iso: string): string {
+function formatarData(iso: string | null): string {
+  if (!iso) return 'sem prazo'
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return iso
   return d.toLocaleDateString('pt-BR')

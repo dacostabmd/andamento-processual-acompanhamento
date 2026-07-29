@@ -84,6 +84,7 @@ const FILTROS: FiltrosDashboard = {
   dataInicio: '2026-04-23',
   dataFim: null,
   status: 'todos',
+  filtroPrazo: 'todas',
   setor: null,
   projetoId: null,
   fechadoPorId: null,

@@ -19,7 +19,7 @@ export const PREDICADOS: Record<string, (t: Tarefa, agora: Date) => boolean> = {
   emAndamentoNoPrazo: (t, a) => tarefaNoPrazo(t, a),
   aguardandoControle: (t) => t.status === 4,
   riscoAtraso: (t, a) => {
-    if (t.status >= STATUS_CONCLUIDO) return false
+    if (t.status >= STATUS_CONCLUIDO || !t.prazoFinal) return false
     const diff = new Date(t.prazoFinal).getTime() - a.getTime()
     return diff >= 0 && diff <= TRES_DIAS_MS
   },

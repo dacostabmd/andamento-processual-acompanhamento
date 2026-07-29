@@ -99,13 +99,16 @@ async function buscarTarefasDoSnapshot(): Promise<Tarefa[]> {
     // Ajusta dinamicamente as datas do mock em relação à data atual para ter tarefas
     // em andamento e com risco de atraso em ambiente de desenvolvimento (mock offline).
     const agora = new Date()
-    const maxMockTime = Math.max(...mock.tarefas.map((t) => new Date(t.prazoFinal).getTime()))
+    const tarefasComPrazo = mock.tarefas.filter((t) => t.prazoFinal !== null)
+    const maxMockTime = tarefasComPrazo.length > 0
+      ? Math.max(...tarefasComPrazo.map((t) => new Date(t.prazoFinal!).getTime()))
+      : agora.getTime()
     const targetMaxTime = agora.getTime() + 20 * 24 * 60 * 60 * 1000
     const deltaMs = targetMaxTime - maxMockTime
 
     return mock.tarefas.map((t) => ({
       ...t,
-      prazoFinal: new Date(new Date(t.prazoFinal).getTime() + deltaMs).toISOString(),
+      prazoFinal: t.prazoFinal ? new Date(new Date(t.prazoFinal).getTime() + deltaMs).toISOString() : null,
     }))
   }
 
