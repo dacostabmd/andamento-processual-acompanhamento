@@ -1,12 +1,19 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { enviarMensagemAssistente, type MensagemChat } from '../../services/aiAssistantService'
-import type { FiltrosDashboard, MetricasTarefas, PacoteAtendimento } from '../../types/domain'
+import type {
+  FiltrosDashboard,
+  MetricasTarefas,
+  PacoteAtendimento,
+  VisaoDashboard,
+} from '../../types/domain'
 import classes from './AiAssistantChat.module.css'
 
 interface AiAssistantChatProps {
   metricas: MetricasTarefas | null
   pacotes: PacoteAtendimento[] | null
+  /** Visão ativa na tela; repassada à IA para ela usar a mesma noção de equipe. */
+  visao?: VisaoDashboard
   filtros: FiltrosDashboard
 }
 
@@ -85,7 +92,7 @@ function renderizarConteudoComMarkdown(texto: string) {
   )
 }
 
-export function AiAssistantChat({ metricas, pacotes, filtros }: AiAssistantChatProps) {
+export function AiAssistantChat({ metricas, pacotes, filtros, visao }: AiAssistantChatProps) {
   const [aberto, setAberto] = useState(false)
   const [mensagens, setMensagens] = useState<MensagemChat[]>([])
   const [textoInput, setTextoInput] = useState('')
@@ -120,6 +127,7 @@ export function AiAssistantChat({ metricas, pacotes, filtros }: AiAssistantChatP
         metricas,
         pacotes,
         filtros,
+        visao,
       })
 
       const mensagemIa: MensagemChat = {

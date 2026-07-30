@@ -33,16 +33,24 @@ export async function resolverAcesso(
 ): Promise<SessaoUsuario | null> {
   const syncApiUrl = import.meta.env.VITE_SYNC_API_URL?.trim()
 
-  // Se estiver em modo dev (npm run dev) OU se o serviço de sync (Worker) estiver ativo,
-  // não faz requisições diretas do navegador para os webhooks do Bitrix (que tomam CORS).
-  if (import.meta.env.DEV || modoMockDevAtivo() || Boolean(syncApiUrl)) {
+  // Somente DEV/mock curto-circuita o controle de acesso.
+  //
+  // A condição anterior era `DEV || mock || Boolean(syncApiUrl)`. Como
+  // VITE_SYNC_API_URL está SEMPRE definida em produção (é assim que o dashboard
+  // obtém os dados), esse terceiro termo tornava o atalho permanente: a checagem
+  // de grupos abaixo nunca executava, e todo usuário do portal recebia acesso a
+  // todos os grupos monitorados. O worker também não revalidava nada, então não
+  // havia nenhuma verificação de acesso em nenhuma camada.
+  if (import.meta.env.DEV || modoMockDevAtivo()) {
     return {
       colaborador: { id: idBitrix || 0, nome: nome || 'Painel de Inteligência (Modo Mock)', ativo: true },
       projetosPermitidos: projetosMonitoradosMock(),
     }
   }
 
-
+  // Embutido no Bitrix24: valida os grupos do usuário. A chamada é feita pelo
+  // SDK do BX24 (mesma origem do iframe), então não sofre o CORS que atingiria um
+  // fetch direto ao webhook — vale mesmo com o worker configurado.
   if (bx24Disponivel()) {
     const grupos = await listarTodasPaginas<GrupoBitrix>('sonet_group.user.groups')
     const temAcessoAMonitorado = grupos.some((g) => GRUPOS_MONITORADOS.includes(Number(g.GROUP_ID)))
@@ -50,8 +58,24 @@ export async function resolverAcesso(
     if (!temAcessoAMonitorado) {
       return null
     }
-    const projetosPermitidos = await gruposMonitoradosViaWebhook()
-    return { colaborador: { id: idBitrix, nome, ativo: true }, projetosPermitidos }
+    // Com acesso confirmado, o painel opera sobre todos os grupos monitorados.
+    return {
+      colaborador: { id: idBitrix, nome, ativo: true },
+      projetosPermitidos: gruposMonitoradosFixos(),
+    }
+  }
+
+  // Fora do iframe, mas com o worker configurado: não há sessão de usuário do
+  // Bitrix para checar. O acesso passa a ser garantido pelo token da API do
+  // worker (X-API-Token), não por grupo — quem não tem o token não lê nada.
+  if (syncApiUrl) {
+    console.info(
+      '[ACESSO] Sem SDK do Bitrix24: acesso controlado pelo token da API do worker, não por grupo.',
+    )
+    return {
+      colaborador: { id: idBitrix || 0, nome: nome || 'Painel de Inteligência', ativo: true },
+      projetosPermitidos: gruposMonitoradosFixos(),
+    }
   }
 
   if (fonteAtiva() === 'webhook') {
@@ -65,6 +89,16 @@ export async function resolverAcesso(
   throw new Error(
     'Fonte de dados do Bitrix não configurada. Rode embutido no Bitrix24 ou defina VITE_BITRIX_API_URL.',
   )
+}
+
+/**
+ * Grupos monitorados sem consultar o Bitrix. Usado quando o worker é a fonte de
+ * dados: os nomes reais chegam no próprio snapshot (`projetoNome`), então buscar
+ * `sonet_group.get` do navegador só adicionaria uma chamada que costuma falhar
+ * por CORS e cair no mesmo resultado.
+ */
+function gruposMonitoradosFixos(): Projeto[] {
+  return GRUPOS_MONITORADOS.map((id) => ({ id, nome: `Grupo ${id}` }))
 }
 
 /** Nomes de todos os grupos monitorados (via `sonet_group.get`, sem depender de sessão). */

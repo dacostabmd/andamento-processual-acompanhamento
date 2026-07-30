@@ -1,5 +1,12 @@
-import type { FiltrosDashboard, MetricasTarefas, PacoteAtendimento, Tarefa } from '../types/domain'
+import type {
+  FiltrosDashboard,
+  MetricasTarefas,
+  PacoteAtendimento,
+  Tarefa,
+  VisaoDashboard,
+} from '../types/domain'
 import { periodoAtendivel } from './aiAssistant/agregacao'
+import { baseSyncApi, fetchSyncApi } from './syncApi'
 import {
   comporComparacao,
   comporDetalhe,
@@ -31,6 +38,11 @@ interface ContextoDashboard {
   metricas: MetricasTarefas | null
   pacotes: PacoteAtendimento[] | null
   filtros: FiltrosDashboard
+  /**
+   * Dimensão de agrupamento ativa na tela. Repassada ao worker para a IA
+   * responder pela mesma noção de "equipe" que o dashboard está exibindo.
+   */
+  visao?: VisaoDashboard
 }
 
 export function construirPromptContextual(contexto: ContextoDashboard): string {
@@ -191,13 +203,10 @@ export async function enviarMensagemAssistente(
     throw new Error('Última mensagem inválida para resposta do assistente.')
   }
 
-  const syncApiUrl = import.meta.env.VITE_SYNC_API_URL?.trim()
-
-  // 1. Prioridade: Consulta Text-to-SQL via Worker Python (API na VPS)
-  if (syncApiUrl) {
+  // 1. Prioridade: Text-to-SQL no worker (LangChain + GPT-4 sobre o PostgreSQL).
+  if (baseSyncApi()) {
     try {
-      const baseUrl = syncApiUrl.endsWith('/') ? syncApiUrl.slice(0, -1) : syncApiUrl
-      const respostaWorker = await fetch(`${baseUrl}/query-ia`, {
+      const respostaWorker = await fetchSyncApi('/query-ia', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -210,12 +219,24 @@ export async function enviarMensagemAssistente(
               texto: m.texto,
             })),
           filtros: contexto.filtros,
+          // A visão ativa na tela decide se "equipe" significa a de quem fechou
+          // o card ou a do participante. Sem isto, a IA podia responder por
+          // equipe_atendimento enquanto o dashboard mostrava equipe_executora —
+          // dois números diferentes para a mesma pergunta, na mesma tela.
+          visao: contexto.visao ?? 'atendimento',
         }),
       })
 
       if (respostaWorker.ok) {
         const json = await respostaWorker.json()
         if (json.resposta) return json.resposta
+      } else {
+        // Sem `else`, um 401 (token errado) ou 429 (limite) era indistinguível de
+        // "worker offline" e caía calado no fallback local, que responde com
+        // números diferentes — o usuário não tinha como saber que mudou de motor.
+        console.warn(
+          `[IA] Worker respondeu HTTP ${respostaWorker.status}; usando fallback local.`,
+        )
       }
     } catch (err) {
       console.warn('Falha ao consultar endpoint Text-to-SQL do Worker, tentando fallback de cliente:', err)
