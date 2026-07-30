@@ -1,13 +1,15 @@
-import { STATUS_LABELS, type Tarefa } from '../../types/domain'
+import { STATUS_LABELS, type StatusTarefa, type Tarefa } from '../../types/domain'
 import {
   cardsDoRendimento,
   contar,
+  contarPorEquipe,
   filtrarPorEntidade,
   PREDICADOS,
   ranquear,
   rendimento,
   resumoSlice,
   taxaAtraso,
+  type ContagemEquipe,
   type TipoDimensaoGrupo,
 } from './agregacao'
 import type { Entidade, Intencao, Periodo, TipoMetrica } from './intencao'
@@ -142,6 +144,51 @@ export function comporResumo(cards: Tarefa[], intencao: Intencao, agora: Date): 
   }
 
   return linhas.join('\n') + rodapeSuposicoes(intencao)
+}
+
+// ---------------------------------------------------------------------------
+// Contagem por equipe (fechadas × com responsável, com detalhamento por status)
+// ---------------------------------------------------------------------------
+
+function linhaStatus(porStatus: Record<StatusTarefa, number>): string {
+  const ordem: StatusTarefa[] = [5, 3, 2, 4, 6]
+  return ordem
+    .filter((s) => porStatus[s] > 0)
+    .map((s) => `${porStatus[s]} ${STATUS_LABELS[s].toLowerCase()}`)
+    .join(', ')
+}
+
+function linhaEquipe(c: ContagemEquipe): string {
+  const statusFechadas = linhaStatus(c.statusFechadas)
+  const statusResp = linhaStatus(c.statusResponsavel)
+  return (
+    `- **${c.equipe}**: fechou **${c.fechadas}** tarefa(s)${statusFechadas ? ` (${statusFechadas})` : ''}; ` +
+    `tem **${c.comResponsavelNoTime}** tarefa(s) como responsável${statusResp ? ` (${statusResp})` : ''}`
+  )
+}
+
+/**
+ * Responde "quantas tarefas cada equipe fechou / tem / está com atraso", com o
+ * detalhamento por status pedido explicitamente: fechadas via `closedBy`
+ * (equipe do fechador), e "com responsável no time" via participante da tarefa
+ * (`equipeAtendimento`) — as duas contagens não se sobrepõem necessariamente,
+ * um card pode ter responsável de uma equipe e ter sido fechado por outra.
+ */
+export function comporContagemPorEquipe(cards: Tarefa[], intencao: Intencao): string {
+  const linhas = contarPorEquipe(cards).map(linhaEquipe)
+  const semEquipe = cards.filter(
+    (c) => c.equipeAtendimento === 'indefinido' && c.equipeFechador === 'indefinido',
+  ).length
+
+  return (
+    [`**Tarefas por equipe** (Cinthia Filgueiras, Simone Freitas, Quézia Karen, Lorena Pontes):`, ...linhas].join(
+      '\n',
+    ) +
+    (semEquipe > 0
+      ? `\n\n${semEquipe} tarefa(s) não têm responsável nem fechador identificáveis em nenhuma das 4 equipes.`
+      : '') +
+    rodapeSuposicoes(intencao)
+  )
 }
 
 // ---------------------------------------------------------------------------

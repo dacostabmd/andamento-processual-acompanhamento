@@ -34,7 +34,7 @@ export function RankingFechadores({ dados }: Props) {
 
     const filtradas = termo
       ? dados.linhas.filter((l) =>
-          `${l.nome} ${l.equipe}`
+          `${l.nome} ${l.equipe} ${l.setor ?? ''} ${l.supervisor ?? ''}`
             .toLowerCase()
             .normalize('NFD')
             .replace(/[̀-ͯ]/g, '')
@@ -76,6 +76,11 @@ export function RankingFechadores({ dados }: Props) {
             neste ranking
           </Text>
         )}
+        {dados.pessoasSemSupervisor > 0 && (
+          <Text size="xs" c="dimmed">
+            · {dados.pessoasSemSupervisor} pessoa(s) sem supervisor cadastrado no Bitrix
+          </Text>
+        )}
         {dados.concluidasSemFechador > 0 && (
           <Text size="xs" c="dimmed">
             · {dados.concluidasSemFechador.toLocaleString('pt-BR')} concluído(s) sem fechador
@@ -86,7 +91,7 @@ export function RankingFechadores({ dados }: Props) {
 
       <div className="flex flex-wrap items-center gap-2">
         <TextInput
-          placeholder="Buscar pessoa ou equipe…"
+          placeholder="Buscar pessoa, setor ou supervisor…"
           value={busca}
           onChange={(e) => setBusca(e.currentTarget.value)}
           size="xs"
@@ -124,7 +129,7 @@ export function RankingFechadores({ dados }: Props) {
 
       {/* Overflow no container, não no body: a tabela é larga no celular. */}
       <div className="overflow-x-auto">
-        <div className="max-h-[420px] min-w-[560px] overflow-y-auto">
+        <div className="max-h-[420px] min-w-[760px] overflow-y-auto">
           {linhas.length === 0 ? (
             <Text size="sm" c="dimmed" py="md">
               Nenhuma pessoa encontrada para “{busca}”.
@@ -135,7 +140,8 @@ export function RankingFechadores({ dados }: Props) {
                 <tr style={{ borderBottom: '1px solid var(--superficie-borda)' }}>
                   <th className="w-10 px-2 py-2 text-left font-semibold opacity-70">#</th>
                   <th className="px-2 py-2 text-left font-semibold opacity-70">Pessoa</th>
-                  <th className="px-2 py-2 text-left font-semibold opacity-70">Equipe</th>
+                  <th className="px-2 py-2 text-left font-semibold opacity-70">Setor</th>
+                  <th className="px-2 py-2 text-left font-semibold opacity-70">Supervisor</th>
                   <th className="w-32 px-2 py-2 text-right font-semibold opacity-70">Fechados</th>
                   <th className="w-40 px-2 py-2 text-left font-semibold opacity-70">
                     Prazo (no prazo / atraso)
@@ -188,19 +194,46 @@ function LinhaFechador({
           {linha.nome}
         </Text>
       </td>
+      {/* Setor é o departamento cadastrado na pessoa — mais específico que a
+          equipe, e cobre também quem está fora das 4 equipes de andamento
+          (FINANCEIRO, JURÍDICO, NEGOCIAÇÃO E ACORDOS…). */}
       <td className="px-2 py-2">
-        <Badge
-          size="sm"
-          variant="light"
-          color={linha.equipe === 'indefinido' ? 'gray' : undefined}
-          style={
-            linha.equipe === 'indefinido'
-              ? undefined
-              : { backgroundColor: `${COR_POR_EQUIPE[linha.equipe]}22`, color: COR_POR_EQUIPE[linha.equipe] }
-          }
-        >
-          {linha.equipe === 'indefinido' ? 'Sem equipe' : linha.equipe}
-        </Badge>
+        {linha.setor ? (
+          <Badge
+            size="sm"
+            variant="light"
+            color={linha.equipe === 'indefinido' ? 'gray' : undefined}
+            style={
+              linha.equipe === 'indefinido'
+                ? undefined
+                : {
+                    backgroundColor: `${COR_POR_EQUIPE[linha.equipe]}22`,
+                    color: COR_POR_EQUIPE[linha.equipe],
+                  }
+            }
+          >
+            {linha.setor}
+          </Badge>
+        ) : (
+          <Text size="xs" c="dimmed">
+            sem setor
+          </Text>
+        )}
+      </td>
+      <td className="px-2 py-2">
+        {linha.supervisor ? (
+          <Text size="sm" lineClamp={1}>
+            {linha.supervisor}
+          </Text>
+        ) : (
+          // Ausência é falta de cadastro no Bitrix, não ausência de chefia — o
+          // rótulo diz isso, em vez de deixar a célula vazia.
+          <Tooltip label="O departamento desta pessoa não tem supervisor definido no Bitrix" withArrow>
+            <Text size="xs" c="dimmed">
+              não cadastrado
+            </Text>
+          </Tooltip>
+        )}
       </td>
       <td className="px-2 py-2 text-right">
         <div className="flex items-center justify-end gap-2">

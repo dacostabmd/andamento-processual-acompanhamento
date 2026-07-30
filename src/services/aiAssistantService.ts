@@ -1,3 +1,4 @@
+import { STATUS_LABELS } from '../types/domain'
 import type {
   FiltrosDashboard,
   MetricasTarefas,
@@ -5,10 +6,11 @@ import type {
   Tarefa,
   VisaoDashboard,
 } from '../types/domain'
-import { periodoAtendivel } from './aiAssistant/agregacao'
+import { contarPorEquipe, periodoAtendivel } from './aiAssistant/agregacao'
 import { baseSyncApi, fetchSyncApi } from './syncApi'
 import {
   comporComparacao,
+  comporContagemPorEquipe,
   comporDetalhe,
   comporEsclarecimento,
   comporEscalar,
@@ -67,6 +69,23 @@ export function construirPromptContextual(contexto: ContextoDashboard): string {
   let resumoColaboradoresAtendimento = 'Nenhum colaborador de atendimento disponível.'
   let resumoFechadores = 'Nenhum dado de fechamento disponível.'
   let resumoFechamentoEquipes = 'Nenhum dado disponível.'
+  let resumoContagemPorEquipe = 'Nenhum dado disponível.'
+
+  if (cards.length > 0) {
+    resumoContagemPorEquipe = contarPorEquipe(cards)
+      .map((c) => {
+        const statusFechadas = (Object.entries(c.statusFechadas) as Array<[string, number]>)
+          .filter(([, n]) => n > 0)
+          .map(([s, n]) => `${n} ${STATUS_LABELS[Number(s) as 2 | 3 | 4 | 5 | 6].toLowerCase()}`)
+          .join(', ')
+        const statusResp = (Object.entries(c.statusResponsavel) as Array<[string, number]>)
+          .filter(([, n]) => n > 0)
+          .map(([s, n]) => `${n} ${STATUS_LABELS[Number(s) as 2 | 3 | 4 | 5 | 6].toLowerCase()}`)
+          .join(', ')
+        return `- Equipe "${c.equipe}": fechou ${c.fechadas} tarefa(s) (${statusFechadas || 'nenhum status'}); tem ${c.comResponsavelNoTime} tarefa(s) como responsável/participante (${statusResp || 'nenhum status'})`
+      })
+      .join('\n')
+  }
 
   if (pacotes && pacotes.length > 0) {
     const equipesMap = new Map<string, { total: number; responsaveis: number }>()
@@ -167,6 +186,9 @@ ${resumoMetricas}
 
 [Volume por Equipe de Atendimento]
 ${resumoEquipes}
+
+[Contagem por Equipe — Fechadas (closedBy) × Com Responsável (participante), por status]
+${resumoContagemPorEquipe}
 
 [Mapeamento dos Responsáveis pelo Atendimento]
 ${resumoColaboradoresAtendimento}
@@ -378,6 +400,7 @@ export function gerarRespostaSimuladaInteligente(
 
   if (intencao.metrica === 'explicacao') return comporExplicacao(cards, intencao, agora)
   if (intencao.metrica === 'detalhe') return comporDetalhe(cards, intencao, agora)
+  if (intencao.metrica === 'porEquipe') return comporContagemPorEquipe(cards, intencao)
   if (intencao.metrica === 'resumo') return comporResumo(cards, intencao, agora)
   if (intencao.metrica === 'taxaAtrasoAtiva' || intencao.metrica === 'taxaAtrasoTotal')
     return comporTaxa(cards, intencao, agora)

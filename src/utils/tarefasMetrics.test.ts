@@ -90,6 +90,24 @@ describe('equipeExecutoraDaTarefa', () => {
     } as Tarefa
     expect(equipeExecutoraDaTarefa(tarefa)).toBe('Quézia Karen')
   })
+
+  it('prefere equipeFechador, resolvida por ID de departamento no worker', () => {
+    // Se os dois caminhos discordarem, vale o que veio por ID: o nome pode ter
+    // sido renomeado no portal depois que o snapshot foi gravado.
+    const tarefa = {
+      equipeFechador: 'Lorena Pontes',
+      fechadoPorDepartamentos: ['Andamento Simone Freitas'],
+    } as Tarefa
+    expect(equipeExecutoraDaTarefa(tarefa)).toBe('Lorena Pontes')
+  })
+
+  it('volta ao nome do departamento em snapshots antigos, sem equipeFechador', () => {
+    const tarefa = {
+      equipeFechador: 'indefinido',
+      fechadoPorDepartamentos: ['Andamento Simone Freitas'],
+    } as Tarefa
+    expect(equipeExecutoraDaTarefa(tarefa)).toBe('Simone Freitas')
+  })
 })
 
 describe('empacotarPorAtendimento — divergência entre as visões', () => {
@@ -279,12 +297,37 @@ describe('calcularRankingFechadores', () => {
       totalFechado: 0,
       concluidasSemFechador: 0,
       naoConcluidas: 0,
+      pessoasSemSupervisor: 0,
     })
   })
 
   it('usa fallback de nome quando o fechador não tem nome resolvido', () => {
     const r = calcularRankingFechadores([card({ fechadoPorId: 999, fechadoPorNome: null })])
     expect(r.linhas[0].nome).toBe('Usuário 999')
+  })
+
+  it('traz setor e supervisor do cadastro da pessoa', () => {
+    const r = calcularRankingFechadores([
+      card({
+        fechadoPorId: 5305,
+        fechadoPorNome: 'Alguém do TI',
+        setorFechador: 'Suporte e Desenvolvimento (TI)',
+        gestorFechadorNome: 'Gabriel Alves',
+      }),
+    ])
+    expect(r.linhas[0].setor).toBe('Suporte e Desenvolvimento (TI)')
+    expect(r.linhas[0].supervisor).toBe('Gabriel Alves')
+    expect(r.pessoasSemSupervisor).toBe(0)
+  })
+
+  it('conta quem está sem supervisor cadastrado', () => {
+    // ~39% das pessoas caem aqui: o departamento delas (e os superiores) não
+    // têm UF_HEAD definido no Bitrix. É falta de cadastro, não de chefia.
+    const r = calcularRankingFechadores([
+      card({ fechadoPorId: 1, fechadoPorNome: 'Com', gestorFechadorNome: 'Chefe' }),
+      card({ fechadoPorId: 2, fechadoPorNome: 'Sem', gestorFechadorNome: null }),
+    ])
+    expect(r.pessoasSemSupervisor).toBe(1)
   })
 
   it('desempata por nome quando o volume é igual', () => {

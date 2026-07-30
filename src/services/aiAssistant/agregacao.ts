@@ -1,5 +1,16 @@
-import { STATUS_CONCLUIDO, type Tarefa } from '../../types/domain'
-import { tarefaEstaAtrasada, tarefaEstaConcluida, tarefaNoPrazo } from '../../utils/tarefasMetrics'
+import {
+  EQUIPES_ATENDIMENTO,
+  STATUS_CONCLUIDO,
+  type EquipeAtendimento,
+  type StatusTarefa,
+  type Tarefa,
+} from '../../types/domain'
+import {
+  equipeExecutoraDaTarefa,
+  tarefaEstaAtrasada,
+  tarefaEstaConcluida,
+  tarefaNoPrazo,
+} from '../../utils/tarefasMetrics'
 import { normalizar, type Entidade, type Periodo, type TipoMetrica } from './intencao'
 
 /**
@@ -225,6 +236,53 @@ export function resumoSlice(cards: Tarefa[], agora: Date): ResumoSlice {
     aguardandoControle: contar(cards, 'aguardandoControle', agora),
     taxaAtrasoAtiva: taxaAtraso(cards, 'ativas', agora).percentual,
   }
+}
+
+// ---------------------------------------------------------------------------
+// Contagens por equipe (fechamento via closedBy, atendimento via participante)
+// ---------------------------------------------------------------------------
+
+/** Contagem por status de um conjunto de cards, na ordem de STATUS_LABELS. */
+export type ContagemPorStatus = Record<StatusTarefa, number>
+
+function contarPorStatus(cards: Tarefa[]): ContagemPorStatus {
+  const base = { 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 } as ContagemPorStatus
+  for (const c of cards) base[c.status] += 1
+  return base
+}
+
+/** Linha de contagem de UMA equipe: quantas fechou, quantas atende, e por status. */
+export interface ContagemEquipe {
+  equipe: EquipeAtendimento
+  /** Cards FECHADOS por alguém desta equipe (closedBy → departamento do fechador). */
+  fechadas: number
+  /** Cards cujo PARTICIPANTE (accomplice) é desta equipe — cobre abertos e fechados. */
+  comResponsavelNoTime: number
+  /** Status das fechadas por esta equipe. */
+  statusFechadas: ContagemPorStatus
+  /** Status de todas com responsável nesta equipe (fechadas ou não). */
+  statusResponsavel: ContagemPorStatus
+}
+
+/**
+ * Contagens por equipe pedidas explicitamente: quantas tarefas cada uma das 4
+ * equipes (Cinthia Filgueiras, Simone Freitas, Quézia Karen, Lorena Pontes)
+ * FECHOU (`closedBy`, resolvido para equipe por `equipeExecutoraDaTarefa`) e
+ * quantas tem como RESPONSÁVEL (`equipeAtendimento`, que sai do participante da
+ * tarefa) — com o detalhamento por status em cada uma das duas visões.
+ */
+export function contarPorEquipe(cards: Tarefa[]): ContagemEquipe[] {
+  return EQUIPES_ATENDIMENTO.map((equipe) => {
+    const fechadasCards = cards.filter((c) => equipeExecutoraDaTarefa(c) === equipe)
+    const responsavelCards = cards.filter((c) => c.equipeAtendimento === equipe)
+    return {
+      equipe,
+      fechadas: fechadasCards.length,
+      comResponsavelNoTime: responsavelCards.length,
+      statusFechadas: contarPorStatus(fechadasCards),
+      statusResponsavel: contarPorStatus(responsavelCards),
+    }
+  })
 }
 
 // ---------------------------------------------------------------------------

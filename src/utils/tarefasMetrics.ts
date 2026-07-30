@@ -1,7 +1,6 @@
 import {
   EQUIPE_POR_NOME_DEPARTAMENTO,
   EQUIPES_ATENDIMENTO,
-  NOMES_DEPARTAMENTO_EQUIPES,
   STATUS_CONCLUIDO,
   type VisaoDashboard,
   type ContagemSituacao,
@@ -127,12 +126,9 @@ export function aplicarFiltros(tarefas: Tarefa[], filtros: FiltrosDashboard): Ta
     }
     if (filtros.ocultarForaDasEquipes) {
       if (tarefa.equipeAtendimento === 'indefinido') return false
-      if (
-        tarefa.fechadoPorDepartamentos.length > 0 &&
-        !tarefa.fechadoPorDepartamentos.some((d) =>
-          (NOMES_DEPARTAMENTO_EQUIPES as readonly string[]).includes(d.trim()),
-        )
-      ) {
+      // Card já fechado por alguém de fora das 4 equipes também sai. Cards ainda
+      // abertos não têm fechador e não são julgados por este critério.
+      if (tarefa.fechadoPorId !== null && equipeExecutoraDaTarefa(tarefa) === 'indefinido') {
         return false
       }
     }
@@ -145,17 +141,25 @@ export function aplicarFiltros(tarefas: Tarefa[], filtros: FiltrosDashboard): Ta
 const ORDEM_EQUIPES: EquipeAtendimento[] = [...EQUIPES_ATENDIMENTO, 'indefinido']
 
 /**
- * Equipe de quem FECHOU o card, derivada dos departamentos reais do fechador.
+ * Equipe de quem FECHOU o card.
  *
- * Diferente de `tarefa.equipeAtendimento`, que vem do participante
- * (accomplices[0]) e por isso concentra quase tudo numa pessoa só. Um fechador
- * pode pertencer a mais de um departamento de equipe (medido: 992 cards em
- * "Andamento Cinthia Filgueiras" + "Andamento Lorena Pontes"); nesse caso vale a
- * primeira equipe na ordem canônica de EQUIPES_ATENDIMENTO, para que o mesmo
- * card caia sempre no mesmo grupo e os totais das equipes somem exatamente o
- * total de cards — contá-lo nas duas equipes inflaria a soma.
+ * Prefere `equipeFechador`, que o worker resolve pelo ID do departamento do
+ * fechador. O caminho por NOME (`fechadoPorDepartamentos`) continua como
+ * retaguarda para snapshots gerados antes do campo existir — casar strings é
+ * frágil: o Bitrix devolve alguns nomes com espaço à esquerda, e renomear o
+ * departamento no portal quebraria a correspondência em silêncio.
+ *
+ * Um fechador pode pertencer a mais de um departamento de equipe (medido: 992
+ * cards em "Andamento Cinthia Filgueiras" + "Andamento Lorena Pontes"); nesse
+ * caso vale a primeira equipe na ordem canônica de EQUIPES_ATENDIMENTO, a mesma
+ * ordem usada no worker. O card cai sempre no mesmo grupo e os totais das
+ * equipes somam exatamente o total de cards — contá-lo nas duas inflaria a soma.
  */
 export function equipeExecutoraDaTarefa(tarefa: Tarefa): EquipeAtendimento {
+  if (tarefa.equipeFechador && tarefa.equipeFechador !== 'indefinido') {
+    return tarefa.equipeFechador
+  }
+
   const equipes = tarefa.fechadoPorDepartamentos
     .map((nome) => EQUIPE_POR_NOME_DEPARTAMENTO[nome.trim()])
     .filter((e): e is EquipeAtendimento => e !== undefined)
@@ -331,6 +335,8 @@ export function calcularRankingFechadores(tarefas: Tarefa[]): RankingFechadores 
         fechadoPorId: tarefa.fechadoPorId,
         nome: tarefa.fechadoPorNome ?? `Usuário ${tarefa.fechadoPorId}`,
         equipe: equipeExecutoraDaTarefa(tarefa),
+        setor: tarefa.setorFechador,
+        supervisor: tarefa.gestorFechadorNome,
         total: 0,
         noPrazo: 0,
         comAtraso: 0,
@@ -362,7 +368,9 @@ export function calcularRankingFechadores(tarefas: Tarefa[]): RankingFechadores 
 
   linhas.sort((a, b) => b.total - a.total || a.nome.localeCompare(b.nome))
 
-  return { linhas, totalFechado, concluidasSemFechador, naoConcluidas }
+  const pessoasSemSupervisor = linhas.filter((l) => !l.supervisor).length
+
+  return { linhas, totalFechado, concluidasSemFechador, naoConcluidas, pessoasSemSupervisor }
 }
 
 /** Acumula o "fechado por" de um card no agregado (apenas tarefas concluídas/fechadas). */

@@ -24,6 +24,7 @@ export type TipoMetrica =
   | 'taxaAtrasoAtiva'
   | 'taxaAtrasoTotal'
   | 'rendimento' // status=5 dentro de um período por finalizadoEm
+  | 'porEquipe' // fechadas × com responsável, por cada uma das 4 equipes, com status
   | 'resumo' // painel multi-métrica
   | 'detalhe' // listar cards
   | 'explicacao' // decompor último número
@@ -189,6 +190,28 @@ const LEXICO_METRICA: Array<{ metrica: TipoMetrica; termos: string[] }> = [
   { metrica: 'explicacao', termos: ['por que', 'porque', 'explica'] },
 ]
 
+/**
+ * Termos que pedem a repartição por equipe (fechadas × com responsável, com
+ * status). Fora do LEXICO_METRICA principal de propósito: é um pedido de
+ * FORMATO de resposta ("quebra por equipe"), não concorre por especificidade
+ * com "atrasadas"/"concluidas" — o texto pode trazer as duas coisas juntas
+ * ("quantas cada equipe fechou" é 'porEquipe', não 'total' genérico).
+ */
+const TERMOS_POR_EQUIPE = [
+  'por equipe',
+  'de cada equipe',
+  'cada equipe',
+  'cada time',
+  'por time',
+  'entre as equipes',
+  'entre os times',
+  'todas as equipes',
+]
+
+function mencionaPorEquipe(txt: string): boolean {
+  return TERMOS_POR_EQUIPE.some((t) => txt.includes(t))
+}
+
 /** Detecta menção explícita de percentual/taxa (para desempatar taxa vs contagem). */
 function mencionaTaxa(txt: string): boolean {
   return /taxa|percentual|% |porcent/.test(txt)
@@ -207,6 +230,12 @@ export function extrairMetrica(txt: string, temPeriodo: boolean): TipoMetrica {
   if (mencionaTaxa(txt) && (set.has('atrasadas') || set.has('taxaAtrasoAtiva'))) {
     return mencionaSobreTotal(txt) ? 'taxaAtrasoTotal' : 'taxaAtrasoAtiva'
   }
+
+  // "por equipe"/"cada equipe" sem outro eixo de agrupamento nomeado (pessoa,
+  // setor, uf, projeto) pede a repartição fechadas×responsável por time. Fica
+  // fora do LEXICO_METRICA para não competir por especificidade com
+  // atrasadas/concluidas — é um pedido de formato, não de métrica.
+  if (mencionaPorEquipe(txt) && !set.has('taxaAtrasoAtiva')) return 'porEquipe'
 
   if (set.size === 0) return 'desconhecida'
 
@@ -695,8 +724,13 @@ export function extrairIntencao(pergunta: string, cards: Tarefa[], agora: Date):
   const metrica = extrairMetrica(textoNormalizado, periodo.tipo !== 'nenhum')
   const { entidade, segunda } = resolverEntidade(textoNormalizado, cat)
 
-  // Ranking/tendência marcam a entidade como "todas" quando não há valor específico.
-  if ((agrupamento === 'ranking' || agrupamento === 'tendencia') && entidade.valorCanonico === null) {
+  // Ranking/tendência/porEquipe marcam a entidade como "todas" quando não há
+  // valor específico — "quantas cada equipe fechou" não está perguntando "qual
+  // equipe?", já está pedindo a quebra por todas elas.
+  if (
+    (agrupamento === 'ranking' || agrupamento === 'tendencia' || metrica === 'porEquipe') &&
+    entidade.valorCanonico === null
+  ) {
     entidade.todas = true
     // O eixo NOMEADO no texto ("qual EQUIPE...", "qual SETOR...") define a
     // dimensão do ranking e VENCE qualquer palpite do resolvedor de entidade

@@ -46,6 +46,7 @@ interface OpcoesTarefa {
   projetoId?: number | null
   titulo?: string
   prioridade?: PrioridadeTarefa
+  equipeFechador?: EquipeAtendimento
 }
 
 function tarefa(op: OpcoesTarefa = {}): Tarefa {
@@ -67,7 +68,15 @@ function tarefa(op: OpcoesTarefa = {}): Tarefa {
     responsavelAtendimentoId: null,
     responsavelAtendimentoNome: op.responsavelAtendimentoNome ?? null,
     equipeAtendimento: op.equipe ?? 'indefinido',
+    origemEquipeAtendimento: op.equipe && op.equipe !== 'indefinido' ? 'participante' : 'nao_atribuida',
+    equipeFechador: op.equipeFechador ?? 'indefinido',
     estadoUf: op.estadoUf ?? null,
+    setorFechador: null,
+    gestorFechadorId: null,
+    gestorFechadorNome: null,
+    setorAtendimento: null,
+    gestorAtendimentoId: null,
+    gestorAtendimentoNome: null,
   }
 }
 
@@ -391,6 +400,15 @@ describe('aiAssistantService', () => {
         'tendencia',
       )
     })
+
+    it('"por equipe" -> metrica porEquipe', () => {
+      expect(extrairMetrica('quantas tarefas cada equipe fechou', false)).toBe('porEquipe')
+      expect(extrairMetrica('me mostra as tarefas por equipe', false)).toBe('porEquipe')
+    })
+
+    it('"taxa de atraso por equipe" continua taxa, não porEquipe', () => {
+      expect(extrairMetrica('qual a taxa de atraso de cada equipe', false)).toBe('taxaAtrasoAtiva')
+    })
   })
 
   // ====================================================================
@@ -457,6 +475,27 @@ describe('aiAssistantService', () => {
       const r = perguntar('Qual a taxa de atraso da equipe da Quezia Karen?')
       expect(r).toContain('Quézia Karen')
       expect(r).toContain('taxa de atraso')
+    })
+
+    it('porEquipe: fechadas (closedBy) e com responsável (participante) por time, com status', () => {
+      idSeq = 1
+      const cards = [
+        // Cinthia: fechou 1 (concluída), e tem 2 como participante (1 concluída, 1 atrasada).
+        tarefa({ equipe: 'Cinthia Filgueiras', equipeFechador: 'Cinthia Filgueiras', status: 5 }),
+        tarefa({ equipe: 'Cinthia Filgueiras', status: 3, prazoFinal: PRAZO_PASSADO }),
+        // Simone: não fechou nenhuma; tem 1 como participante (ativa).
+        tarefa({ equipe: 'Simone Freitas', status: 2 }),
+      ]
+      const contexto = {
+        metricas: METRICAS_STUB,
+        pacotes: [pacote('Cinthia Filgueiras', cards.slice(0, 2), 'Ana Souza'), pacote('Simone Freitas', [cards[2]], 'Bruno Lima')],
+        filtros: FILTROS,
+      }
+      const r = gerarRespostaSimuladaInteligente('quantas tarefas cada equipe fechou', contexto)
+      expect(r).toContain('Cinthia Filgueiras')
+      expect(r).toMatch(/fechou \*\*1\*\*/)
+      expect(r).toContain('Simone Freitas')
+      expect(r).toMatch(/fechou \*\*0\*\*/)
     })
 
     it('#15 equipe indefinida é entidade legítima', () => {

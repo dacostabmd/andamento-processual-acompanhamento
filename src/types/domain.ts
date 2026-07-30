@@ -57,16 +57,37 @@ export interface Tarefa {
   responsavelNome: string | null
   prioridade: PrioridadeTarefa
   /**
-   * Responsável pelo atendimento do cliente — é o único participante
-   * (accomplice) da tarefa, distinto do responsável nativo. Critério de
-   * agrupamento da tela de inteligência. Sem participante → "Indefinido".
+   * Quem atende o card: o PARTICIPANTE (accomplice) da tarefa no Bitrix — é
+   * este campo, e não o responsável nativo, que define a equipe de atendimento.
+   * Null quando o card não tem participante identificável.
    */
   responsavelAtendimentoId: number | null
   responsavelAtendimentoNome: string | null
-  /** Equipe (departamento) do responsável pelo atendimento, ou "indefinido". */
+  /** Equipe do participante, pelo ID do departamento dele. */
   equipeAtendimento: EquipeAtendimento
+  /**
+   * De onde saiu `equipeAtendimento`. 'participante' é o caso normal;
+   * 'nao_atribuida' é ausência declarada (sem participante, ou fora das 4
+   * equipes). A tela usa isto para dizer sobre que base o número foi calculado.
+   */
+  origemEquipeAtendimento: OrigemEquipe
+  /** Equipe de quem FECHOU o card, pelo ID do departamento do fechador. */
+  equipeFechador: EquipeAtendimento
   /** UF (sigla de 2 letras) do processo, normalizada do campo nativo da tarefa. */
   estadoUf: string | null
+
+  /**
+   * Setor e supervisor de cada papel, vindos do cadastro da pessoa no Bitrix.
+   * `setor*` é o nome do departamento (UF_DEPARTMENT), preenchido em 100% dos
+   * fechadores. `supervisor*` é o campo "Supervisor" da ficha do usuário — que
+   * no Bitrix é o chefe (UF_HEAD) do departamento —, preenchido em ~61%.
+   */
+  setorFechador: string | null
+  gestorFechadorId: number | null
+  gestorFechadorNome: string | null
+  setorAtendimento: string | null
+  gestorAtendimentoId: number | null
+  gestorAtendimentoNome: string | null
 }
 
 /**
@@ -82,6 +103,13 @@ export const EQUIPES_ATENDIMENTO = [
 ] as const
 
 export type EquipeAtendimento = (typeof EQUIPES_ATENDIMENTO)[number] | 'indefinido'
+
+/**
+ * Procedência da equipe de atendimento. 'participante' é o caso normal (equipe
+ * do accomplices[0]); 'responsavel' é valor legado de snapshots gravados antes
+ * desta versão. Espelha `origemEquipeAtendimento` em types.ts no worker.
+ */
+export type OrigemEquipe = 'participante' | 'responsavel' | 'nao_atribuida'
 
 /**
  * ID do departamento (Bitrix24) de cada equipe de atendimento — espelha
@@ -126,18 +154,15 @@ export const EQUIPE_POR_NOME_DEPARTAMENTO: Record<string, EquipeAtendimento> = {
  * Dimensão pela qual o dashboard agrupa os cards. As duas visões respondem a
  * perguntas diferentes e podem divergir na MESMA tarefa:
  *
- *   - 'atendimento': agrupa pelo participante da tarefa (accomplices[0]). É quem
- *     responde ao cliente. Cobre 100% dos cards, mas a ordem do array de
- *     participantes no Bitrix não é semântica, então o valor é frágil — hoje 93%
- *     dos cards caem numa única pessoa.
- *   - 'executora': agrupa por quem FECHOU o card, usando o departamento real do
- *     fechador (`fechadoPorDepartamentos`). É a atribuição confiável de trabalho
- *     entregue, mas só existe para cards já fechados.
+ *   - 'atendimento': agrupa pelo RESPONSÁVEL da tarefa, na equipe do departamento
+ *     dele. Cobre também cards ainda abertos, que é o que a visão executora não
+ *     consegue ver.
+ *   - 'executora': agrupa por quem FECHOU o card, na equipe do departamento do
+ *     fechador. É a atribuição de trabalho entregue, mas só existe para cards já
+ *     fechados.
  *
- * Exemplo real do snapshot: um card com fechadoPorDepartamentos =
- * ["Andamento Simone Freitas"] aparece como equipe "Cinthia Filgueiras" na visão
- * de atendimento (porque Cinthia é o accomplice) e como "Simone Freitas" na
- * visão executora. Ver docs/ia-modelagem-e-hierarquia.md §1.
+ * As duas podem divergir no MESMO card, e isso não é erro: quem atende nem sempre
+ * é quem fecha. Ver docs/ia-modelagem-e-hierarquia.md §1.
  */
 export type VisaoDashboard = 'atendimento' | 'executora'
 
@@ -149,12 +174,12 @@ export const VISOES_DASHBOARD: Array<{
   {
     valor: 'atendimento',
     rotulo: 'Por atendimento',
-    descricao: 'Agrupa pelo responsável pelo atendimento (participante do card)',
+    descricao: 'Agrupa pelo responsável da tarefa, na equipe do departamento dele',
   },
   {
     valor: 'executora',
     rotulo: 'Por equipe executora',
-    descricao: 'Agrupa por quem fechou o card, pelo departamento real do fechador',
+    descricao: 'Agrupa por quem fechou o card, na equipe do departamento do fechador',
   },
 ]
 
@@ -218,6 +243,10 @@ export interface RankingFechador {
   nome: string
   /** Equipe do fechador, derivada dos departamentos dele. */
   equipe: EquipeAtendimento
+  /** Departamento do fechador, direto do cadastro (mais específico que a equipe). */
+  setor: string | null
+  /** "Supervisor" da ficha do Bitrix — o chefe do departamento. Null se não cadastrado. */
+  supervisor: string | null
   /** Cards concluídos por esta pessoa. */
   total: number
   /** Dos concluídos, quantos terminaram até o prazo. */
@@ -243,6 +272,8 @@ export interface RankingFechadores {
   concluidasSemFechador: number
   /** Cards ainda não concluídos: não têm fechador por definição. */
   naoConcluidas: number
+  /** Pessoas do ranking sem supervisor cadastrado no Bitrix. */
+  pessoasSemSupervisor: number
 }
 
 /** Volume de cards por UF (estado), para o ranking geográfico. */
