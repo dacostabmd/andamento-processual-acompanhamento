@@ -19,6 +19,7 @@ import {
   type EquipeAtendimento,
   type InteligenciaDados,
   type PacoteAtendimento,
+  type VisaoDashboard,
 } from '../../types/domain'
 import { calcularInteligencia } from '../../utils/tarefasMetrics'
 import { EstadoVazio } from '../EstadoVazio'
@@ -106,6 +107,8 @@ const FAIXAS_URGENCIA_LABELS: Array<{
 
 interface GraficosInteligenciaProps {
   pacotes: PacoteAtendimento[]
+  /** Dimensão de agrupamento ativa — muda apenas os rótulos, não o cálculo. */
+  visao?: VisaoDashboard
 }
 
 /** Só as equipes com pelo menos 1 card entram nos gráficos (evita ruído vazio). */
@@ -130,7 +133,10 @@ function dispararOnda(evento: React.MouseEvent<HTMLButtonElement>) {
   onda.addEventListener('animationend', () => onda.remove())
 }
 
-export function GraficosInteligencia({ pacotes }: GraficosInteligenciaProps) {
+export function GraficosInteligencia({
+  pacotes,
+  visao = 'atendimento',
+}: GraficosInteligenciaProps) {
   // Equipe selecionada pelo ripple; null = todas.
   const [equipeSelecionada, setEquipeSelecionada] = useState<EquipeAtendimento | null>(null)
 
@@ -382,11 +388,12 @@ export function GraficosInteligencia({ pacotes }: GraficosInteligenciaProps) {
 
           <div className={`${classes.cartao} ${classes.cartaoLargo}`}>
             <Text className={classes.tituloCartao} fw={700}>
-              Responsáveis com mais cards
+              {visao === 'executora' ? 'Quem fechou mais cards' : 'Responsáveis com mais cards'}
             </Text>
             <Text className={classes.subtitulo} size="xs">
-              Top {dados.topResponsaveis.length} responsáveis pelo atendimento por volume; a cor
-              indica a equipe.
+              {visao === 'executora'
+                ? `Top ${dados.topResponsaveis.length} pessoas por volume de cards fechados; a cor indica a equipe do departamento do fechador.`
+                : `Top ${dados.topResponsaveis.length} responsáveis pelo atendimento por volume; a cor indica a equipe.`}
             </Text>
             <div className={classes.areaGraficoAlta}>
               <Bar data={ranking} options={opcoesRanking} />

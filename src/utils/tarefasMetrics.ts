@@ -1,7 +1,9 @@
 import {
+  EQUIPE_POR_NOME_DEPARTAMENTO,
   EQUIPES_ATENDIMENTO,
   NOMES_DEPARTAMENTO_EQUIPES,
   STATUS_CONCLUIDO,
+  type VisaoDashboard,
   type ContagemSituacao,
   type EquipeAtendimento,
   type FaixasUrgencia,
@@ -13,6 +15,8 @@ import {
   type MetricasTarefas,
   type PacoteAtendimento,
   type PontoTendenciaMensal,
+  type RankingFechador,
+  type RankingFechadores,
   type Tarefa,
   type VolumeFechadoPor,
   type VolumePorUf,
@@ -141,27 +145,62 @@ export function aplicarFiltros(tarefas: Tarefa[], filtros: FiltrosDashboard): Ta
 const ORDEM_EQUIPES: EquipeAtendimento[] = [...EQUIPES_ATENDIMENTO, 'indefinido']
 
 /**
+ * Equipe de quem FECHOU o card, derivada dos departamentos reais do fechador.
+ *
+ * Diferente de `tarefa.equipeAtendimento`, que vem do participante
+ * (accomplices[0]) e por isso concentra quase tudo numa pessoa só. Um fechador
+ * pode pertencer a mais de um departamento de equipe (medido: 992 cards em
+ * "Andamento Cinthia Filgueiras" + "Andamento Lorena Pontes"); nesse caso vale a
+ * primeira equipe na ordem canônica de EQUIPES_ATENDIMENTO, para que o mesmo
+ * card caia sempre no mesmo grupo e os totais das equipes somem exatamente o
+ * total de cards — contá-lo nas duas equipes inflaria a soma.
+ */
+export function equipeExecutoraDaTarefa(tarefa: Tarefa): EquipeAtendimento {
+  const equipes = tarefa.fechadoPorDepartamentos
+    .map((nome) => EQUIPE_POR_NOME_DEPARTAMENTO[nome.trim()])
+    .filter((e): e is EquipeAtendimento => e !== undefined)
+
+  if (equipes.length === 0) return 'indefinido'
+
+  for (const equipe of EQUIPES_ATENDIMENTO) {
+    if (equipes.includes(equipe)) return equipe
+  }
+  return 'indefinido'
+}
+
+/** Equipe do card conforme a visão ativa. */
+export function equipeDaTarefa(tarefa: Tarefa, visao: VisaoDashboard): EquipeAtendimento {
+  return visao === 'executora' ? equipeExecutoraDaTarefa(tarefa) : tarefa.equipeAtendimento
+}
+
+/**
  * Empacota os cards por responsável pelo atendimento. Cada pacote reúne todos os
  * cards do mesmo responsável, com a equipe dele. Os pacotes vêm ordenados por
  * equipe (ordem fixa) e, dentro da equipe, do maior para o menor volume de cards.
  */
-export function empacotarPorAtendimento(tarefas: Tarefa[]): PacoteAtendimento[] {
-  // Chave por responsável; cards sem responsável definido caem em um pacote único.
+export function empacotarPorAtendimento(
+  tarefas: Tarefa[],
+  visao: VisaoDashboard = 'atendimento',
+): PacoteAtendimento[] {
+  // Chave por pessoa; cards sem pessoa definida caem em um pacote único.
   const pacotesPorChave = new Map<string, PacoteAtendimento>()
 
   tarefas.forEach((tarefa) => {
-    const chave =
-      tarefa.responsavelAtendimentoId === null
-        ? 'sem-responsavel'
-        : String(tarefa.responsavelAtendimentoId)
+    // Na visão executora a pessoa do pacote é quem fechou o card, não o participante.
+    const pessoaId =
+      visao === 'executora' ? tarefa.fechadoPorId : tarefa.responsavelAtendimentoId
+    const pessoaNome = visao === 'executora' ? tarefa.fechadoPorNome : tarefa.responsavelAtendimentoNome
+    const nomeFallback =
+      visao === 'executora' ? 'Ainda não fechado' : 'Sem responsável pelo atendimento'
+
+    const chave = pessoaId === null ? 'sem-responsavel' : String(pessoaId)
 
     let pacote = pacotesPorChave.get(chave)
     if (!pacote) {
       pacote = {
-        responsavelAtendimentoId: tarefa.responsavelAtendimentoId,
-        responsavelAtendimentoNome:
-          tarefa.responsavelAtendimentoNome ?? 'Sem responsável pelo atendimento',
-        equipe: tarefa.equipeAtendimento,
+        responsavelAtendimentoId: pessoaId,
+        responsavelAtendimentoNome: pessoaNome ?? nomeFallback,
+        equipe: equipeDaTarefa(tarefa, visao),
         cards: [],
       }
       pacotesPorChave.set(chave, pacote)
@@ -251,6 +290,79 @@ export function calcularInteligencia(pacotes: PacoteAtendimento[]): Inteligencia
   const tendenciaMensal = calcularTendenciaMensal(pacotes, agora)
 
   return { porEquipe, topResponsaveis, topFechadoPor, porUf, urgencia, tendenciaMensal, totalCards }
+}
+
+/**
+ * Ranking de quem mais fecha tarefas, a partir do `closedBy` do Bitrix.
+ *
+ * REGRA DE CONTAGEM — só entram cards **concluídos** (status 5) **com fechador
+ * identificado**. É mais estrito que `acumularFechadoPor`, que alimenta o
+ * gráfico de barras e também conta cards não concluídos que tenham `fechadoPorId`
+ * e cria uma linha "Não informado" para concluídos sem fechador. Para um ranking
+ * de produtividade entre pessoas, essas duas categorias são ruído: a primeira
+ * mistura trabalho não entregue, a segunda não é uma pessoa.
+ *
+ * O que sobra de fora não é escondido — volta em `concluidasSemFechador` e
+ * `naoConcluidas`, para a tela poder declarar a cobertura em vez de deixar o
+ * leitor supor que o ranking cobre tudo.
+ *
+ * A equipe vem de `equipeExecutoraDaTarefa` (departamento real do fechador), não
+ * de `equipeAtendimento` — esta última deriva do participante e concentra ~93%
+ * dos cards numa pessoa só.
+ */
+export function calcularRankingFechadores(tarefas: Tarefa[]): RankingFechadores {
+  const porPessoa = new Map<number, RankingFechador>()
+  let concluidasSemFechador = 0
+  let naoConcluidas = 0
+
+  tarefas.forEach((tarefa) => {
+    if (!tarefaEstaConcluida(tarefa)) {
+      naoConcluidas += 1
+      return
+    }
+    if (tarefa.fechadoPorId === null) {
+      concluidasSemFechador += 1
+      return
+    }
+
+    let linha = porPessoa.get(tarefa.fechadoPorId)
+    if (!linha) {
+      linha = {
+        fechadoPorId: tarefa.fechadoPorId,
+        nome: tarefa.fechadoPorNome ?? `Usuário ${tarefa.fechadoPorId}`,
+        equipe: equipeExecutoraDaTarefa(tarefa),
+        total: 0,
+        noPrazo: 0,
+        comAtraso: 0,
+        semPrazo: 0,
+        percentual: 0,
+      }
+      porPessoa.set(tarefa.fechadoPorId, linha)
+    }
+
+    linha.total += 1
+
+    // Sem prazo ou sem data de conclusão não dá para julgar pontualidade — vira
+    // uma terceira categoria em vez de ser somada a "no prazo" por omissão.
+    if (!tarefa.prazoFinal || !tarefa.finalizadoEm) {
+      linha.semPrazo += 1
+    } else if (new Date(tarefa.finalizadoEm) > new Date(tarefa.prazoFinal)) {
+      linha.comAtraso += 1
+    } else {
+      linha.noPrazo += 1
+    }
+  })
+
+  const linhas = Array.from(porPessoa.values())
+  const totalFechado = linhas.reduce((soma, l) => soma + l.total, 0)
+
+  linhas.forEach((l) => {
+    l.percentual = totalFechado === 0 ? 0 : (l.total / totalFechado) * 100
+  })
+
+  linhas.sort((a, b) => b.total - a.total || a.nome.localeCompare(b.nome))
+
+  return { linhas, totalFechado, concluidasSemFechador, naoConcluidas }
 }
 
 /** Acumula o "fechado por" de um card no agregado (apenas tarefas concluídas/fechadas). */
@@ -389,13 +501,18 @@ export function calcularMetricasPorSetor(tarefas: Tarefa[]): MetricasPorSetor[] 
     .sort((a, b) => a.setor.localeCompare(b.setor))
 }
 
-/** Agrupa as tarefas pelas 4 equipes de atendimento conhecidas e calcula as métricas de cada uma. */
+/**
+ * Agrupa as tarefas pelas 4 equipes conhecidas e calcula as métricas de cada uma.
+ * A equipe de cada card sai de `equipeDaTarefa`, então a mesma função serve às
+ * duas visões — na executora, o card conta para a equipe de quem o fechou.
+ */
 export function calcularMetricasPorEquipe(
   tarefas: Tarefa[],
   modoTaxaAtraso: 'ativas' | 'total' = 'ativas',
+  visao: VisaoDashboard = 'atendimento',
 ): MetricasPorEquipe[] {
   return EQUIPES_ATENDIMENTO.map((equipe) => {
-    const tarefasDaEquipe = tarefas.filter((t) => t.equipeAtendimento === equipe)
+    const tarefasDaEquipe = tarefas.filter((t) => equipeDaTarefa(t, visao) === equipe)
     return {
       equipe,
       metricas: calcularMetricas(tarefasDaEquipe, modoTaxaAtraso),

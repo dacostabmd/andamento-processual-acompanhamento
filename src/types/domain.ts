@@ -110,8 +110,61 @@ export const NOMES_DEPARTAMENTO_EQUIPES = [
 ] as const
 
 /**
- * "Pacote" da tela de inteligência: todos os cards atribuídos a um mesmo
- * responsável pelo atendimento, já classificados na equipe dele.
+ * Nome do departamento ("Andamento Simone Freitas") → equipe ("Simone Freitas").
+ * É o caminho inverso de NOMES_DEPARTAMENTO_EQUIPES e existe porque o snapshot
+ * grava `fechadoPorDepartamentos` como NOME, não como ID — é a única forma de
+ * saber a equipe de quem efetivamente fechou a tarefa.
+ */
+export const EQUIPE_POR_NOME_DEPARTAMENTO: Record<string, EquipeAtendimento> = {
+  'Andamento Cinthia Filgueiras': 'Cinthia Filgueiras',
+  'Andamento Simone Freitas': 'Simone Freitas',
+  'Andamento Quézia Karen': 'Quézia Karen',
+  'Andamento Lorena Pontes': 'Lorena Pontes',
+}
+
+/**
+ * Dimensão pela qual o dashboard agrupa os cards. As duas visões respondem a
+ * perguntas diferentes e podem divergir na MESMA tarefa:
+ *
+ *   - 'atendimento': agrupa pelo participante da tarefa (accomplices[0]). É quem
+ *     responde ao cliente. Cobre 100% dos cards, mas a ordem do array de
+ *     participantes no Bitrix não é semântica, então o valor é frágil — hoje 93%
+ *     dos cards caem numa única pessoa.
+ *   - 'executora': agrupa por quem FECHOU o card, usando o departamento real do
+ *     fechador (`fechadoPorDepartamentos`). É a atribuição confiável de trabalho
+ *     entregue, mas só existe para cards já fechados.
+ *
+ * Exemplo real do snapshot: um card com fechadoPorDepartamentos =
+ * ["Andamento Simone Freitas"] aparece como equipe "Cinthia Filgueiras" na visão
+ * de atendimento (porque Cinthia é o accomplice) e como "Simone Freitas" na
+ * visão executora. Ver docs/ia-modelagem-e-hierarquia.md §1.
+ */
+export type VisaoDashboard = 'atendimento' | 'executora'
+
+export const VISOES_DASHBOARD: Array<{
+  valor: VisaoDashboard
+  rotulo: string
+  descricao: string
+}> = [
+  {
+    valor: 'atendimento',
+    rotulo: 'Por atendimento',
+    descricao: 'Agrupa pelo responsável pelo atendimento (participante do card)',
+  },
+  {
+    valor: 'executora',
+    rotulo: 'Por equipe executora',
+    descricao: 'Agrupa por quem fechou o card, pelo departamento real do fechador',
+  },
+]
+
+/**
+ * "Pacote" da tela de inteligência: todos os cards atribuídos a uma mesma
+ * pessoa, já classificados na equipe dela. Quem é essa pessoa depende da
+ * VisaoDashboard ativa — o responsável pelo atendimento na visão 'atendimento',
+ * ou quem fechou o card na visão 'executora'. Os nomes dos campos preservam a
+ * nomenclatura original para não quebrar os gráficos, que consomem as duas
+ * visões pelo mesmo formato.
  */
 export interface PacoteAtendimento {
   responsavelAtendimentoId: number | null
@@ -149,6 +202,47 @@ export interface VolumeFechadoPor {
   fechadoPorId: number | null
   nome: string
   total: number
+}
+
+/**
+ * Uma linha do ranking de quem fecha tarefas (campo `closedBy` do Bitrix).
+ *
+ * Diferente de VolumeFechadoPor, que só carrega o total para o gráfico de
+ * barras: aqui interessa comparar pessoas entre si, então cada linha traz a
+ * equipe (para saber de quem é o time), a repartição por prazo (volume alto com
+ * muito atraso não é a mesma coisa que volume alto no prazo) e a participação
+ * no total.
+ */
+export interface RankingFechador {
+  fechadoPorId: number
+  nome: string
+  /** Equipe do fechador, derivada dos departamentos dele. */
+  equipe: EquipeAtendimento
+  /** Cards concluídos por esta pessoa. */
+  total: number
+  /** Dos concluídos, quantos terminaram até o prazo. */
+  noPrazo: number
+  /** Dos concluídos, quantos terminaram depois do prazo. */
+  comAtraso: number
+  /** Concluídos sem prazo definido — não entram em noPrazo nem comAtraso. */
+  semPrazo: number
+  /** Participação percentual no total de cards fechados do recorte atual. */
+  percentual: number
+}
+
+/**
+ * Ranking completo + os totais que dão contexto a ele. Os totais evitam a
+ * leitura errada mais comum: tratar o volume de fechamento como se cobrisse
+ * todos os cards, quando só cards CONCLUÍDOS têm fechador.
+ */
+export interface RankingFechadores {
+  linhas: RankingFechador[]
+  /** Cards concluídos com fechador identificado — a base do ranking. */
+  totalFechado: number
+  /** Concluídos sem `closedBy` preenchido: ficam fora do ranking. */
+  concluidasSemFechador: number
+  /** Cards ainda não concluídos: não têm fechador por definição. */
+  naoConcluidas: number
 }
 
 /** Volume de cards por UF (estado), para o ranking geográfico. */

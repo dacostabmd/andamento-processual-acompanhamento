@@ -1,11 +1,13 @@
 import { listarTodasPaginas } from './bitrixTransport'
 import { registrarSnapshotMetadata } from './debugSnapshot'
 import { modoMockDevAtivo } from './modoMockDev'
+import { baseSyncApi, descreverErroHttp, fetchSyncApi } from './syncApi'
 import {
   aplicarFiltros,
   calcularMetricas,
   calcularMetricasPorSetor,
   calcularMetricasPorEquipe,
+  calcularRankingFechadores,
   empacotarPorAtendimento,
 } from '../utils/tarefasMetrics'
 import {
@@ -18,7 +20,9 @@ import {
   type MetricasTarefas,
   type PacoteAtendimento,
   type Projeto,
+  type RankingFechadores,
   type Tarefa,
+  type VisaoDashboard,
 } from '../types/domain'
 
 let cacheDepartamentos: Promise<Map<number, string>> | null = null
@@ -54,10 +58,9 @@ function obterDepartamentosBitrix(): Promise<Map<number, string>> {
 let cacheChave: string | null = null
 let cachePromise: Promise<Tarefa[]> | null = null
 
+/** Mantido como alias de baseSyncApi para não alterar os chamadores locais. */
 function baseSyncApiUrl(): string | null {
-  const bruta = import.meta.env.VITE_SYNC_API_URL?.trim()
-  if (!bruta) return null
-  return bruta.endsWith('/') ? bruta.slice(0, -1) : bruta
+  return baseSyncApi()
 }
 
 interface SnapshotMetadata {
@@ -74,13 +77,14 @@ async function buscarTarefasDoSnapshot(): Promise<Tarefa[]> {
 
   if (base) {
     try {
-      const resposta = await fetch(`${base}/snapshot`)
+      // Envia o X-API-Token: o worker agora exige credencial em /snapshot.
+      const resposta = await fetchSyncApi('/snapshot')
       if (resposta.ok) {
         const corpo = (await resposta.json()) as { tarefas: Tarefa[]; metadata: SnapshotMetadata }
         registrarSnapshotMetadata(corpo.metadata)
         return corpo.tarefas
       }
-      erroConexao = `Servidor de sincronização respondeu com status HTTP ${resposta.status}.`
+      erroConexao = descreverErroHttp(resposta.status, base)
     } catch (err) {
       console.warn('Serviço de sync em VITE_SYNC_API_URL não respondeu:', err)
       erroConexao = `Não foi possível conectar ao servidor em ${base}. Verifique se a VPS está ligada.`
@@ -175,9 +179,10 @@ export async function obterMetricasPorSetorFiltradas(
 export async function obterMetricasPorEquipeFiltradas(
   filtros: FiltrosDashboard,
   projetosPermitidos: Projeto[],
+  visao: VisaoDashboard = 'atendimento',
 ): Promise<MetricasPorEquipe[]> {
   const tarefas = await carregarTarefasPermitidas(projetosPermitidos)
-  return calcularMetricasPorEquipe(aplicarFiltros(tarefas, filtros), filtros.modoTaxaAtraso)
+  return calcularMetricasPorEquipe(aplicarFiltros(tarefas, filtros), filtros.modoTaxaAtraso, visao)
 }
 
 
@@ -189,9 +194,24 @@ export async function obterMetricasPorEquipeFiltradas(
 export async function obterPacotesAtendimento(
   filtros: FiltrosDashboard,
   projetosPermitidos: Projeto[],
+  visao: VisaoDashboard = 'atendimento',
 ): Promise<PacoteAtendimento[]> {
   const tarefas = await carregarTarefasPermitidas(projetosPermitidos)
-  return empacotarPorAtendimento(aplicarFiltros(tarefas, filtros))
+  return empacotarPorAtendimento(aplicarFiltros(tarefas, filtros), visao)
+}
+
+/**
+ * Ranking de quem mais fecha tarefas (`closedBy`), sob os filtros ativos.
+ *
+ * Não depende da visão selecionada: "quem fechou" é sempre o fechador. A visão
+ * decide como os cards são AGRUPADOS nos gráficos, não quem executou o trabalho.
+ */
+export async function obterRankingFechadores(
+  filtros: FiltrosDashboard,
+  projetosPermitidos: Projeto[],
+): Promise<RankingFechadores> {
+  const tarefas = await carregarTarefasPermitidas(projetosPermitidos)
+  return calcularRankingFechadores(aplicarFiltros(tarefas, filtros))
 }
 
 /**
