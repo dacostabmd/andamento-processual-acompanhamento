@@ -1,3 +1,14 @@
+/* Tailwind v4 convivendo com o Mantine: importamos theme + utilities, mas NÃO o
+ * preflight. O preflight é um reset global agressivo (zera margens, herda
+ * border-box, remove estilo de botões/listas) que atropelaria os estilos que o
+ * Mantine já aplica nos próprios componentes — Paper, Button e inputs perderiam
+ * altura, borda e espaçamento. Sem ele, as utilities (flex, gap-2, rounded-full)
+ * ficam disponíveis para componentes novos sem tocar em nada do que já existe.
+ * Se algum dia o projeto sair do Mantine, basta adicionar a linha do preflight. */
+@layer theme, base, components, utilities;
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
+
 /* Sistema de tema baseado no color-scheme NATIVO do Mantine v9.
  *
  * Dois modos, alternados pelo botão (o Mantine troca o atributo no <html>):
@@ -35,10 +46,20 @@
   --mantine-color-text: var(--cor-secundaria);
 }
 
+/* Roboto como fonte do documento. O Mantine já recebe a mesma stack via
+ * theme.ts, mas isto cobre o que está fora dele (elementos nativos e os
+ * componentes estilizados com utilities do Tailwind). --font-sans é o token que
+ * as utilities `font-sans` do Tailwind leem. */
+@theme {
+  --font-sans: Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  --font-mono: 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
 body {
   margin: 0;
   background-color: var(--mantine-color-body);
   color: var(--mantine-color-text);
+  font-family: var(--font-sans);
 }
 
 /* Fade suave global na troca de tema.

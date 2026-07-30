@@ -2,6 +2,7 @@ import { existsSync, rmSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
 
 /**
  * public/snapshot-mock.json é dado real (599 tarefas + nomes de funcionários)
@@ -24,5 +25,5 @@ function removerSnapshotMockDoDist(): Plugin {
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), removerSnapshotMockDoDist()],
+  plugins: [react(), tailwindcss(), removerSnapshotMockDoDist()],
 })

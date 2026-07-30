@@ -14,17 +14,21 @@ const dourado: MantineColorsTuple = [
   '#433319',
 ]
 
-// Fira Code (Google Fonts, carregada via <link> no index.html) como fonte geral
-// do app. É monoespaçada, então serve tanto para texto quanto para mono.
+// Roboto (Google Fonts, carregada via <link> no index.html) como fonte geral do
+// app — inclui todos os pesos (100..900) e itálico. A Fira Code fica reservada
+// só para trechos monoespaçados (código, IDs), onde o alinhamento de coluna
+// importa; usar monoespaçada no texto corrido prejudicava a legibilidade das
+// tabelas e dos títulos.
 const fontStack =
-  '"Fira Code", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace'
+  'Roboto, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif'
+const fontStackMono = '"Fira Code", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace'
 
 export const theme = createTheme({
   primaryColor: 'dourado',
   primaryShade: 6,
   defaultRadius: 'md',
   fontFamily: fontStack,
-  fontFamilyMonospace: fontStack,
+  fontFamilyMonospace: fontStackMono,
   headings: { fontFamily: fontStack },
   colors: {
     dourado,
