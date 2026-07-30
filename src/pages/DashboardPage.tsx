@@ -1,4 +1,4 @@
-import { Button, Center, Group, Loader, Stack, Title } from '@mantine/core'
+import { Button, Center, Group, Loader, Stack, Text, Title } from '@mantine/core'
 import { useEffect, useState, type ReactNode } from 'react'
 import { EstadoVazio } from '../components/EstadoVazio'
 import { ThemeToggle } from '../components/ThemeToggle'
@@ -7,12 +7,15 @@ import { DebugBitrixPanel } from '../components/dashboard/DebugBitrixPanel'
 import { FiltrosPainel } from '../components/dashboard/FiltrosPainel'
 import { GraficosInteligencia } from '../components/dashboard/GraficosInteligencia'
 import { MetricasCards } from '../components/dashboard/MetricasCards'
+import { NavbarVisualizacoes } from '../components/dashboard/NavbarVisualizacoes'
+import { RankingFechadores } from '../components/dashboard/RankingFechadores'
 import { VersaoModal } from '../components/dashboard/VersaoModal'
 import { useSessaoUsuario } from '../hooks/useSessaoUsuario'
 import {
   obterMetricasFiltradas,
   obterMetricasPorEquipeFiltradas,
   obterPacotesAtendimento,
+  obterRankingFechadores,
 } from '../services/dashboardService'
 import {
   filtrosVazios,
@@ -20,6 +23,8 @@ import {
   type MetricasPorEquipe,
   type MetricasTarefas,
   type PacoteAtendimento,
+  type RankingFechadores as DadosRankingFechadores,
+  type VisaoDashboard,
 } from '../types/domain'
 import classes from './DashboardPage.module.css'
 
@@ -27,9 +32,11 @@ export function DashboardPage() {
   const { estado, colaborador, projetosPermitidos, mensagemErro } = useSessaoUsuario()
 
   const [filtros, setFiltros] = useState<FiltrosDashboard>(() => filtrosVazios(new Date()))
+  const [visao, setVisao] = useState<VisaoDashboard>('atendimento')
   const [metricas, setMetricas] = useState<MetricasTarefas | null>(null)
   const [metricasPorEquipe, setMetricasPorEquipe] = useState<MetricasPorEquipe[]>([])
   const [pacotes, setPacotes] = useState<PacoteAtendimento[] | null>(null)
+  const [rankingFechadores, setRankingFechadores] = useState<DadosRankingFechadores | null>(null)
   const [erroDados, setErroDados] = useState<string | null>(null)
   const [carregandoFiltro, setCarregandoFiltro] = useState(false)
   const [modalVersaoAberto, setModalVersaoAberto] = useState<boolean | undefined>(undefined)
@@ -40,15 +47,17 @@ export function DashboardPage() {
     setCarregandoFiltro(true)
     Promise.all([
       obterMetricasFiltradas(filtros, projetosPermitidos),
-      obterMetricasPorEquipeFiltradas(filtros, projetosPermitidos),
-      obterPacotesAtendimento(filtros, projetosPermitidos),
+      obterMetricasPorEquipeFiltradas(filtros, projetosPermitidos, visao),
+      obterPacotesAtendimento(filtros, projetosPermitidos, visao),
+      obterRankingFechadores(filtros, projetosPermitidos),
     ])
-      .then(([novasMetricas, novasMetricasPorEquipe, novosPacotes]) => {
+      .then(([novasMetricas, novasMetricasPorEquipe, novosPacotes, novoRanking]) => {
         if (cancelado) return
         setErroDados(null)
         setMetricas(novasMetricas)
         setMetricasPorEquipe(novasMetricasPorEquipe)
         setPacotes(novosPacotes)
+        setRankingFechadores(novoRanking)
       })
       .catch((erro) => {
         if (cancelado) return
@@ -60,7 +69,7 @@ export function DashboardPage() {
     return () => {
       cancelado = true
     }
-  }, [estado, filtros, projetosPermitidos])
+  }, [estado, filtros, projetosPermitidos, visao])
 
   function aoMudarFiltros(novosFiltros: FiltrosDashboard) {
     setFiltros(novosFiltros)
@@ -123,6 +132,8 @@ export function DashboardPage() {
             <EstadoVazio titulo="Não foi possível carregar os dados" descricao={erroDados} />
           ) : (
             <>
+              <NavbarVisualizacoes visao={visao} onChange={setVisao} />
+
               <FiltrosPainel
                 filtros={filtros}
                 onChange={aoMudarFiltros}
@@ -136,11 +147,25 @@ export function DashboardPage() {
               />
 
               <div>
+                <Title order={3} mb="xs">
+                  Quem está fechando mais tarefas
+                </Title>
+                <Text size="sm" c="dimmed" mb="md">
+                  Ranking por <code>closedBy</code> — quem efetivamente concluiu o card. É a
+                  atribuição de pessoa mais confiável do snapshot, e independe da visão
+                  selecionada acima.
+                </Text>
+                {rankingFechadores && <RankingFechadores dados={rankingFechadores} />}
+              </div>
+
+              <div>
                 <Title order={3} mb="md">
-                  Inteligência — visão por equipe
+                  {visao === 'executora'
+                    ? 'Inteligência — visão por equipe executora (quem fechou)'
+                    : 'Inteligência — visão por equipe de atendimento'}
                 </Title>
                 <Stack gap="md">
-                  {pacotes && <GraficosInteligencia pacotes={pacotes} />}
+                  {pacotes && <GraficosInteligencia pacotes={pacotes} visao={visao} />}
                 </Stack>
               </div>
             </>
@@ -159,7 +184,7 @@ export function DashboardPage() {
         abertoManual={modalVersaoAberto}
         onCloseManual={() => setModalVersaoAberto(false)}
       />
-      <AiAssistantChat metricas={metricas} pacotes={pacotes} filtros={filtros} />
+      <AiAssistantChat metricas={metricas} pacotes={pacotes} filtros={filtros} visao={visao} />
       <DebugBitrixPanel />
     </div>
   )
