@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { VERSAO_ATUAL } from '../components/dashboard/VersaoModal'
 import classes from './ChangelogsPage.module.css'
 
 export function ChangelogsPage() {
@@ -11,7 +12,7 @@ export function ChangelogsPage() {
               Documentação de Métricas e Inteligência Artificial
             </h1>
             <p style={{ margin: '4px 0 0 0', color: 'var(--texto-secundario, #a0aec0)', fontSize: '14px' }}>
-              Dashboard de Andamento Processual — Versão v0.0.1
+              Dashboard de Andamento Processual — Versão v{VERSAO_ATUAL}
             </p>
           </div>
           <Link to="/dashboard" className={classes.btnVoltar}>

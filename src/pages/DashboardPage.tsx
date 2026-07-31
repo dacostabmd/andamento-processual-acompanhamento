@@ -9,7 +9,7 @@ import { GraficosInteligencia } from '../components/dashboard/GraficosInteligenc
 import { MetricasCards } from '../components/dashboard/MetricasCards'
 import { NavbarVisualizacoes } from '../components/dashboard/NavbarVisualizacoes'
 import { RankingFechadores } from '../components/dashboard/RankingFechadores'
-import { VersaoModal } from '../components/dashboard/VersaoModal'
+import { VERSAO_ATUAL, VersaoModal } from '../components/dashboard/VersaoModal'
 import { useSessaoUsuario } from '../hooks/useSessaoUsuario'
 import {
   obterMetricasFiltradas,
@@ -122,7 +122,7 @@ export function DashboardPage() {
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: '6px' }}>
                 <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
               </svg>
-              Novidades v0.0.1
+              Novidades v{VERSAO_ATUAL}
             </Button>
 
           </Group>

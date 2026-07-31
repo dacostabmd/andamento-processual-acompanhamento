@@ -4,7 +4,13 @@ import { Link } from 'react-router-dom'
 import classes from './VersaoModal.module.css'
 
 const CHAVE_LOCALSTORAGE_VERSAO = 'dap_ultima_versao_visto'
-const VERSAO_ATUAL = '0.0.1'
+
+/**
+ * Versão exibida no dashboard. Exportada porque o badge "Novidades" e a página
+ * de changelogs mostram o mesmo número — antes eram três strings soltas, que
+ * saíam de sincronia a cada release.
+ */
+export const VERSAO_ATUAL = '1.0.0'
 
 interface VersaoModalProps {
   abertoManual?: boolean
@@ -91,7 +97,22 @@ export function VersaoModal({ abertoManual, onCloseManual }: VersaoModalProps) {
                 </div>
                 <div className={classes.featureText}>
                   <h4>Ajudante Virtual de BI (Text-to-SQL)</h4>
-                  <p>Chat interativo com consultas diretas ao banco de dados SQLite local, memória conversacional e respostas transparentes.</p>
+                  <p>Chat interativo que consulta a base sincronizada do Bitrix em linguagem natural, com memória conversacional e respostas transparentes.</p>
+                </div>
+              </div>
+
+              <div className={classes.featureItem}>
+                <div className={classes.featureIcon}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                    <circle cx="8.5" cy="7" r="4" />
+                    <path d="M20 8v6" />
+                    <path d="M23 11h-6" />
+                  </svg>
+                </div>
+                <div className={classes.featureText}>
+                  <h4>Ranking de Fechadores com Setor e Supervisor</h4>
+                  <p>Lista completa de quem fecha tarefas — buscável, com repartição por prazo, setor e supervisor de cada pessoa, e ordenação por volume, pontualidade ou nome.</p>
                 </div>
               </div>
 
@@ -110,8 +131,8 @@ export function VersaoModal({ abertoManual, onCloseManual }: VersaoModalProps) {
                   </svg>
                 </div>
                 <div className={classes.featureText}>
-                  <h4>Alternância de Visão da Taxa de Atraso</h4>
-                  <p>Alterne entre a Taxa sobre Fila Ativa (backlog pendente) e Taxa sobre Volume Total no painel de filtros com apoio de tooltips.</p>
+                  <h4>Visões de Atendimento e Executora</h4>
+                  <p>Alterne entre as visões, filtre por equipe e escolha a Taxa de Atraso sobre a Fila Ativa (backlog pendente) ou sobre o Volume Total. Tema claro e escuro incluídos.</p>
                 </div>
               </div>
 
