@@ -1,17 +1,17 @@
 import { Badge, Progress, Text, TextInput, Tooltip } from '@mantine/core'
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { RankingFechadores as DadosRanking, RankingFechador } from '../../types/domain'
 import { EstadoVazio } from '../EstadoVazio'
-import classes from './RankingFechadores.module.css'
+import { PilulaDeslizante, type OpcaoPilula } from './PilulaDeslizante'
 import { COR_POR_EQUIPE } from './tarefaApresentacao'
 
 type Coluna = 'total' | 'noPrazo' | 'comAtraso' | 'nome'
 
-const ORDENACOES: Array<[Coluna, string]> = [
-  ['total', 'Volume'],
-  ['noPrazo', 'No prazo'],
-  ['comAtraso', 'Com atraso'],
-  ['nome', 'A–Z'],
+const ORDENACOES: ReadonlyArray<OpcaoPilula<Coluna>> = [
+  { valor: 'total', rotulo: 'Volume' },
+  { valor: 'noPrazo', rotulo: 'No prazo' },
+  { valor: 'comAtraso', rotulo: 'Com atraso' },
+  { valor: 'nome', rotulo: 'A–Z' },
 ]
 
 interface Props {
@@ -105,7 +105,19 @@ export function RankingFechadores({ dados }: Props) {
           size="xs"
           className="min-w-[220px] flex-1"
         />
-        <SeletorOrdenacao valor={coluna} onChange={setColuna} />
+        <PilulaDeslizante
+          opcoes={ORDENACOES}
+          valor={coluna}
+          onChange={setColuna}
+          rotuloAcessivel="Ordenar ranking por"
+          className="gap-0.5 p-0.5"
+          classNameOpcao="px-3 py-1 text-xs font-semibold"
+          recuo={2}
+          style={{
+            backgroundColor: 'var(--superficie)',
+            border: '1px solid var(--superficie-borda)',
+          }}
+        />
       </div>
 
       {/* Overflow no container, não no body: a tabela é larga no celular. */}
@@ -144,82 +156,6 @@ export function RankingFechadores({ dados }: Props) {
           )}
         </div>
       </div>
-    </div>
-  )
-}
-
-/**
- * Seletor de ordenação com pílula deslizante.
- *
- * A posição/largura do indicador é medida do botão ativo em vez de calculada
- * por índice: os rótulos têm larguras diferentes ("A–Z" vs "Com atraso"), então
- * um passo fixo desalinharia. Remedimos em troca de seleção e em resize, porque
- * a fonte pode carregar depois da primeira pintura e mudar as larguras.
- */
-function SeletorOrdenacao({
-  valor,
-  onChange,
-}: {
-  valor: Coluna
-  onChange: (valor: Coluna) => void
-}) {
-  const grupoRef = useRef<HTMLDivElement>(null)
-  // `animar: false` na primeira medição — sem isso o indicador deslizaria de
-  // left:0 até a opção padrão a cada montagem. As medições seguintes (troca de
-  // opção, resize) animam.
-  const [pilula, setPilula] = useState<{ left: number; width: number; animar: boolean } | null>(
-    null,
-  )
-
-  const medir = useCallback(() => {
-    const grupo = grupoRef.current
-    const ativo = grupo?.querySelector<HTMLButtonElement>('[data-ativo="true"]')
-    if (!grupo || !ativo) return
-    // offsetLeft é relativo ao grupo (position: relative), então não precisa de
-    // getBoundingClientRect nem compensar scroll.
-    const left = ativo.offsetLeft
-    const width = ativo.offsetWidth
-    setPilula((anterior) => {
-      if (anterior && anterior.left === left && anterior.width === width) return anterior
-      return { left, width, animar: anterior !== null }
-    })
-  }, [])
-
-  useLayoutEffect(() => {
-    medir()
-  }, [medir, valor])
-
-  useEffect(() => {
-    const grupo = grupoRef.current
-    if (!grupo) return
-    // ResizeObserver em vez de window.resize: o grupo também muda de largura
-    // quando o campo de busca ao lado cresce/encolhe, sem a janela mudar.
-    const observer = new ResizeObserver(medir)
-    observer.observe(grupo)
-    return () => observer.disconnect()
-  }, [medir])
-
-  return (
-    <div ref={grupoRef} className={classes.grupo} role="group" aria-label="Ordenar ranking por">
-      {pilula && (
-        <span
-          aria-hidden
-          className={`${classes.indicador} ${pilula.animar ? '' : classes.indicadorEstatico}`}
-          style={{ left: pilula.left, width: pilula.width }}
-        />
-      )}
-      {ORDENACOES.map(([opcao, rotulo]) => (
-        <button
-          key={opcao}
-          type="button"
-          data-ativo={valor === opcao}
-          aria-pressed={valor === opcao}
-          onClick={() => onChange(opcao)}
-          className={`${classes.opcao} ${valor === opcao ? classes.opcaoAtiva : ''}`}
-        >
-          {rotulo}
-        </button>
-      ))}
     </div>
   )
 }
