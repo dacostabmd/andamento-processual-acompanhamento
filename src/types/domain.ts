@@ -57,18 +57,22 @@ export interface Tarefa {
   responsavelNome: string | null
   prioridade: PrioridadeTarefa
   /**
-   * Quem atende o card: o PARTICIPANTE (accomplice) da tarefa no Bitrix — é
-   * este campo, e não o responsável nativo, que define a equipe de atendimento.
-   * Null quando o card não tem participante identificável.
+   * Responsável nativo da tarefa (RESPONSIBLE_ID) — quem atende o card.
+   * Null quando a tarefa não tem responsável identificável.
    */
   responsavelAtendimentoId: number | null
   responsavelAtendimentoNome: string | null
-  /** Equipe do participante, pelo ID do departamento dele. */
+  /**
+   * Equipe de atendimento: uma das 4 equipes (Simone Freitas, Quézia Karen,
+   * Cinthia Filgueiras, Lorena Pontes) encontrada em `fechadoPorDepartamentos`,
+   * normalizando nomes com grafia divergente.
+   */
   equipeAtendimento: EquipeAtendimento
   /**
-   * De onde saiu `equipeAtendimento`. 'participante' é o caso normal;
-   * 'nao_atribuida' é ausência declarada (sem participante, ou fora das 4
-   * equipes). A tela usa isto para dizer sobre que base o número foi calculado.
+   * De onde saiu `equipeAtendimento`. 'fechador' é o caso normal (achada em
+   * fechadoPorDepartamentos); 'nao_atribuida' é ausência declarada (nenhuma das
+   * 4 equipes presente). A tela usa isto para dizer sobre que base o número foi
+   * calculado. 'participante'/'responsavel' são valores legados.
    */
   origemEquipeAtendimento: OrigemEquipe
   /** Equipe de quem FECHOU o card, pelo ID do departamento do fechador. */
@@ -105,11 +109,12 @@ export const EQUIPES_ATENDIMENTO = [
 export type EquipeAtendimento = (typeof EQUIPES_ATENDIMENTO)[number] | 'indefinido'
 
 /**
- * Procedência da equipe de atendimento. 'participante' é o caso normal (equipe
- * do accomplices[0]); 'responsavel' é valor legado de snapshots gravados antes
- * desta versão. Espelha `origemEquipeAtendimento` em types.ts no worker.
+ * Procedência da equipe de atendimento. 'fechador' é o caso normal (equipe
+ * achada em fechadoPorDepartamentos); 'participante' e 'responsavel' são
+ * valores legados de snapshots gravados antes desta versão. Espelha
+ * `origemEquipeAtendimento` em types.ts no worker.
  */
-export type OrigemEquipe = 'participante' | 'responsavel' | 'nao_atribuida'
+export type OrigemEquipe = 'participante' | 'responsavel' | 'fechador' | 'nao_atribuida'
 
 /**
  * ID do departamento (Bitrix24) de cada equipe de atendimento — espelha

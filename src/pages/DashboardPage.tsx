@@ -29,7 +29,7 @@ import {
 import classes from './DashboardPage.module.css'
 
 export function DashboardPage() {
-  const { estado, colaborador, projetosPermitidos, mensagemErro } = useSessaoUsuario()
+  const { estado, projetosPermitidos, mensagemErro } = useSessaoUsuario()
 
   const [filtros, setFiltros] = useState<FiltrosDashboard>(() => filtrosVazios(new Date()))
   const [visao, setVisao] = useState<VisaoDashboard>('atendimento')
@@ -105,8 +105,7 @@ export function DashboardPage() {
     conteudo = (
       <div className={classes.conteudo}>
         <Stack gap="xl">
-          <Group justify="space-between" align="center">
-            {colaborador && <Title order={2}>Olá, {colaborador.nome}</Title>}
+          <Group justify="flex-end" align="center">
             <Button
               variant="subtle"
               color="yellow"

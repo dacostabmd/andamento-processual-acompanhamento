@@ -10,13 +10,13 @@ import './index.css'
 import { theme } from './theme.ts'
 import App from './App.tsx'
 
-// defaultColorScheme "light" = modo NORMAL do painel (fundo claro #c7c7c7,
-// texto escuro — ver index.css). O botão de tema alterna para "dark" (fundo
-// escuro #1a1a1a). ColorSchemeScript evita flash de tema errado no load.
+// defaultColorScheme "dark" = padrão do painel (fundo escuro #1a1a1a). O botão
+// de tema alterna para "light" (fundo #c7c7c7, texto escuro — ver index.css).
+// ColorSchemeScript evita flash de tema errado no load.
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ColorSchemeScript defaultColorScheme="light" />
-    <MantineProvider theme={theme} defaultColorScheme="light">
+    <ColorSchemeScript defaultColorScheme="dark" />
+    <MantineProvider theme={theme} defaultColorScheme="dark">
       <Notifications />
       <App />
     </MantineProvider>

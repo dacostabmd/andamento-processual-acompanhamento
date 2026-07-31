@@ -9,7 +9,7 @@ import classes from './ThemeToggle.module.css'
  */
 export function ThemeToggle() {
   const { setColorScheme } = useMantineColorScheme()
-  const computado = useComputedColorScheme('light', { getInitialValueInEffect: true })
+  const computado = useComputedColorScheme('dark', { getInitialValueInEffect: true })
   const escuro = computado === 'dark'
 
   const alternar = () => {
