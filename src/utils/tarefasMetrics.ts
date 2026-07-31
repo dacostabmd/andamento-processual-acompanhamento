@@ -311,8 +311,9 @@ export function calcularInteligencia(pacotes: PacoteAtendimento[]): Inteligencia
  * leitor supor que o ranking cobre tudo.
  *
  * A equipe vem de `equipeExecutoraDaTarefa` (departamento real do fechador), não
- * de `equipeAtendimento` — esta última deriva do participante e concentra ~93%
- * dos cards numa pessoa só.
+ * de `equipeAtendimento` — esta última é a equipe do SUPERVISOR do fechador (ou
+ * do supervisor do responsável, em fallback), útil para agrupar por gestão, mas
+ * não identifica o departamento de quem efetivamente fechou o card.
  */
 export function calcularRankingFechadores(tarefas: Tarefa[]): RankingFechadores {
   const porPessoa = new Map<number, RankingFechador>()

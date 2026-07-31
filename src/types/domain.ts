@@ -64,15 +64,19 @@ export interface Tarefa {
   responsavelAtendimentoNome: string | null
   /**
    * Equipe de atendimento: uma das 4 equipes (Simone Freitas, Quézia Karen,
-   * Cinthia Filgueiras, Lorena Pontes) encontrada em `fechadoPorDepartamentos`,
-   * normalizando nomes com grafia divergente.
+   * Cinthia Filgueiras, Lorena Pontes) do SUPERVISOR (UF_HEAD) de quem fechou
+   * a tarefa, com fallback para a equipe do supervisor do responsável pelo
+   * atendimento quando o supervisor do fechador não pertence a nenhuma das 4.
+   * Nunca vem do participante (accomplices) da tarefa.
    */
   equipeAtendimento: EquipeAtendimento
   /**
-   * De onde saiu `equipeAtendimento`. 'fechador' é o caso normal (achada em
-   * fechadoPorDepartamentos); 'nao_atribuida' é ausência declarada (nenhuma das
-   * 4 equipes presente). A tela usa isto para dizer sobre que base o número foi
-   * calculado. 'participante'/'responsavel' são valores legados.
+   * De onde saiu `equipeAtendimento`. 'fechador' = veio do supervisor de quem
+   * fechou a tarefa (caso normal); 'responsavel' = veio do supervisor do
+   * responsável pelo atendimento (fallback, usado quando o supervisor do
+   * fechador não pertence a nenhuma das 4 equipes); 'nao_atribuida' = nenhum
+   * dos dois supervisores pertence a uma equipe (ou nenhum é identificável).
+   * 'participante' é valor legado de snapshots gravados antes desta versão.
    */
   origemEquipeAtendimento: OrigemEquipe
   /** Equipe de quem FECHOU o card, pelo ID do departamento do fechador. */
@@ -109,10 +113,11 @@ export const EQUIPES_ATENDIMENTO = [
 export type EquipeAtendimento = (typeof EQUIPES_ATENDIMENTO)[number] | 'indefinido'
 
 /**
- * Procedência da equipe de atendimento. 'fechador' é o caso normal (equipe
- * achada em fechadoPorDepartamentos); 'participante' e 'responsavel' são
- * valores legados de snapshots gravados antes desta versão. Espelha
- * `origemEquipeAtendimento` em types.ts no worker.
+ * Procedência da equipe de atendimento. 'fechador' = supervisor de quem fechou
+ * a tarefa (caso normal); 'responsavel' = supervisor do responsável pelo
+ * atendimento (fallback quando o supervisor do fechador não tem equipe).
+ * 'participante' é valor legado de snapshots gravados antes desta versão.
+ * Espelha `origemEquipeAtendimento` em types.ts no worker.
  */
 export type OrigemEquipe = 'participante' | 'responsavel' | 'fechador' | 'nao_atribuida'
 

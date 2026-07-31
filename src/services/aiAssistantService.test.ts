@@ -68,7 +68,7 @@ function tarefa(op: OpcoesTarefa = {}): Tarefa {
     responsavelAtendimentoId: null,
     responsavelAtendimentoNome: op.responsavelAtendimentoNome ?? null,
     equipeAtendimento: op.equipe ?? 'indefinido',
-    origemEquipeAtendimento: op.equipe && op.equipe !== 'indefinido' ? 'participante' : 'nao_atribuida',
+    origemEquipeAtendimento: op.equipe && op.equipe !== 'indefinido' ? 'fechador' : 'nao_atribuida',
     equipeFechador: op.equipeFechador ?? 'indefinido',
     estadoUf: op.estadoUf ?? null,
     setorFechador: null,

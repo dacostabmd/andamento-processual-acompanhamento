@@ -239,7 +239,8 @@ export function resumoSlice(cards: Tarefa[], agora: Date): ResumoSlice {
 }
 
 // ---------------------------------------------------------------------------
-// Contagens por equipe (fechamento via closedBy, atendimento via participante)
+// Contagens por equipe (fechamento via closedBy; atendimento via equipe do
+// supervisor de quem fechou, com fallback para o supervisor do responsável)
 // ---------------------------------------------------------------------------
 
 /** Contagem por status de um conjunto de cards, na ordem de STATUS_LABELS. */
@@ -256,7 +257,7 @@ export interface ContagemEquipe {
   equipe: EquipeAtendimento
   /** Cards FECHADOS por alguém desta equipe (closedBy → departamento do fechador). */
   fechadas: number
-  /** Cards cujo PARTICIPANTE (accomplice) é desta equipe — cobre abertos e fechados. */
+  /** Cards cuja equipe de atendimento (supervisor do fechador, ou do responsável) é esta — cobre abertos e fechados. */
   comResponsavelNoTime: number
   /** Status das fechadas por esta equipe. */
   statusFechadas: ContagemPorStatus
@@ -268,8 +269,10 @@ export interface ContagemEquipe {
  * Contagens por equipe pedidas explicitamente: quantas tarefas cada uma das 4
  * equipes (Cinthia Filgueiras, Simone Freitas, Quézia Karen, Lorena Pontes)
  * FECHOU (`closedBy`, resolvido para equipe por `equipeExecutoraDaTarefa`) e
- * quantas tem como RESPONSÁVEL (`equipeAtendimento`, que sai do participante da
- * tarefa) — com o detalhamento por status em cada uma das duas visões.
+ * quantas tem como equipe de ATENDIMENTO (`equipeAtendimento`, que sai da
+ * equipe do supervisor de quem fechou o card, com fallback para a equipe do
+ * supervisor do responsável pelo atendimento) — com o detalhamento por status
+ * em cada uma das duas visões.
  */
 export function contarPorEquipe(cards: Tarefa[]): ContagemEquipe[] {
   return EQUIPES_ATENDIMENTO.map((equipe) => {

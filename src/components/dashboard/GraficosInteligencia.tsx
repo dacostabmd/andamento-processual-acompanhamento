@@ -111,7 +111,7 @@ interface GraficosInteligenciaProps {
   visao?: VisaoDashboard
 }
 
-/** Só as equipes com pelo menos 1 card entram nos gráficos (evita ruído vazio). */
+/** Só as equipes com pelo menos 1 tarefa entram nos gráficos (evita ruído vazio). */
 function equipesComCards(dados: InteligenciaDados): EquipeAtendimento[] {
   return ORDEM_EQUIPES.filter((equipe) => {
     const linha = dados.porEquipe.find((e) => e.equipe === equipe)
@@ -152,7 +152,7 @@ export function GraficosInteligencia({
     [cores],
   )
 
-  // Contagem de cards por equipe (para os rótulos dos ripples) — sempre do total,
+  // Contagem de tarefas por equipe (para os rótulos dos ripples) — sempre do total,
   // independente da seleção, para o usuário ver o tamanho de cada equipe.
   const totaisPorEquipe = useMemo(() => {
     const mapa = new Map<EquipeAtendimento, number>()
@@ -172,7 +172,7 @@ export function GraficosInteligencia({
 
   const equipes = useMemo(() => equipesComCards(dados), [dados])
 
-  // Equipes que aparecem como ripples: as que têm ao menos 1 card no total.
+  // Equipes que aparecem como ripples: as que têm ao menos 1 tarefa no total.
   const ripplesEquipes = useMemo(
     () => ORDEM_EQUIPES.filter((e) => (totaisPorEquipe.get(e) ?? 0) > 0),
     [totaisPorEquipe],
@@ -202,7 +202,7 @@ export function GraficosInteligencia({
       labels: equipes.map(rotuloEquipe),
       datasets: [
         {
-          label: 'Cards',
+          label: 'Tarefas',
           data: equipes.map(
             (equipe) => dados.porEquipe.find((e) => e.equipe === equipe)?.contagem.total ?? 0,
           ),
@@ -220,7 +220,7 @@ export function GraficosInteligencia({
       labels: dados.topResponsaveis.map((r) => r.nome),
       datasets: [
         {
-          label: 'Cards',
+          label: 'Tarefas',
           data: dados.topResponsaveis.map((r) => r.total),
           backgroundColor: dados.topResponsaveis.map((r) => COR_POR_EQUIPE[r.equipe]),
           borderRadius: 4,
@@ -236,7 +236,7 @@ export function GraficosInteligencia({
       labels: dados.topFechadoPor.map((f) => f.nome),
       datasets: [
         {
-          label: 'Cards',
+          label: 'Tarefas',
           data: dados.topFechadoPor.map((f) => f.total),
           backgroundColor: COR_FECHADO_POR,
           borderRadius: 4,
@@ -252,7 +252,7 @@ export function GraficosInteligencia({
       labels: dados.porUf.map((u) => u.uf),
       datasets: [
         {
-          label: 'Cards',
+          label: 'Tarefas',
           data: dados.porUf.map((u) => u.total),
           backgroundColor: COR_UF,
           borderRadius: 4,
@@ -268,7 +268,7 @@ export function GraficosInteligencia({
       labels: FAIXAS_URGENCIA_LABELS.map((f) => f.label),
       datasets: [
         {
-          label: 'Cards',
+          label: 'Tarefas',
           data: FAIXAS_URGENCIA_LABELS.map((f) => dados.urgencia[f.chave]),
           backgroundColor: FAIXAS_URGENCIA_LABELS.map((f) => COR_URGENCIA[f.chave]),
           borderRadius: 4,
@@ -364,10 +364,10 @@ export function GraficosInteligencia({
         <div className={classes.grade}>
           <div className={classes.cartao}>
             <Text className={classes.tituloCartao} fw={700}>
-              Cards por equipe e situação
+              Tarefas por equipe e situação
             </Text>
             <Text className={classes.subtitulo} size="xs">
-              Distribuição dos cards de cada equipe entre no prazo, adiados, concluídos e atrasados.
+              Distribuição das tarefas de cada equipe entre no prazo, adiadas, concluídas e atrasadas.
             </Text>
             <div className={classes.areaGrafico}>
               <Bar data={empilhado} options={opcoesEmpilhado} />
@@ -379,7 +379,7 @@ export function GraficosInteligencia({
               Participação por equipe
             </Text>
             <Text className={classes.subtitulo} size="xs">
-              Fatia de cada equipe no total de {dados.totalCards} card(s) filtrado(s).
+              Fatia de cada equipe no total de {dados.totalCards} tarefa(s) filtrada(s).
             </Text>
             <div className={classes.areaGrafico}>
               <Doughnut data={distribuicao} options={opcoesRosca} />
@@ -388,11 +388,11 @@ export function GraficosInteligencia({
 
           <div className={`${classes.cartao} ${classes.cartaoLargo}`}>
             <Text className={classes.tituloCartao} fw={700}>
-              {visao === 'executora' ? 'Quem fechou mais cards' : 'Responsáveis com mais cards'}
+              {visao === 'executora' ? 'Quem fechou mais tarefas' : 'Responsáveis com mais tarefas'}
             </Text>
             <Text className={classes.subtitulo} size="xs">
               {visao === 'executora'
-                ? `Top ${dados.topResponsaveis.length} pessoas por volume de cards fechados; a cor indica a equipe do departamento do fechador.`
+                ? `Top ${dados.topResponsaveis.length} pessoas por volume de tarefas fechadas; a cor indica a equipe do departamento do fechador.`
                 : `Top ${dados.topResponsaveis.length} responsáveis pelo atendimento por volume; a cor indica a equipe.`}
             </Text>
             <div className={classes.areaGraficoAlta}>
@@ -405,8 +405,8 @@ export function GraficosInteligencia({
               Fechado por
             </Text>
             <Text className={classes.subtitulo} size="xs">
-              Top {dados.topFechadoPor.length} pessoas por volume de cards fechados (campo
-              customizado do card).
+              Top {dados.topFechadoPor.length} pessoas por volume de tarefas fechadas (campo
+              customizado da tarefa).
             </Text>
             <div className={classes.areaGraficoAlta}>
               <Bar data={fechadoPor} options={opcoesRanking} />
@@ -418,7 +418,7 @@ export function GraficosInteligencia({
               Volume por Estado (UF)
             </Text>
             <Text className={classes.subtitulo} size="xs">
-              Top {dados.porUf.length} estados por volume de cards; cards sem UF informada não
+              Top {dados.porUf.length} estados por volume de tarefas; tarefas sem UF informada não
               entram no ranking.
             </Text>
             <div className={classes.areaGrafico}>
@@ -431,7 +431,7 @@ export function GraficosInteligencia({
               Urgência por prazo
             </Text>
             <Text className={classes.subtitulo} size="xs">
-              Cards ativos (não concluídos, não adiados) por faixa de dias até o vencimento.
+              Tarefas ativas (não concluídas, não adiadas) por faixa de dias até o vencimento.
             </Text>
             <div className={classes.areaGrafico}>
               <Bar data={urgencia} options={opcoesRanking} />

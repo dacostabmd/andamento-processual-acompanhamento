@@ -14,8 +14,8 @@ interface Props {
  * Ranking de quem mais fecha tarefas (campo `closedBy` do Bitrix).
  *
  * Complementa o gráfico "Fechado por", que mostra apenas o top 10 num gráfico de
- * barras. Com 103 pessoas fechando cards, o top 10 esconde 90% delas, e a barra
- * não permite comparar pontualidade nem saber de qual equipe é cada pessoa.
+ * barras. Com 103 pessoas fechando tarefas, o top 10 esconde 90% delas, e a
+ * barra não permite comparar pontualidade nem saber de qual equipe é cada pessoa.
  *
  * Aqui a lista é completa, ordenável e buscável, e cada linha traz a repartição
  * por prazo — porque volume alto com muito atraso não é a mesma leitura que
@@ -63,16 +63,16 @@ export function RankingFechadores({ dados }: Props) {
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Cobertura: sem isto o ranking parece cobrir todos os cards, quando só
-          cards concluídos têm fechador. */}
+      {/* Cobertura: sem isto o ranking parece cobrir todas as tarefas, quando só
+          as concluídas têm fechador. */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
         <Text size="sm" fw={600}>
-          {dados.totalFechado.toLocaleString('pt-BR')} cards fechados por{' '}
+          {dados.totalFechado.toLocaleString('pt-BR')} tarefas fechadas por{' '}
           {dados.linhas.length} pessoa(s)
         </Text>
         {dados.naoConcluidas > 0 && (
           <Text size="xs" c="dimmed">
-            {dados.naoConcluidas.toLocaleString('pt-BR')} card(s) ainda não concluído(s) não entram
+            {dados.naoConcluidas.toLocaleString('pt-BR')} tarefa(s) ainda não concluída(s) não entram
             neste ranking
           </Text>
         )}
@@ -179,7 +179,7 @@ function LinhaFechador({
   ordenadoPorVolume: boolean
 }) {
   // Base da pontualidade exclui os sem prazo: dividir por `total` puniria quem
-  // fecha muitos cards que nunca tiveram prazo definido.
+  // fecha muitas tarefas que nunca tiveram prazo definido.
   const comPrazo = linha.noPrazo + linha.comAtraso
   const pctNoPrazo = comPrazo === 0 ? null : (linha.noPrazo / comPrazo) * 100
 
@@ -250,7 +250,7 @@ function LinhaFechador({
           size="xs"
           mt={4}
           color="#2f6fb0"
-          aria-label={`${linha.total} cards fechados`}
+          aria-label={`${linha.total} tarefas fechadas`}
         />
       </td>
       <td className="px-2 py-2">

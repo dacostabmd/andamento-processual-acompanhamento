@@ -111,8 +111,9 @@ describe('equipeExecutoraDaTarefa', () => {
 })
 
 describe('empacotarPorAtendimento — divergência entre as visões', () => {
-  // Card real do snapshot: fechado pela equipe da Simone, mas com a Cinthia
-  // como participante — as duas visões precisam discordar aqui.
+  // Card real do snapshot: fechado pela equipe da Simone, mas com equipe de
+  // atendimento (supervisor) resolvida para Cinthia — as duas visões precisam
+  // discordar aqui.
   const card = {
     id: 1,
     status: 5,
@@ -125,7 +126,7 @@ describe('empacotarPorAtendimento — divergência entre as visões', () => {
     equipeAtendimento: 'Cinthia Filgueiras',
   } as unknown as Tarefa
 
-  it('agrupa pelo participante na visão de atendimento', () => {
+  it('agrupa pela equipe de atendimento (supervisor) na visão de atendimento', () => {
     const [pacote] = empacotarPorAtendimento([card], 'atendimento')
     expect(pacote.responsavelAtendimentoNome).toBe('Cinthia Filgueiras')
     expect(pacote.equipe).toBe('Cinthia Filgueiras')

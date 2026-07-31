@@ -170,9 +170,10 @@ function linhaEquipe(c: ContagemEquipe): string {
 /**
  * Responde "quantas tarefas cada equipe fechou / tem / está com atraso", com o
  * detalhamento por status pedido explicitamente: fechadas via `closedBy`
- * (equipe do fechador), e "com responsável no time" via participante da tarefa
+ * (equipe do fechador), e "como responsável" via equipe do supervisor de quem
+ * fechou — ou do supervisor do responsável pelo atendimento, em fallback —
  * (`equipeAtendimento`) — as duas contagens não se sobrepõem necessariamente,
- * um card pode ter responsável de uma equipe e ter sido fechado por outra.
+ * um card pode ter equipe de atendimento diferente da equipe de quem o fechou.
  */
 export function comporContagemPorEquipe(cards: Tarefa[], intencao: Intencao): string {
   const linhas = contarPorEquipe(cards).map(linhaEquipe)

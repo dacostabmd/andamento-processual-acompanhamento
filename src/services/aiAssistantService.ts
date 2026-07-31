@@ -82,7 +82,7 @@ export function construirPromptContextual(contexto: ContextoDashboard): string {
           .filter(([, n]) => n > 0)
           .map(([s, n]) => `${n} ${STATUS_LABELS[Number(s) as 2 | 3 | 4 | 5 | 6].toLowerCase()}`)
           .join(', ')
-        return `- Equipe "${c.equipe}": fechou ${c.fechadas} tarefa(s) (${statusFechadas || 'nenhum status'}); tem ${c.comResponsavelNoTime} tarefa(s) como responsável/participante (${statusResp || 'nenhum status'})`
+        return `- Equipe "${c.equipe}": fechou ${c.fechadas} tarefa(s) (${statusFechadas || 'nenhum status'}); tem ${c.comResponsavelNoTime} tarefa(s) como equipe de atendimento (${statusResp || 'nenhum status'})`
       })
       .join('\n')
   }
@@ -187,7 +187,7 @@ ${resumoMetricas}
 [Volume por Equipe de Atendimento]
 ${resumoEquipes}
 
-[Contagem por Equipe — Fechadas (closedBy) × Com Responsável (participante), por status]
+[Contagem por Equipe — Fechadas (closedBy) × Equipe de Atendimento (supervisor do fechador, com fallback para o supervisor do responsável), por status]
 ${resumoContagemPorEquipe}
 
 [Mapeamento dos Responsáveis pelo Atendimento]
@@ -242,9 +242,10 @@ export async function enviarMensagemAssistente(
             })),
           filtros: contexto.filtros,
           // A visão ativa na tela decide se "equipe" significa a de quem fechou
-          // o card ou a do participante. Sem isto, a IA podia responder por
-          // equipe_atendimento enquanto o dashboard mostrava equipe_executora —
-          // dois números diferentes para a mesma pergunta, na mesma tela.
+          // o card ou a do supervisor de atendimento. Sem isto, a IA podia
+          // responder por equipe_atendimento enquanto o dashboard mostrava
+          // equipe_executora — dois números diferentes para a mesma pergunta,
+          // na mesma tela.
           visao: contexto.visao ?? 'atendimento',
         }),
       })
