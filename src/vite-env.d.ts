@@ -20,6 +20,13 @@ interface ImportMetaEnv {
    * "https://sync.seudominio.com.br".
    */
   readonly VITE_SYNC_API_URL?: string
+  /**
+   * Token enviado como header `X-API-Token` em toda chamada ao worker
+   * (`/snapshot`, `/query-ia`). Deve ser igual a `API_TOKEN_LEITURA` no `.env`
+   * do worker — sem ele, o worker responde 401. Como toda VITE_*, fica
+   * embutido no bundle e é legível via DevTools; ver syncApi.ts.
+   */
+  readonly VITE_API_TOKEN?: string
 }
 
 interface ImportMeta {
