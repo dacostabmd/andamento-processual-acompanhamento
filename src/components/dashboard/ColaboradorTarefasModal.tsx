@@ -1,4 +1,15 @@
-import { ActionIcon, Badge, Modal, Progress, SimpleGrid, Stack, Text, Tooltip, UnstyledButton } from '@mantine/core'
+import {
+  ActionIcon,
+  Badge,
+  Modal,
+  Progress,
+  SimpleGrid,
+  Stack,
+  Text,
+  TextInput,
+  Tooltip,
+  UnstyledButton,
+} from '@mantine/core'
 import { useMemo, useState } from 'react'
 import { montarUrlTarefaBitrix } from '../../services/bitrixPortal'
 import { STATUS_LABELS, type EquipeAtendimento, type Tarefa } from '../../types/domain'
@@ -37,8 +48,17 @@ const SITUACOES_BREAKDOWN: Array<{ chave: keyof typeof COR_POR_SITUACAO; label: 
   { chave: 'adiadas', label: 'Adiadas' },
 ]
 
+function normalizarBusca(texto: string): string {
+  return texto
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+}
+
 export function ColaboradorTarefasModal({ colaborador, aoFechar }: ColaboradorTarefasModalProps) {
   const [tarefaDetalhe, setTarefaDetalhe] = useState<Tarefa | null>(null)
+  const [busca, setBusca] = useState('')
 
   const contagem = useMemo(
     () => (colaborador ? contarSituacoes(colaborador.cards) : null),
@@ -63,11 +83,18 @@ export function ColaboradorTarefasModal({ colaborador, aoFechar }: ColaboradorTa
     return [...colaborador.cards].sort((a, b) => pesoSituacao(a) - pesoSituacao(b))
   }, [colaborador])
 
+  const cardsFiltrados = useMemo(() => {
+    const termo = normalizarBusca(busca)
+    if (!termo) return cardsOrdenados
+    return cardsOrdenados.filter((t) => normalizarBusca(t.titulo).includes(termo))
+  }, [cardsOrdenados, busca])
+
   return (
     <>
       <Modal
         opened={colaborador !== null}
         onClose={aoFechar}
+        onExitTransitionEnd={() => setBusca('')}
         title="Tarefas contabilizadas"
         centered
         size="auto"
@@ -143,95 +170,110 @@ export function ColaboradorTarefasModal({ colaborador, aoFechar }: ColaboradorTa
                 descricao="Não há tarefas contabilizadas para esta pessoa no recorte de filtros atual."
               />
             ) : (
-              <div className="max-h-[420px] overflow-y-auto overflow-x-auto pr-1">
-                <table className="w-full min-w-[600px] border-collapse text-sm table-fixed">
-                  <colgroup>
-                    <col />
-                    <col className="w-32" />
-                    <col className="w-24" />
-                    <col className="w-32" />
-                    <col className="w-12" />
-                  </colgroup>
-                  <thead
-                    className="sticky top-0 z-10"
-                    style={{ backgroundColor: 'var(--superficie)' }}
-                  >
-                    <tr style={{ borderBottom: '1px solid var(--superficie-borda)' }}>
-                      <th className="px-2 py-2 text-left font-semibold opacity-70">Título</th>
-                      <th className="px-2 py-2 text-left font-semibold opacity-70">Status</th>
-                      <th className="px-2 py-2 text-left font-semibold opacity-70">Prazo</th>
-                      <th className="px-2 py-2 text-left font-semibold opacity-70">
-                        Finalizado em
-                      </th>
-                      <th className="px-2 py-2 text-center font-semibold opacity-70">Ação</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {cardsOrdenados.map((tarefa) => {
-                      const urlBitrix = montarUrlTarefaBitrix(
-                        tarefa.id,
-                        tarefa.projetoId,
-                        tarefa.responsavelId,
-                      )
-                      return (
-                        <tr key={tarefa.id} style={{ borderBottom: '1px solid var(--superficie-borda)' }}>
-                          <td className="px-2 py-2">
-                            <UnstyledButton onClick={() => setTarefaDetalhe(tarefa)}>
-                              <Text size="sm" lineClamp={1} className="hover:underline" style={{ cursor: 'pointer' }}>
-                                {tarefa.titulo}
-                              </Text>
-                            </UnstyledButton>
-                          </td>
-                          <td className="px-2 py-2">
-                            <Badge size="sm" color={corDoStatus(tarefa)} variant="light">
-                              {STATUS_LABELS[tarefa.status]}
-                            </Badge>
-                          </td>
-                          <td className="px-2 py-2">
-                            <Text size="xs">{formatarData(tarefa.prazoFinal)}</Text>
-                          </td>
-                          <td className="px-2 py-2">
-                            <Text size="xs">{formatarDataHora(tarefa.finalizadoEm)}</Text>
-                          </td>
-                          <td className="px-2 py-2">
-                            <div className="flex items-center justify-center">
-                              {urlBitrix && (
-                                <Tooltip label="Abrir no Bitrix" withArrow>
-                                  <ActionIcon
-                                    component="a"
-                                    href={urlBitrix}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    onClick={(e) => e.stopPropagation()}
-                                    variant="subtle"
-                                    size="sm"
-                                    aria-label="Abrir tarefa no Bitrix"
-                                  >
-                                    <svg
-                                      width="14"
-                                      height="14"
-                                      viewBox="0 0 24 24"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      strokeWidth="2"
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                    >
-                                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                                      <path d="M15 3h6v6" />
-                                      <path d="M10 14 21 3" />
-                                    </svg>
-                                  </ActionIcon>
-                                </Tooltip>
-                              )}
-                            </div>
-                          </td>
+              <Stack gap="sm">
+                <TextInput
+                  placeholder="Buscar por título da tarefa…"
+                  value={busca}
+                  onChange={(e) => setBusca(e.currentTarget.value)}
+                  size="xs"
+                />
+
+                {cardsFiltrados.length === 0 ? (
+                  <Text size="sm" c="dimmed" py="md">
+                    Nenhuma tarefa encontrada para "{busca}".
+                  </Text>
+                ) : (
+                  <div className="max-h-[420px] overflow-y-auto overflow-x-auto pr-1">
+                    <table className="w-full min-w-[600px] border-collapse text-sm table-fixed">
+                      <colgroup>
+                        <col />
+                        <col className="w-32" />
+                        <col className="w-24" />
+                        <col className="w-32" />
+                        <col className="w-12" />
+                      </colgroup>
+                      <thead
+                        className="sticky top-0 z-10"
+                        style={{ backgroundColor: 'var(--superficie)' }}
+                      >
+                        <tr style={{ borderBottom: '1px solid var(--superficie-borda)' }}>
+                          <th className="px-2 py-2 text-left font-semibold opacity-70">Título</th>
+                          <th className="px-2 py-2 text-left font-semibold opacity-70">Status</th>
+                          <th className="px-2 py-2 text-left font-semibold opacity-70">Prazo</th>
+                          <th className="px-2 py-2 text-left font-semibold opacity-70">
+                            Finalizado em
+                          </th>
+                          <th className="px-2 py-2 text-center font-semibold opacity-70">Ação</th>
                         </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                      </thead>
+                      <tbody>
+                        {cardsFiltrados.map((tarefa) => {
+                          const urlBitrix = montarUrlTarefaBitrix(
+                            tarefa.id,
+                            tarefa.projetoId,
+                            tarefa.responsavelId,
+                          )
+                          return (
+                            <tr key={tarefa.id} style={{ borderBottom: '1px solid var(--superficie-borda)' }}>
+                              <td className="px-2 py-2">
+                                <UnstyledButton onClick={() => setTarefaDetalhe(tarefa)}>
+                                  <Text size="sm" lineClamp={1} className="hover:underline" style={{ cursor: 'pointer' }}>
+                                    {tarefa.titulo}
+                                  </Text>
+                                </UnstyledButton>
+                              </td>
+                              <td className="px-2 py-2">
+                                <Badge size="sm" color={corDoStatus(tarefa)} variant="light">
+                                  {STATUS_LABELS[tarefa.status]}
+                                </Badge>
+                              </td>
+                              <td className="px-2 py-2">
+                                <Text size="xs">{formatarData(tarefa.prazoFinal)}</Text>
+                              </td>
+                              <td className="px-2 py-2">
+                                <Text size="xs">{formatarDataHora(tarefa.finalizadoEm)}</Text>
+                              </td>
+                              <td className="px-2 py-2">
+                                <div className="flex items-center justify-center">
+                                  {urlBitrix && (
+                                    <Tooltip label="Abrir no Bitrix" withArrow>
+                                      <ActionIcon
+                                        component="a"
+                                        href={urlBitrix}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        onClick={(e) => e.stopPropagation()}
+                                        variant="subtle"
+                                        size="sm"
+                                        aria-label="Abrir tarefa no Bitrix"
+                                      >
+                                        <svg
+                                          width="14"
+                                          height="14"
+                                          viewBox="0 0 24 24"
+                                          fill="none"
+                                          stroke="currentColor"
+                                          strokeWidth="2"
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                        >
+                                          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                                          <path d="M15 3h6v6" />
+                                          <path d="M10 14 21 3" />
+                                        </svg>
+                                      </ActionIcon>
+                                    </Tooltip>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </Stack>
             )}
           </Stack>
         )}
