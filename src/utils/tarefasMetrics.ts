@@ -234,6 +234,34 @@ function acumularSituacao(acc: ContagemSituacao, tarefa: Tarefa, agora: Date): v
   else acc.noPrazo += 1
 }
 
+/** Breakdown por situação de um conjunto qualquer de cards — mesma classificação usada nos gráficos de inteligência. */
+export function contarSituacoes(cards: Tarefa[]): ContagemSituacao {
+  const agora = new Date()
+  const acc = contagemVazia()
+  cards.forEach((card) => acumularSituacao(acc, card, agora))
+  return acc
+}
+
+/** Critério para localizar as tarefas de uma pessoa: cada dimensão usa um ID diferente da tarefa. */
+export type CriterioPessoa =
+  | { tipo: 'responsavelAtendimento'; id: number | null }
+  | { tipo: 'fechadoPor'; id: number | null }
+
+/**
+ * Localiza as tarefas de uma pessoa num recorte de tarefas cruas, usado pelos
+ * pontos de clique do modal de colaborador (gráfico de fechado-por e tabela de
+ * ranking de fechadores). Mostra TODAS as tarefas que batem com o critério, não
+ * só o subconjunto mais estrito que alimenta a métrica de origem (ex.:
+ * `calcularRankingFechadores` só conta concluídas) — por isso o total aqui pode
+ * divergir do número da barra/linha que originou o clique.
+ */
+export function tarefasDaPessoa(tarefas: Tarefa[], criterio: CriterioPessoa): Tarefa[] {
+  if (criterio.tipo === 'fechadoPor') {
+    return tarefas.filter((t) => t.fechadoPorId === criterio.id)
+  }
+  return tarefas.filter((t) => t.responsavelAtendimentoId === criterio.id)
+}
+
 const TOP_RESPONSAVEIS = 10
 const TOP_FECHADO_POR = 10
 

@@ -1,7 +1,9 @@
-import { Badge, Progress, Text, TextInput, Tooltip } from '@mantine/core'
+import { Badge, Progress, Text, TextInput, Tooltip, UnstyledButton } from '@mantine/core'
 import { useMemo, useState } from 'react'
-import type { RankingFechadores as DadosRanking, RankingFechador } from '../../types/domain'
+import type { RankingFechadores as DadosRanking, RankingFechador, Tarefa } from '../../types/domain'
+import { tarefasDaPessoa } from '../../utils/tarefasMetrics'
 import { EstadoVazio } from '../EstadoVazio'
+import type { ColaboradorSelecionado } from './ColaboradorTarefasModal'
 import { PilulaDeslizante, type OpcaoPilula } from './PilulaDeslizante'
 import { COR_POR_EQUIPE } from './tarefaApresentacao'
 
@@ -16,6 +18,9 @@ const ORDENACOES: ReadonlyArray<OpcaoPilula<Coluna>> = [
 
 interface Props {
   dados: DadosRanking
+  /** Tarefas cruas do recorte atual — usadas para resolver as tarefas de uma pessoa ao clicar no nome dela. */
+  tarefas: Tarefa[]
+  onSelecionarColaborador: (colaborador: ColaboradorSelecionado) => void
 }
 
 /**
@@ -29,7 +34,7 @@ interface Props {
  * por prazo — porque volume alto com muito atraso não é a mesma leitura que
  * volume alto no prazo.
  */
-export function RankingFechadores({ dados }: Props) {
+export function RankingFechadores({ dados, tarefas, onSelecionarColaborador }: Props) {
   const [busca, setBusca] = useState('')
   const [coluna, setColuna] = useState<Coluna>('total')
 
@@ -149,6 +154,8 @@ export function RankingFechadores({ dados }: Props) {
                     posicao={indice + 1}
                     liderTotal={liderTotal}
                     ordenadoPorVolume={coluna === 'total'}
+                    tarefas={tarefas}
+                    onSelecionarColaborador={onSelecionarColaborador}
                   />
                 ))}
               </tbody>
@@ -165,11 +172,15 @@ function LinhaFechador({
   posicao,
   liderTotal,
   ordenadoPorVolume,
+  tarefas,
+  onSelecionarColaborador,
 }: {
   linha: RankingFechador
   posicao: number
   liderTotal: number
   ordenadoPorVolume: boolean
+  tarefas: Tarefa[]
+  onSelecionarColaborador: (colaborador: ColaboradorSelecionado) => void
 }) {
   // Base da pontualidade exclui os sem prazo: dividir por `total` puniria quem
   // fecha muitas tarefas que nunca tiveram prazo definido.
@@ -183,9 +194,26 @@ function LinhaFechador({
         {ordenadoPorVolume ? posicao : '–'}
       </td>
       <td className="px-2 py-2">
-        <Text size="sm" fw={posicao <= 3 && ordenadoPorVolume ? 700 : 400} lineClamp={1}>
-          {linha.nome}
-        </Text>
+        <UnstyledButton
+          onClick={() =>
+            onSelecionarColaborador({
+              nome: linha.nome,
+              equipe: linha.equipe,
+              papel: 'Fechado por',
+              cards: tarefasDaPessoa(tarefas, { tipo: 'fechadoPor', id: linha.fechadoPorId }),
+            })
+          }
+        >
+          <Text
+            size="sm"
+            fw={posicao <= 3 && ordenadoPorVolume ? 700 : 400}
+            lineClamp={1}
+            className="hover:underline"
+            style={{ cursor: 'pointer' }}
+          >
+            {linha.nome}
+          </Text>
+        </UnstyledButton>
       </td>
       {/* Setor é o departamento cadastrado na pessoa — mais específico que a
           equipe, e cobre também quem está fora das 4 equipes de andamento

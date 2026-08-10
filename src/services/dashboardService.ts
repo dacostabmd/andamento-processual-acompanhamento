@@ -201,6 +201,19 @@ export async function obterPacotesAtendimento(
 }
 
 /**
+ * Tarefas cruas do recorte de filtros atual — usada para localizar as tarefas
+ * de UM colaborador ao abrir o modal de detalhe. Não dispara fetch novo:
+ * reaproveita o cache em memória de `carregarTarefasPermitidas`.
+ */
+export async function obterTarefasFiltradas(
+  filtros: FiltrosDashboard,
+  projetosPermitidos: Projeto[],
+): Promise<Tarefa[]> {
+  const tarefas = await carregarTarefasPermitidas(projetosPermitidos)
+  return aplicarFiltros(tarefas, filtros)
+}
+
+/**
  * Ranking de quem mais fecha tarefas (`closedBy`), sob os filtros ativos.
  *
  * Não depende da visão selecionada: "quem fechou" é sempre o fechador. A visão

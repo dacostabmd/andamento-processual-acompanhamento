@@ -12,17 +12,19 @@ import {
   type ChartData,
   type ChartOptions,
 } from 'chart.js'
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { Bar, Doughnut, Line } from 'react-chartjs-2'
 import {
   EQUIPES_ATENDIMENTO,
   type EquipeAtendimento,
   type InteligenciaDados,
   type PacoteAtendimento,
+  type Tarefa,
   type VisaoDashboard,
 } from '../../types/domain'
-import { calcularInteligencia } from '../../utils/tarefasMetrics'
+import { calcularInteligencia, equipeExecutoraDaTarefa, tarefasDaPessoa } from '../../utils/tarefasMetrics'
 import { EstadoVazio } from '../EstadoVazio'
+import type { ColaboradorSelecionado } from './ColaboradorTarefasModal'
 import { COR_POR_EQUIPE, COR_POR_SITUACAO } from './tarefaApresentacao'
 import classes from './GraficosInteligencia.module.css'
 
@@ -109,6 +111,10 @@ interface GraficosInteligenciaProps {
   pacotes: PacoteAtendimento[]
   /** Dimensão de agrupamento ativa — muda apenas os rótulos, não o cálculo. */
   visao?: VisaoDashboard
+  /** Tarefas cruas do recorte atual — usadas para resolver o clique no ranking "Fechado por". */
+  tarefasFiltradas: Tarefa[]
+  /** Disparado ao clicar numa barra de ranking (responsáveis ou fechado-por). */
+  onSelecionarColaborador: (colaborador: ColaboradorSelecionado) => void
 }
 
 /** Só as equipes com pelo menos 1 tarefa entram nos gráficos (evita ruído vazio). */
@@ -136,6 +142,8 @@ function dispararOnda(evento: React.MouseEvent<HTMLButtonElement>) {
 export function GraficosInteligencia({
   pacotes,
   visao = 'atendimento',
+  tarefasFiltradas,
+  onSelecionarColaborador,
 }: GraficosInteligenciaProps) {
   // Equipe selecionada pelo ripple; null = todas.
   const [equipeSelecionada, setEquipeSelecionada] = useState<EquipeAtendimento | null>(null)
@@ -145,7 +153,7 @@ export function GraficosInteligencia({
   const cores = useMemo(() => coresChrome(scheme), [scheme])
   const opcoesEmpilhado = useMemo(() => montarOpcoesEmpilhado(cores), [cores])
   const opcoesRosca = useMemo(() => montarOpcoesRosca(cores), [cores])
-  const opcoesRanking = useMemo(() => montarOpcoesRanking(cores), [cores])
+  const rotuloPapelResponsavel = visao === 'executora' ? 'Fechado por' : 'Responsável pelo atendimento'
   const opcoesTendencia = useMemo(() => montarOpcoesTendencia(cores, 'contagem'), [cores])
   const opcoesTendenciaPercentual = useMemo(
     () => montarOpcoesTendencia(cores, 'percentual'),
@@ -245,6 +253,52 @@ export function GraficosInteligencia({
       ],
     }),
     [dados],
+  )
+
+  // Clique numa barra de "Responsáveis"/"Quem fechou mais tarefas": a pessoa
+  // corresponde 1:1 a um PacoteAtendimento, então usa pacote.cards direto.
+  const aoClicarRanking = useCallback(
+    (index: number) => {
+      const item = dados.topResponsaveis[index]
+      if (!item) return
+      const pacote = pacotes.find((p) => p.responsavelAtendimentoId === item.responsavelAtendimentoId)
+      if (!pacote) return
+      onSelecionarColaborador({
+        nome: item.nome,
+        equipe: item.equipe,
+        papel: rotuloPapelResponsavel,
+        cards: pacote.cards,
+      })
+    },
+    [dados, pacotes, rotuloPapelResponsavel, onSelecionarColaborador],
+  )
+
+  // Clique numa barra de "Fechado por": dimensão diferente (fechadoPorId,
+  // sempre por fechador), sem PacoteAtendimento 1:1 — filtra as tarefas cruas.
+  const aoClicarFechadoPor = useCallback(
+    (index: number) => {
+      const item = dados.topFechadoPor[index]
+      if (!item) return
+      const cards = tarefasDaPessoa(tarefasFiltradas, { tipo: 'fechadoPor', id: item.fechadoPorId })
+      const equipe = cards.length > 0 ? equipeExecutoraDaTarefa(cards[0]) : 'indefinido'
+      onSelecionarColaborador({
+        nome: item.nome,
+        equipe,
+        papel: 'Fechado por',
+        cards,
+      })
+    },
+    [dados, tarefasFiltradas, onSelecionarColaborador],
+  )
+
+  const opcoesRanking = useMemo(() => montarOpcoesRanking(cores), [cores])
+  const opcoesRankingResponsaveis = useMemo(
+    () => montarOpcoesRanking(cores, aoClicarRanking),
+    [cores, aoClicarRanking],
+  )
+  const opcoesRankingFechadoPor = useMemo(
+    () => montarOpcoesRanking(cores, aoClicarFechadoPor),
+    [cores, aoClicarFechadoPor],
   )
 
   const porUf = useMemo<ChartData<'bar'>>(
@@ -396,7 +450,7 @@ export function GraficosInteligencia({
                 : `Top ${dados.topResponsaveis.length} responsáveis pelo atendimento por volume; a cor indica a equipe.`}
             </Text>
             <div className={classes.areaGraficoAlta}>
-              <Bar data={ranking} options={opcoesRanking} />
+              <Bar data={ranking} options={opcoesRankingResponsaveis} />
             </div>
           </div>
 
@@ -409,7 +463,7 @@ export function GraficosInteligencia({
               customizado da tarefa).
             </Text>
             <div className={classes.areaGraficoAlta}>
-              <Bar data={fechadoPor} options={opcoesRanking} />
+              <Bar data={fechadoPor} options={opcoesRankingFechadoPor} />
             </div>
           </div>
 
@@ -502,7 +556,11 @@ function montarOpcoesRosca(cores: CoresChrome): ChartOptions<'doughnut'> {
   }
 }
 
-function montarOpcoesRanking(cores: CoresChrome): ChartOptions<'bar'> {
+/** `onClickIndice`, quando informado, torna as barras clicáveis (abre o modal de detalhe do colaborador). */
+function montarOpcoesRanking(
+  cores: CoresChrome,
+  onClickIndice?: (index: number) => void,
+): ChartOptions<'bar'> {
   return {
     maintainAspectRatio: false,
     responsive: true,
@@ -519,6 +577,18 @@ function montarOpcoesRanking(cores: CoresChrome): ChartOptions<'bar'> {
       },
       y: { grid: { display: false }, ticks: { color: cores.texto } },
     },
+    onClick: onClickIndice
+      ? (_event, elements) => {
+          const index = elements[0]?.index
+          if (index !== undefined) onClickIndice(index)
+        }
+      : undefined,
+    onHover: onClickIndice
+      ? (event, elements) => {
+          const target = event.native?.target as HTMLElement | null
+          if (target) target.style.cursor = elements.length ? 'pointer' : 'default'
+        }
+      : undefined,
   }
 }
 

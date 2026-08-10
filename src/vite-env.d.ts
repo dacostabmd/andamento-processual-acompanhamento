@@ -27,6 +27,14 @@ interface ImportMetaEnv {
    * embutido no bundle e é legível via DevTools; ver syncApi.ts.
    */
   readonly VITE_API_TOKEN?: string
+  /**
+   * [OPCIONAL] URL do portal Bitrix24, usada só para montar o link "abrir no
+   * Bitrix" de cada tarefa nos modais de detalhe. Formato:
+   * "https://SEU_PORTAL.bitrix24.com.br" (sem barra final, sem token). Se
+   * vazia, o botão/link simplesmente não aparece — não é obrigatória para o
+   * dashboard funcionar.
+   */
+  readonly VITE_BITRIX_PORTAL_URL?: string
 }
 
 interface ImportMeta {

@@ -3,6 +3,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { EstadoVazio } from '../components/EstadoVazio'
 import { ThemeToggle } from '../components/ThemeToggle'
 import { AiAssistantChat } from '../components/dashboard/AiAssistantChat'
+import { ColaboradorTarefasModal, type ColaboradorSelecionado } from '../components/dashboard/ColaboradorTarefasModal'
 import { DebugBitrixPanel } from '../components/dashboard/DebugBitrixPanel'
 import { FiltrosPainel } from '../components/dashboard/FiltrosPainel'
 import { GraficosInteligencia } from '../components/dashboard/GraficosInteligencia'
@@ -16,6 +17,7 @@ import {
   obterMetricasPorEquipeFiltradas,
   obterPacotesAtendimento,
   obterRankingFechadores,
+  obterTarefasFiltradas,
 } from '../services/dashboardService'
 import {
   filtrosVazios,
@@ -24,6 +26,7 @@ import {
   type MetricasTarefas,
   type PacoteAtendimento,
   type RankingFechadores as DadosRankingFechadores,
+  type Tarefa,
   type VisaoDashboard,
 } from '../types/domain'
 import classes from './DashboardPage.module.css'
@@ -37,6 +40,10 @@ export function DashboardPage() {
   const [metricasPorEquipe, setMetricasPorEquipe] = useState<MetricasPorEquipe[]>([])
   const [pacotes, setPacotes] = useState<PacoteAtendimento[] | null>(null)
   const [rankingFechadores, setRankingFechadores] = useState<DadosRankingFechadores | null>(null)
+  const [tarefasFiltradas, setTarefasFiltradas] = useState<Tarefa[]>([])
+  const [colaboradorSelecionado, setColaboradorSelecionado] = useState<ColaboradorSelecionado | null>(
+    null,
+  )
   const [erroDados, setErroDados] = useState<string | null>(null)
   const [carregandoFiltro, setCarregandoFiltro] = useState(false)
   const [modalVersaoAberto, setModalVersaoAberto] = useState<boolean | undefined>(undefined)
@@ -50,14 +57,16 @@ export function DashboardPage() {
       obterMetricasPorEquipeFiltradas(filtros, projetosPermitidos, visao),
       obterPacotesAtendimento(filtros, projetosPermitidos, visao),
       obterRankingFechadores(filtros, projetosPermitidos),
+      obterTarefasFiltradas(filtros, projetosPermitidos),
     ])
-      .then(([novasMetricas, novasMetricasPorEquipe, novosPacotes, novoRanking]) => {
+      .then(([novasMetricas, novasMetricasPorEquipe, novosPacotes, novoRanking, novasTarefas]) => {
         if (cancelado) return
         setErroDados(null)
         setMetricas(novasMetricas)
         setMetricasPorEquipe(novasMetricasPorEquipe)
         setPacotes(novosPacotes)
         setRankingFechadores(novoRanking)
+        setTarefasFiltradas(novasTarefas)
       })
       .catch((erro) => {
         if (cancelado) return
@@ -154,7 +163,13 @@ export function DashboardPage() {
                   atribuição de pessoa mais confiável do snapshot, e independe da visão
                   selecionada acima.
                 </Text>
-                {rankingFechadores && <RankingFechadores dados={rankingFechadores} />}
+                {rankingFechadores && (
+                  <RankingFechadores
+                    dados={rankingFechadores}
+                    tarefas={tarefasFiltradas}
+                    onSelecionarColaborador={setColaboradorSelecionado}
+                  />
+                )}
               </div>
 
               <div>
@@ -164,7 +179,14 @@ export function DashboardPage() {
                     : 'Inteligência — visão por equipe de atendimento'}
                 </Title>
                 <Stack gap="md">
-                  {pacotes && <GraficosInteligencia pacotes={pacotes} visao={visao} />}
+                  {pacotes && (
+                    <GraficosInteligencia
+                      pacotes={pacotes}
+                      visao={visao}
+                      tarefasFiltradas={tarefasFiltradas}
+                      onSelecionarColaborador={setColaboradorSelecionado}
+                    />
+                  )}
                 </Stack>
               </div>
             </>
@@ -182,6 +204,10 @@ export function DashboardPage() {
       <VersaoModal
         abertoManual={modalVersaoAberto}
         onCloseManual={() => setModalVersaoAberto(false)}
+      />
+      <ColaboradorTarefasModal
+        colaborador={colaboradorSelecionado}
+        aoFechar={() => setColaboradorSelecionado(null)}
       />
       <AiAssistantChat metricas={metricas} pacotes={pacotes} filtros={filtros} visao={visao} />
       <DebugBitrixPanel />
