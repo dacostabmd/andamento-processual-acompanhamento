@@ -48,13 +48,14 @@ export function TarefaDetalheModal({ tarefa, aoFechar }: TarefaDetalheModalProps
       onClose={aoFechar}
       title="Andamento processual"
       centered
-      size="lg"
+      size="auto"
+      styles={{ content: { width: 'min(720px, calc(100vw - 2rem))' } }}
       radius="md"
       transitionProps={{ transition: 'slide-up', duration: 250 }}
     >
       {tarefa && (
         <Stack gap="md">
-          <Group justify="space-between" align="flex-start" wrap="nowrap">
+          <Stack gap="xs">
             <Text fw={700} size="lg">
               {tarefa.titulo}
             </Text>
@@ -66,7 +67,7 @@ export function TarefaDetalheModal({ tarefa, aoFechar }: TarefaDetalheModalProps
                 {STATUS_LABELS[tarefa.status]}
               </Badge>
             </Group>
-          </Group>
+          </Stack>
 
           <Text size="sm" fw={600}>
             {descreverSituacao(tarefa)}

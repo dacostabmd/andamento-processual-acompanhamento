@@ -1,4 +1,4 @@
-import { Badge, Modal, SimpleGrid, Stack, Text, UnstyledButton } from '@mantine/core'
+import { ActionIcon, Badge, Modal, SimpleGrid, Stack, Text, Tooltip, UnstyledButton } from '@mantine/core'
 import { useMemo, useState } from 'react'
 import { montarUrlTarefaBitrix } from '../../services/bitrixPortal'
 import { STATUS_LABELS, type EquipeAtendimento, type Tarefa } from '../../types/domain'
@@ -55,7 +55,8 @@ export function ColaboradorTarefasModal({ colaborador, aoFechar }: ColaboradorTa
         onClose={aoFechar}
         title="Tarefas contabilizadas"
         centered
-        size="xl"
+        size="auto"
+        styles={{ content: { width: 'min(900px, calc(100vw - 2rem))' } }}
         radius="md"
         transitionProps={{ transition: 'slide-up', duration: 250 }}
       >
@@ -106,7 +107,7 @@ export function ColaboradorTarefasModal({ colaborador, aoFechar }: ColaboradorTa
               />
             ) : (
               <div className="overflow-x-auto">
-                <div className="max-h-[420px] min-w-[640px] overflow-y-auto">
+                <div className="max-h-[420px] min-w-[560px] overflow-y-auto">
                   <table className="w-full border-collapse text-sm">
                     <thead
                       className="sticky top-0 z-10"
@@ -114,12 +115,12 @@ export function ColaboradorTarefasModal({ colaborador, aoFechar }: ColaboradorTa
                     >
                       <tr style={{ borderBottom: '1px solid var(--superficie-borda)' }}>
                         <th className="px-2 py-2 text-left font-semibold opacity-70">Título</th>
-                        <th className="w-40 px-2 py-2 text-left font-semibold opacity-70">Status</th>
-                        <th className="w-28 px-2 py-2 text-left font-semibold opacity-70">Prazo</th>
-                        <th className="w-40 px-2 py-2 text-left font-semibold opacity-70">
+                        <th className="w-32 px-2 py-2 text-left font-semibold opacity-70">Status</th>
+                        <th className="w-24 px-2 py-2 text-left font-semibold opacity-70">Prazo</th>
+                        <th className="w-32 px-2 py-2 text-left font-semibold opacity-70">
                           Finalizado em
                         </th>
-                        <th className="w-24 px-2 py-2 text-right font-semibold opacity-70">Ação</th>
+                        <th className="w-14 px-2 py-2 text-right font-semibold opacity-70">Ação</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -147,16 +148,33 @@ export function ColaboradorTarefasModal({ colaborador, aoFechar }: ColaboradorTa
                             </td>
                             <td className="px-2 py-2 text-right">
                               {urlBitrix && (
-                                <a
-                                  href={urlBitrix}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <Text size="xs" c="blue" className="hover:underline">
-                                    Abrir no Bitrix
-                                  </Text>
-                                </a>
+                                <Tooltip label="Abrir no Bitrix" withArrow>
+                                  <ActionIcon
+                                    component="a"
+                                    href={urlBitrix}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={(e) => e.stopPropagation()}
+                                    variant="subtle"
+                                    size="sm"
+                                    aria-label="Abrir tarefa no Bitrix"
+                                  >
+                                    <svg
+                                      width="14"
+                                      height="14"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      strokeWidth="2"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                    >
+                                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                                      <path d="M15 3h6v6" />
+                                      <path d="M10 14 21 3" />
+                                    </svg>
+                                  </ActionIcon>
+                                </Tooltip>
                               )}
                             </td>
                           </tr>
