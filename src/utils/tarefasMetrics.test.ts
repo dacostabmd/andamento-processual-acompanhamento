@@ -5,8 +5,43 @@ import {
   empacotarPorAtendimento,
   calcularRankingFechadores,
   equipeExecutoraDaTarefa,
+  tarefaFoiConcluidaComAtraso,
 } from './tarefasMetrics'
 import type { Tarefa } from '../types/domain'
+
+describe('tarefaFoiConcluidaComAtraso', () => {
+  it('true quando concluída depois do prazo', () => {
+    const tarefa = {
+      status: 5,
+      prazoFinal: '2024-01-10T12:00:00Z',
+      finalizadoEm: '2024-01-11T12:00:00Z',
+    } as Tarefa
+    expect(tarefaFoiConcluidaComAtraso(tarefa)).toBe(true)
+  })
+
+  it('false quando concluída dentro do prazo', () => {
+    const tarefa = {
+      status: 5,
+      prazoFinal: '2024-01-10T12:00:00Z',
+      finalizadoEm: '2024-01-09T12:00:00Z',
+    } as Tarefa
+    expect(tarefaFoiConcluidaComAtraso(tarefa)).toBe(false)
+  })
+
+  it('false quando ainda não concluída, mesmo vencida', () => {
+    const tarefa = { status: 3, prazoFinal: '2024-01-01T12:00:00Z', finalizadoEm: null } as Tarefa
+    expect(tarefaFoiConcluidaComAtraso(tarefa)).toBe(false)
+  })
+
+  it('false quando concluída mas sem prazo ou sem data de finalização', () => {
+    expect(
+      tarefaFoiConcluidaComAtraso({ status: 5, prazoFinal: null, finalizadoEm: '2024-01-11T12:00:00Z' } as Tarefa),
+    ).toBe(false)
+    expect(
+      tarefaFoiConcluidaComAtraso({ status: 5, prazoFinal: '2024-01-10T12:00:00Z', finalizadoEm: null } as Tarefa),
+    ).toBe(false)
+  })
+})
 
 describe('calcularMetricas', () => {
   beforeEach(() => {

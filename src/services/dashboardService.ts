@@ -70,6 +70,36 @@ interface SnapshotMetadata {
   runId: string
 }
 
+/**
+ * Nomes reais dos grupos, vindos de `metadata.groups` do último snapshot lido
+ * (o worker resolve via Bitrix). Ao contrário de `debugSnapshot.ts`, funciona
+ * em produção também — é a única fonte de nome real quando `VITE_SYNC_API_URL`
+ * está configurada, já que nesse caminho `acessoService.ts` nunca chama
+ * `sonet_group.get` (ver `gruposMonitoradosFixos`) e devolve só "Grupo {id}".
+ */
+const nomesReaisPorGrupo = new Map<number, string>()
+
+/**
+ * O worker cai em "Grupo {id}" quando a chamada `sonet_group.get` falha ou
+ * não acha o grupo (ver `fetchGroupNames`) — não é um nome real, é o mesmo
+ * placeholder que `acessoService.ts` também usa. Ignorar aqui evita que uma
+ * falha passageira substitua um nome real já conhecido por este placeholder.
+ */
+function ehNomePlaceholder(id: number, nome: string): boolean {
+  return nome === `Grupo ${id}`
+}
+
+function registrarNomesDeGrupo(metadata: SnapshotMetadata): void {
+  metadata.groups.forEach((g) => {
+    if (g.nome && !ehNomePlaceholder(g.id, g.nome)) nomesReaisPorGrupo.set(g.id, g.nome)
+  })
+}
+
+/** Aplica os nomes reais já conhecidos sobre uma lista de projetos (sem nome real, mantém o fallback recebido). */
+export function comNomesReais(projetos: Projeto[]): Projeto[] {
+  return projetos.map((p) => ({ id: p.id, nome: nomesReaisPorGrupo.get(p.id) ?? p.nome }))
+}
+
 async function buscarTarefasDoSnapshot(gruposSelecionados: number[]): Promise<Tarefa[]> {
   const base = baseSyncApiUrl()
   let erroConexao: string | null = null
@@ -84,6 +114,7 @@ async function buscarTarefasDoSnapshot(gruposSelecionados: number[]): Promise<Ta
       if (resposta.ok) {
         const corpo = (await resposta.json()) as { tarefas: Tarefa[]; metadata: SnapshotMetadata }
         registrarSnapshotMetadata(corpo.metadata)
+        registrarNomesDeGrupo(corpo.metadata)
         return corpo.tarefas
       }
       erroConexao = descreverErroHttp(resposta.status, base)
@@ -101,6 +132,7 @@ async function buscarTarefasDoSnapshot(gruposSelecionados: number[]): Promise<Ta
     }
     const mock = (await resposta.json()) as { tarefas: Tarefa[]; metadata: SnapshotMetadata }
     registrarSnapshotMetadata(mock.metadata)
+    registrarNomesDeGrupo(mock.metadata)
 
     // Ajusta dinamicamente as datas do mock em relação à data atual para ter tarefas
     // em andamento e com risco de atraso em ambiente de desenvolvimento (mock offline).

@@ -33,11 +33,6 @@ function montarStats(metricas: MetricasTarefas) {
       descricao: 'Atrasadas em relação ao total ativo',
     },
     {
-      label: 'Aguardando Controle',
-      valor: String(metricas.aguardandoRevisao),
-      descricao: 'Tarefas pendentes de revisão/aprovação',
-    },
-    {
       label: 'Concluídas',
       valor: String(metricas.concluidas),
       descricao: 'Tarefas com status "Concluído"',

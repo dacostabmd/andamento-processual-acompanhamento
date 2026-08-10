@@ -23,6 +23,7 @@ import {
   contarSituacoes,
   tarefaEstaAtrasada,
   tarefaEstaConcluida,
+  tarefaFoiConcluidaComAtraso,
 } from '../../utils/tarefasMetrics'
 import { EstadoVazio } from '../EstadoVazio'
 import { TarefaDetalheModal } from './TarefaDetalheModal'
@@ -126,7 +127,7 @@ export function ColaboradorTarefasModal({ colaborador, aoFechar }: ColaboradorTa
         {colaborador && contagem && (
           <Stack gap="md">
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2" style={{ marginTop: 4 }}>
                 <Text fw={700} size="lg">
                   {colaborador.nome}
                 </Text>
@@ -280,8 +281,14 @@ export function ColaboradorTarefasModal({ colaborador, aoFechar }: ColaboradorTa
                                 </UnstyledButton>
                               </td>
                               <td className="px-2 py-2">
-                                <Badge size="sm" color={corDoStatus(tarefa)} variant="light">
-                                  {STATUS_LABELS[tarefa.status]}
+                                <Badge
+                                  size="sm"
+                                  color={tarefaFoiConcluidaComAtraso(tarefa) ? 'orange' : corDoStatus(tarefa)}
+                                  variant="light"
+                                >
+                                  {tarefaFoiConcluidaComAtraso(tarefa)
+                                    ? 'Concluído com atraso'
+                                    : STATUS_LABELS[tarefa.status]}
                                 </Badge>
                               </td>
                               <td className="px-2 py-2">

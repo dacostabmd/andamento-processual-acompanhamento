@@ -13,6 +13,7 @@ import { SeletorGrupos } from '../components/dashboard/SeletorGrupos'
 import { VERSAO_ATUAL, VersaoModal } from '../components/dashboard/VersaoModal'
 import { useSessaoUsuario } from '../hooks/useSessaoUsuario'
 import {
+  comNomesReais,
   obterMetricasFiltradas,
   obterMetricasPorEquipeFiltradas,
   obterPacotesAtendimento,
@@ -52,6 +53,11 @@ export function DashboardPage() {
   const [erroDados, setErroDados] = useState<string | null>(null)
   const [carregandoFiltro, setCarregandoFiltro] = useState(false)
   const [modalVersaoAberto, setModalVersaoAberto] = useState<boolean | undefined>(undefined)
+  // projetosPermitidos resolvido no login não tem nome real quando a fonte é o
+  // worker (acessoService devolve "Grupo {id}" — o nome real só existe no
+  // metadata.groups do snapshot). Reaplicado a cada carga para refletir assim
+  // que o primeiro snapshot chega.
+  const [projetosComNomes, setProjetosComNomes] = useState(projetosPermitidos)
 
   useEffect(() => {
     if (estado !== 'ok') return
@@ -72,6 +78,7 @@ export function DashboardPage() {
         setPacotes(novosPacotes)
         setRankingFechadores(novoRanking)
         setTarefasFiltradas(novasTarefas)
+        setProjetosComNomes(comNomesReais(projetosPermitidos))
       })
       .catch((erro) => {
         if (cancelado) return
@@ -146,7 +153,7 @@ export function DashboardPage() {
           ) : (
             <>
               <SeletorGrupos
-                projetosPermitidos={projetosPermitidos}
+                projetosPermitidos={projetosComNomes}
                 selecionados={gruposSelecionados}
                 onChange={setGruposSelecionados}
               />

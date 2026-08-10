@@ -41,6 +41,22 @@ export function tarefaNoPrazo(tarefa: Tarefa, agora: Date): boolean {
   )
 }
 
+/**
+ * Tarefa concluída DEPOIS do prazo. Não usa `tarefaEstaAtrasada` (que só
+ * classifica tarefas ainda ABERTAS) — o status nativo do Bitrix de uma tarefa
+ * concluída é sempre "Concluído", nunca "Atrasado", então sem isto não há
+ * como sinalizar visualmente, por linha, quais concluídas contam para a
+ * métrica "Atrasadas (total)" do modal de colaborador.
+ */
+export function tarefaFoiConcluidaComAtraso(tarefa: Tarefa): boolean {
+  return (
+    tarefaEstaConcluida(tarefa) &&
+    tarefa.prazoFinal !== null &&
+    tarefa.finalizadoEm !== null &&
+    new Date(tarefa.finalizadoEm) > new Date(tarefa.prazoFinal)
+  )
+}
+
 export function calcularMetricas(
   tarefas: Tarefa[],
   modoTaxaAtraso: 'ativas' | 'total' = 'ativas',
@@ -323,7 +339,7 @@ export function calcularPontualidadeFechamento(cards: Tarefa[]): PontualidadeFec
     concluidas += 1
     if (!tarefa.prazoFinal || !tarefa.finalizadoEm) {
       semPrazo += 1
-    } else if (new Date(tarefa.finalizadoEm) > new Date(tarefa.prazoFinal)) {
+    } else if (tarefaFoiConcluidaComAtraso(tarefa)) {
       comAtraso += 1
     } else {
       noPrazo += 1

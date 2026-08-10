@@ -14956,19 +14956,19 @@
   "groups": [
    {
     "id": 86,
-    "nome": "Grupo 86",
+    "nome": "Acompanhamento Mensal",
     "taskCount": 250,
     "error": null
    },
    {
     "id": 92,
-    "nome": "Grupo 92",
+    "nome": "Cobrança Mensal",
     "taskCount": 250,
     "error": null
    },
    {
     "id": 94,
-    "nome": "Grupo 94",
+    "nome": "Negociação Mensal",
     "taskCount": 250,
     "error": null
    }
