@@ -2,12 +2,60 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import {
   calcularMetricas,
   calcularMetricasPorEquipe,
+  calcularTopFechadoPor,
   empacotarPorAtendimento,
   calcularRankingFechadores,
   equipeExecutoraDaTarefa,
   tarefaFoiConcluidaComAtraso,
 } from './tarefasMetrics'
 import type { Tarefa } from '../types/domain'
+
+describe('calcularTopFechadoPor', () => {
+  // Bug real: o gráfico "Fechado por" era calculado a partir de `pacotes`
+  // filtrados pelo ripple de equipe de ATENDIMENTO — mas um fechador pode ter
+  // a maioria dos cards dele atendidos por gente de OUTRAS equipes, então o
+  // total aparecia artificialmente baixo (ex.: 2 em vez de 18 no gráfico,
+  // enquanto o modal, que usa a lista crua, mostrava o valor certo).
+  it('conta todos os cards do fechador, mesmo com responsáveis de atendimento variados', () => {
+    const cards = [
+      {
+        id: 1,
+        status: 5,
+        fechadoPorId: 42,
+        fechadoPorNome: 'Jonathan Weber',
+        responsavelAtendimentoId: 1,
+      },
+      {
+        id: 2,
+        status: 5,
+        fechadoPorId: 42,
+        fechadoPorNome: 'Jonathan Weber',
+        responsavelAtendimentoId: 2, // pessoa diferente, possivelmente outra equipe
+      },
+      {
+        id: 3,
+        status: 5,
+        fechadoPorId: 42,
+        fechadoPorNome: 'Jonathan Weber',
+        responsavelAtendimentoId: 3, // idem
+      },
+    ] as unknown as Tarefa[]
+
+    const ranking = calcularTopFechadoPor(cards)
+    expect(ranking).toHaveLength(1)
+    expect(ranking[0].total).toBe(3)
+  })
+
+  it('ignora tarefas não concluídas ou sem fechador', () => {
+    const cards = [
+      { id: 1, status: 5, fechadoPorId: 1, fechadoPorNome: 'A' },
+      { id: 2, status: 2, fechadoPorId: null },
+    ] as unknown as Tarefa[]
+    const ranking = calcularTopFechadoPor(cards)
+    expect(ranking).toHaveLength(1)
+    expect(ranking[0].total).toBe(1)
+  })
+})
 
 describe('tarefaFoiConcluidaComAtraso', () => {
   it('true quando concluída depois do prazo', () => {

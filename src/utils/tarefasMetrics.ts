@@ -356,10 +356,34 @@ const TOP_RESPONSAVEIS = 10
 const TOP_FECHADO_POR = 10
 
 /**
+ * Ranking de "fechado por" (volume) a partir de uma lista crua de tarefas —
+ * independente de como elas foram agrupadas em pacotes de atendimento.
+ *
+ * Existe separado de `calcularInteligencia` porque "quem fechou" é uma
+ * dimensão própria (equipe do FECHADOR), diferente da equipe de atendimento
+ * usada para agrupar `pacotes`. Calcular isto a partir de `pacotes` filtrados
+ * pelo ripple de equipe de atendimento é um bug: um fechador pode ter a
+ * maioria dos cards dele atribuídos (responsavelAtendimentoId) a pessoas de
+ * OUTRAS equipes, então o total apareceria artificialmente baixo — o card
+ * conta para "fechado por" mesmo que o pacote dele (agrupado por quem
+ * ATENDE) não pertença à equipe selecionada no ripple.
+ */
+export function calcularTopFechadoPor(tarefas: Tarefa[]): VolumeFechadoPor[] {
+  const fechadoPorAgg = new Map<string, VolumeFechadoPor>()
+  tarefas.forEach((card) => acumularFechadoPor(fechadoPorAgg, card))
+  return Array.from(fechadoPorAgg.values())
+    .sort((a, b) => b.total - a.total || a.nome.localeCompare(b.nome))
+    .slice(0, TOP_FECHADO_POR)
+}
+
+/**
  * Consolida os pacotes no modelo de dados de inteligência que alimenta os
- * gráficos: contagem por situação de cada equipe (na ordem fixa das equipes), o
- * ranking dos responsáveis por volume de cards e o ranking de "fechado por".
- * Recalculado a cada filtro.
+ * gráficos: contagem por situação de cada equipe (na ordem fixa das equipes) e
+ * o ranking dos responsáveis por volume de cards. Recalculado a cada filtro.
+ *
+ * NÃO inclui mais `topFechadoPor` — ver `calcularTopFechadoPor`, calculado à
+ * parte a partir da lista crua de tarefas (não de `pacotes`, que agrupa por
+ * uma dimensão diferente e pode estar filtrado pelo ripple errado).
  */
 export function calcularInteligencia(pacotes: PacoteAtendimento[]): InteligenciaDados {
   const agora = new Date()
@@ -372,15 +396,12 @@ export function calcularInteligencia(pacotes: PacoteAtendimento[]): Inteligencia
   })
 
   const volumes: VolumeResponsavel[] = []
-  // Agregação de "fechado por" por pessoa (chave string; null = sem valor).
-  const fechadoPorAgg = new Map<string, VolumeFechadoPor>()
   let totalCards = 0
 
   pacotes.forEach((pacote) => {
     const contagem = contagemPorEquipe.get(pacote.equipe)!
     pacote.cards.forEach((card) => {
       acumularSituacao(contagem, card, agora)
-      acumularFechadoPor(fechadoPorAgg, card)
     })
     responsaveisPorEquipe.set(pacote.equipe, responsaveisPorEquipe.get(pacote.equipe)! + 1)
     totalCards += pacote.cards.length
@@ -403,15 +424,11 @@ export function calcularInteligencia(pacotes: PacoteAtendimento[]): Inteligencia
     .sort((a, b) => b.total - a.total || a.nome.localeCompare(b.nome))
     .slice(0, TOP_RESPONSAVEIS)
 
-  const topFechadoPor = Array.from(fechadoPorAgg.values())
-    .sort((a, b) => b.total - a.total || a.nome.localeCompare(b.nome))
-    .slice(0, TOP_FECHADO_POR)
-
   const porUf = calcularVolumePorUf(pacotes)
   const urgencia = calcularFaixasUrgencia(pacotes, agora)
   const tendenciaMensal = calcularTendenciaMensal(pacotes, agora)
 
-  return { porEquipe, topResponsaveis, topFechadoPor, porUf, urgencia, tendenciaMensal, totalCards }
+  return { porEquipe, topResponsaveis, porUf, urgencia, tendenciaMensal, totalCards }
 }
 
 /**

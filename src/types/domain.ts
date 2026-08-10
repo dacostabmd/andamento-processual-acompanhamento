@@ -310,7 +310,6 @@ export interface PontoTendenciaMensal {
 export interface InteligenciaDados {
   porEquipe: InteligenciaEquipe[]
   topResponsaveis: VolumeResponsavel[]
-  topFechadoPor: VolumeFechadoPor[]
   porUf: VolumePorUf[]
   urgencia: FaixasUrgencia
   tendenciaMensal: PontoTendenciaMensal[]

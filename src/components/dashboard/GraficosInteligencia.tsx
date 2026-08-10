@@ -22,7 +22,12 @@ import {
   type Tarefa,
   type VisaoDashboard,
 } from '../../types/domain'
-import { calcularInteligencia, equipeExecutoraDaTarefa, tarefasDaPessoa } from '../../utils/tarefasMetrics'
+import {
+  calcularInteligencia,
+  calcularTopFechadoPor,
+  equipeExecutoraDaTarefa,
+  tarefasDaPessoa,
+} from '../../utils/tarefasMetrics'
 import { EstadoVazio } from '../EstadoVazio'
 import type { ColaboradorSelecionado } from './ColaboradorTarefasModal'
 import { COR_POR_EQUIPE, COR_POR_SITUACAO } from './tarefaApresentacao'
@@ -178,6 +183,18 @@ export function GraficosInteligencia({
     return calcularInteligencia(recorte)
   }, [pacotes, equipeSelecionada])
 
+  // "Fechado por" é uma dimensão à parte (equipe de quem FECHOU, não de quem
+  // atende) — calculado direto de `tarefasFiltradas` (cru, sem agrupar por
+  // pacote de atendimento). Filtrar `pacotes` pelo ripple de atendimento e
+  // extrair "fechado por" dali sub-contava fechadores cujos cards são
+  // atendidos majoritariamente por gente de OUTRAS equipes.
+  const topFechadoPor = useMemo(() => {
+    const base = equipeSelecionada
+      ? tarefasFiltradas.filter((t) => equipeExecutoraDaTarefa(t) === equipeSelecionada)
+      : tarefasFiltradas
+    return calcularTopFechadoPor(base)
+  }, [tarefasFiltradas, equipeSelecionada])
+
   const equipes = useMemo(() => equipesComCards(dados), [dados])
 
   // Equipes que aparecem como ripples: as que têm ao menos 1 tarefa no total.
@@ -241,18 +258,18 @@ export function GraficosInteligencia({
 
   const fechadoPor = useMemo<ChartData<'bar'>>(
     () => ({
-      labels: dados.topFechadoPor.map((f) => f.nome),
+      labels: topFechadoPor.map((f) => f.nome),
       datasets: [
         {
           label: 'Tarefas',
-          data: dados.topFechadoPor.map((f) => f.total),
+          data: topFechadoPor.map((f) => f.total),
           backgroundColor: COR_FECHADO_POR,
           borderRadius: 4,
           borderSkipped: false,
         },
       ],
     }),
-    [dados],
+    [topFechadoPor],
   )
 
   // Clique numa barra de "Responsáveis"/"Quem fechou mais tarefas": a pessoa
@@ -277,7 +294,7 @@ export function GraficosInteligencia({
   // sempre por fechador), sem PacoteAtendimento 1:1 — filtra as tarefas cruas.
   const aoClicarFechadoPor = useCallback(
     (index: number) => {
-      const item = dados.topFechadoPor[index]
+      const item = topFechadoPor[index]
       if (!item) return
       const cards = tarefasDaPessoa(tarefasFiltradas, { tipo: 'fechadoPor', id: item.fechadoPorId })
       const equipe = cards.length > 0 ? equipeExecutoraDaTarefa(cards[0]) : 'indefinido'
@@ -288,7 +305,7 @@ export function GraficosInteligencia({
         cards,
       })
     },
-    [dados, tarefasFiltradas, onSelecionarColaborador],
+    [topFechadoPor, tarefasFiltradas, onSelecionarColaborador],
   )
 
   const opcoesRanking = useMemo(() => montarOpcoesRanking(cores), [cores])
@@ -459,7 +476,7 @@ export function GraficosInteligencia({
               Fechado por
             </Text>
             <Text className={classes.subtitulo} size="xs">
-              Top {dados.topFechadoPor.length} pessoas por volume de tarefas fechadas (campo
+              Top {topFechadoPor.length} pessoas por volume de tarefas fechadas (campo
               customizado da tarefa).
             </Text>
             <div className={classes.areaGraficoAlta}>
