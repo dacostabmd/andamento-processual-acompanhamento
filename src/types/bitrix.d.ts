@@ -26,6 +26,15 @@ interface Bitrix24Sdk {
   /** Finaliza instalação do app — marca como 100% instalado. Deve ser chamado
    * na página de instalação (quando a configuração inicial for concluída). */
   installFinish(): void
+  /**
+   * Navega para uma página do próprio portal (fora do iframe do app), pelo
+   * caminho relativo (ex.: "/workgroups/group/86/tasks/task/view/123/").
+   * Existe porque um `<a target="_blank">` comum, dentro do iframe do app, é
+   * interceptado pelo BX24 e reescrito para passar pela rota REST autenticada
+   * (.../rest/{user}/{token}/...) — quebrando links de navegação normais com
+   * ERROR_METHOD_NOT_FOUND. openPath evita essa reescrita.
+   */
+  openPath(path: string, callback?: () => void): void
 }
 
 declare global {

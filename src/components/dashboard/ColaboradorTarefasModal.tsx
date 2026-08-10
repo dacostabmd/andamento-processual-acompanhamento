@@ -10,7 +10,13 @@ import {
   UnstyledButton,
 } from '@mantine/core'
 import { useMemo, useState } from 'react'
-import { montarUrlPerfilBitrix, montarUrlTarefaBitrix } from '../../services/bitrixPortal'
+import {
+  montarCaminhoPerfilBitrix,
+  montarCaminhoTarefaBitrix,
+  montarUrlPerfilBitrix,
+  montarUrlTarefaBitrix,
+} from '../../services/bitrixPortal'
+import { abrirNoPortal } from '../../services/bitrixSdk'
 import { STATUS_LABELS, type EquipeAtendimento, type Tarefa } from '../../types/domain'
 import {
   calcularPontualidadeFechamento,
@@ -71,7 +77,7 @@ export function ColaboradorTarefasModal({ colaborador, aoFechar }: ColaboradorTa
   // papel indica (fechado por x responsável pelo atendimento), a partir de
   // qualquer card do pacote (o critério de agrupamento garante que todos têm
   // o mesmo ID nesse campo).
-  const urlPerfil = useMemo(() => {
+  const perfilBitrix = useMemo(() => {
     if (!colaborador) return null
     const primeiraTarefa = colaborador.cards[0]
     if (!primeiraTarefa) return null
@@ -79,7 +85,10 @@ export function ColaboradorTarefasModal({ colaborador, aoFechar }: ColaboradorTa
       colaborador.papel === 'Fechado por'
         ? primeiraTarefa.fechadoPorId
         : primeiraTarefa.responsavelAtendimentoId
-    return montarUrlPerfilBitrix(pessoaId)
+    const url = montarUrlPerfilBitrix(pessoaId)
+    const caminho = montarCaminhoPerfilBitrix(pessoaId)
+    if (!url || !caminho) return null
+    return { url, caminho }
   }, [colaborador])
 
   // Mais críticas primeiro: ajuda a achar o que precisa de atenção sem rolar tudo.
@@ -121,13 +130,12 @@ export function ColaboradorTarefasModal({ colaborador, aoFechar }: ColaboradorTa
                 <Text fw={700} size="lg">
                   {colaborador.nome}
                 </Text>
-                {urlPerfil && (
+                {perfilBitrix && (
                   <Tooltip label="Abrir perfil no Bitrix" withArrow>
                     <ActionIcon
-                      component="a"
-                      href={urlPerfil}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                      component="button"
+                      type="button"
+                      onClick={() => abrirNoPortal(perfilBitrix.caminho, perfilBitrix.url)}
                       variant="subtle"
                       size="sm"
                       aria-label="Abrir perfil no Bitrix"
@@ -257,6 +265,11 @@ export function ColaboradorTarefasModal({ colaborador, aoFechar }: ColaboradorTa
                             tarefa.projetoId,
                             tarefa.responsavelId,
                           )
+                          const caminhoBitrix = montarCaminhoTarefaBitrix(
+                            tarefa.id,
+                            tarefa.projetoId,
+                            tarefa.responsavelId,
+                          )
                           return (
                             <tr key={tarefa.id} style={{ borderBottom: '1px solid var(--superficie-borda)' }}>
                               <td className="px-2 py-2">
@@ -279,14 +292,15 @@ export function ColaboradorTarefasModal({ colaborador, aoFechar }: ColaboradorTa
                               </td>
                               <td className="px-2 py-2">
                                 <div className="flex items-center justify-center">
-                                  {urlBitrix && (
+                                  {urlBitrix && caminhoBitrix && (
                                     <Tooltip label="Abrir no Bitrix" withArrow>
                                       <ActionIcon
-                                        component="a"
-                                        href={urlBitrix}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        onClick={(e) => e.stopPropagation()}
+                                        component="button"
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          abrirNoPortal(caminhoBitrix, urlBitrix)
+                                        }}
                                         variant="subtle"
                                         size="sm"
                                         aria-label="Abrir tarefa no Bitrix"

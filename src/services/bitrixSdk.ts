@@ -222,6 +222,22 @@ function buscarPrimeiraPagina<T>(
   })
 }
 
+/**
+ * Abre uma página do próprio portal Bitrix24 numa nova aba. Dentro do iframe
+ * do app, um `<a target="_blank">` comum é interceptado pelo BX24 e reescrito
+ * para passar pela rota REST autenticada (.../rest/{user}/{token}/...),
+ * quebrando a navegação com ERROR_METHOD_NOT_FOUND — por isso usa
+ * `BX24.openPath` (caminho relativo) quando disponível, com `urlAbsoluta`
+ * como fallback fora do iframe (onde BX24 não existe).
+ */
+export function abrirNoPortal(caminhoRelativo: string, urlAbsoluta: string): void {
+  if (bx24Disponivel() && typeof window.BX24?.openPath === 'function') {
+    window.BX24.openPath(caminhoRelativo)
+    return
+  }
+  window.open(urlAbsoluta, '_blank', 'noopener')
+}
+
 export async function obterUsuarioBitrixAtual(): Promise<UsuarioBitrixAtual> {
   // Dev mode: usuário de mentira, sem tocar no Bitrix nem exigir webhook
   if (import.meta.env.DEV || modoMockDevAtivo()) {
