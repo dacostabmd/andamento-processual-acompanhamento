@@ -408,6 +408,25 @@ describe('calcularRankingFechadores', () => {
     expect(r.pessoasSemSupervisor).toBe(1)
   })
 
+  it('infere o supervisor pelo nome da equipe quando o setor é conhecido mas o UF_HEAD não está cadastrado', () => {
+    // Caso real: "Wellington Ramos" tem setor "Andamento Quézia Karen" (logo
+    // equipeAtendimento/equipeFechador = 'Quézia Karen'), mas o campo
+    // "Supervisor" da ficha dele no Bitrix está vazio. As 4 equipes são
+    // batizadas com o nome da própria supervisora, então a equipe já responde.
+    const r = calcularRankingFechadores([
+      card({
+        fechadoPorId: 42,
+        fechadoPorNome: 'Wellington Ramos',
+        fechadoPorDepartamentos: ['Andamento Quézia Karen'],
+        setorFechador: 'Andamento Quézia Karen',
+        gestorFechadorNome: null,
+      }),
+    ])
+    expect(r.linhas[0].equipe).toBe('Quézia Karen')
+    expect(r.linhas[0].supervisor).toBe('Quézia Karen')
+    expect(r.pessoasSemSupervisor).toBe(0)
+  })
+
   it('desempata por nome quando o volume é igual', () => {
     const r = calcularRankingFechadores([
       card({ fechadoPorId: 2, fechadoPorNome: 'Zoe' }),

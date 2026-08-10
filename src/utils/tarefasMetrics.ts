@@ -450,12 +450,20 @@ export function calcularRankingFechadores(tarefas: Tarefa[]): RankingFechadores 
 
     let linha = porPessoa.get(tarefa.fechadoPorId)
     if (!linha) {
+      const equipe = equipeExecutoraDaTarefa(tarefa)
+      // As 4 equipes de atendimento são batizadas com o nome da própria
+      // supervisora (ver EQUIPES_ATENDIMENTO) — quando o campo "Supervisor" da
+      // ficha do Bitrix não está cadastrado, mas o setor já identificou a
+      // equipe, o nome da equipe JÁ É o nome do supervisor. Sem isto, gente
+      // com setor conhecido aparecia como "sem supervisor" por um campo do
+      // Bitrix vazio, quando a equipe sozinha já respondia a pergunta.
+      const supervisor = tarefa.gestorFechadorNome ?? (equipe === 'indefinido' ? null : equipe)
       linha = {
         fechadoPorId: tarefa.fechadoPorId,
         nome: tarefa.fechadoPorNome ?? `Usuário ${tarefa.fechadoPorId}`,
-        equipe: equipeExecutoraDaTarefa(tarefa),
+        equipe,
         setor: tarefa.setorFechador,
-        supervisor: tarefa.gestorFechadorNome,
+        supervisor,
         total: 0,
         noPrazo: 0,
         comAtraso: 0,
