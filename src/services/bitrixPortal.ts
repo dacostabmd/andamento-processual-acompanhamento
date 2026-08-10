@@ -12,12 +12,21 @@ function basePortalUrl(): string | null {
 
 /**
  * Deep-link nativo do Bitrix24 para abrir uma tarefa específica, ou null se
- * VITE_BITRIX_PORTAL_URL não estiver configurada. O segmento `user/{id}` da
- * rota precisa ser o RESPONSIBLE_ID real da tarefa — `0` não é um usuário
- * "coringa" e o Bitrix responde com ERROR_METHOD_NOT_FOUND nesse caso.
+ * VITE_BITRIX_PORTAL_URL não estiver configurada. O Bitrix não tem uma rota
+ * curta universal por ID — tarefas de grupo de trabalho (GROUP_ID, aqui
+ * `projetoId`) usam `/workgroups/group/{id}/tasks/task/view/{id}/`, e tarefas
+ * pessoais (sem grupo) usam `/company/personal/user/{RESPONSIBLE_ID}/tasks/task/view/{id}/`.
+ * Usar `user/0` como placeholder ou a rota curta sozinha resulta em
+ * ERROR_METHOD_NOT_FOUND — confirmado com URLs reais do portal do usuário.
  */
-export function montarUrlTarefaBitrix(tarefaId: number, responsavelId: number | null): string | null {
+export function montarUrlTarefaBitrix(
+  tarefaId: number,
+  projetoId: number | null,
+  responsavelId: number | null,
+): string | null {
   const base = basePortalUrl()
-  if (!base || !responsavelId) return null
-  return `${base}/company/personal/user/${responsavelId}/tasks/task/view/${tarefaId}/`
+  if (!base) return null
+  if (projetoId) return `${base}/workgroups/group/${projetoId}/tasks/task/view/${tarefaId}/`
+  if (responsavelId) return `${base}/company/personal/user/${responsavelId}/tasks/task/view/${tarefaId}/`
+  return null
 }

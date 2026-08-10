@@ -163,7 +163,11 @@ export function ColaboradorTarefasModal({ colaborador, aoFechar }: ColaboradorTa
                   </thead>
                   <tbody>
                     {cardsOrdenados.map((tarefa) => {
-                      const urlBitrix = montarUrlTarefaBitrix(tarefa.id, tarefa.responsavelId)
+                      const urlBitrix = montarUrlTarefaBitrix(
+                        tarefa.id,
+                        tarefa.projetoId,
+                        tarefa.responsavelId,
+                      )
                       return (
                         <tr key={tarefa.id} style={{ borderBottom: '1px solid var(--superficie-borda)' }}>
                           <td className="px-2 py-2">
