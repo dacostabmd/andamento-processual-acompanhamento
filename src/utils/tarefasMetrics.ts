@@ -262,6 +262,47 @@ export function tarefasDaPessoa(tarefas: Tarefa[], criterio: CriterioPessoa): Ta
   return tarefas.filter((t) => t.responsavelAtendimentoId === criterio.id)
 }
 
+export interface PontualidadeFechamento {
+  concluidas: number
+  noPrazo: number
+  comAtraso: number
+  /** Concluídas sem prazo ou sem data de conclusão — não entram em noPrazo nem comAtraso. */
+  semPrazo: number
+  /** Percentual de pontualidade sobre as concluídas com prazo julgável (exclui semPrazo). */
+  percentualNoPrazo: number | null
+}
+
+/**
+ * Mesma regra de pontualidade de `calcularRankingFechadores` (finalizadoEm vs
+ * prazoFinal), fatorada para reuso no modal de colaborador — o breakdown do
+ * modal usa `contarSituacoes`, que julga a situação ATUAL das tarefas (útil
+ * para as ainda abertas), enquanto esta função julga a pontualidade de quem já
+ * foi concluído, que é a mesma leitura de produtividade do ranking.
+ */
+export function calcularPontualidadeFechamento(cards: Tarefa[]): PontualidadeFechamento {
+  let concluidas = 0
+  let noPrazo = 0
+  let comAtraso = 0
+  let semPrazo = 0
+
+  cards.forEach((tarefa) => {
+    if (!tarefaEstaConcluida(tarefa)) return
+    concluidas += 1
+    if (!tarefa.prazoFinal || !tarefa.finalizadoEm) {
+      semPrazo += 1
+    } else if (new Date(tarefa.finalizadoEm) > new Date(tarefa.prazoFinal)) {
+      comAtraso += 1
+    } else {
+      noPrazo += 1
+    }
+  })
+
+  const comPrazo = noPrazo + comAtraso
+  const percentualNoPrazo = comPrazo === 0 ? null : (noPrazo / comPrazo) * 100
+
+  return { concluidas, noPrazo, comAtraso, semPrazo, percentualNoPrazo }
+}
+
 const TOP_RESPONSAVEIS = 10
 const TOP_FECHADO_POR = 10
 

@@ -1,8 +1,13 @@
-import { ActionIcon, Badge, Modal, SimpleGrid, Stack, Text, Tooltip, UnstyledButton } from '@mantine/core'
+import { ActionIcon, Badge, Modal, Progress, SimpleGrid, Stack, Text, Tooltip, UnstyledButton } from '@mantine/core'
 import { useMemo, useState } from 'react'
 import { montarUrlTarefaBitrix } from '../../services/bitrixPortal'
 import { STATUS_LABELS, type EquipeAtendimento, type Tarefa } from '../../types/domain'
-import { contarSituacoes, tarefaEstaAtrasada, tarefaEstaConcluida } from '../../utils/tarefasMetrics'
+import {
+  calcularPontualidadeFechamento,
+  contarSituacoes,
+  tarefaEstaAtrasada,
+  tarefaEstaConcluida,
+} from '../../utils/tarefasMetrics'
 import { EstadoVazio } from '../EstadoVazio'
 import { TarefaDetalheModal } from './TarefaDetalheModal'
 import { COR_POR_EQUIPE, COR_POR_SITUACAO, corDoStatus, formatarData, formatarDataHora } from './tarefaApresentacao'
@@ -32,6 +37,11 @@ export function ColaboradorTarefasModal({ colaborador, aoFechar }: ColaboradorTa
 
   const contagem = useMemo(
     () => (colaborador ? contarSituacoes(colaborador.cards) : null),
+    [colaborador],
+  )
+
+  const pontualidade = useMemo(
+    () => (colaborador ? calcularPontualidadeFechamento(colaborador.cards) : null),
     [colaborador],
   )
 
@@ -99,6 +109,28 @@ export function ColaboradorTarefasModal({ colaborador, aoFechar }: ColaboradorTa
                 </div>
               ))}
             </SimpleGrid>
+
+            {pontualidade && pontualidade.percentualNoPrazo !== null && (
+              <div>
+                <Text size="xs" c="dimmed" mb={4}>
+                  Pontualidade no fechamento — {pontualidade.noPrazo} no prazo,{' '}
+                  {pontualidade.comAtraso} com atraso
+                  {pontualidade.semPrazo > 0 ? `, ${pontualidade.semPrazo} sem prazo` : ''}
+                </Text>
+                <div className="flex items-center gap-2">
+                  <Progress.Root size="sm" className="flex-1">
+                    <Progress.Section value={pontualidade.percentualNoPrazo} color="#158a6f" />
+                    <Progress.Section
+                      value={100 - pontualidade.percentualNoPrazo}
+                      color="#c0395a"
+                    />
+                  </Progress.Root>
+                  <Text size="xs" fw={600} className="tabular-nums whitespace-nowrap">
+                    {pontualidade.percentualNoPrazo.toFixed(0)}% no prazo
+                  </Text>
+                </div>
+              </div>
+            )}
 
             {cardsOrdenados.length === 0 ? (
               <EstadoVazio
