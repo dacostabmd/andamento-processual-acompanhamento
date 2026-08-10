@@ -56,7 +56,7 @@ export function TarefaDetalheModal({ tarefa, aoFechar }: TarefaDetalheModalProps
       {tarefa && (
         <Stack gap="md">
           <Stack gap="xs">
-            <Text fw={700} size="lg">
+            <Text fw={700} size="lg" mt={4}>
               {tarefa.titulo}
             </Text>
             <Group gap="xs" wrap="nowrap">
