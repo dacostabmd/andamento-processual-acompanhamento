@@ -26,8 +26,13 @@ interface ColaboradorTarefasModalProps {
 }
 
 const SITUACOES_BREAKDOWN: Array<{ chave: keyof typeof COR_POR_SITUACAO; label: string }> = [
-  { chave: 'noPrazo', label: 'No prazo' },
-  { chave: 'atrasadas', label: 'Atrasadas' },
+  // "No prazo" e "Atrasadas" só existem enquanto a tarefa está aberta — uma
+  // vez concluída ela sai dessas duas categorias e vira só "Concluídas"
+  // (mesmo se tiver sido entregue com atraso). O rótulo deixa isso explícito
+  // para não parecer contradizer a pontualidade de fechamento, que reclassifica
+  // as concluídas comparando finalizadoEm x prazoFinal.
+  { chave: 'noPrazo', label: 'Abertas no prazo' },
+  { chave: 'atrasadas', label: 'Abertas em atraso' },
   { chave: 'concluidas', label: 'Concluídas' },
   { chave: 'adiadas', label: 'Adiadas' },
 ]
