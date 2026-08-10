@@ -391,6 +391,13 @@ export interface MetricasTarefas {
   aguardandoRevisao: number
   emAndamento: number
   taxaAtraso: number
+  /**
+   * Denominador usado no cálculo de `taxaAtraso` (tarefas ativas ou total,
+   * conforme `modoTaxaAtraso`). Exposto para a UI mostrar "1 de 1" ao lado da
+   * porcentagem — sem isso, uma taxa de 100% sobre uma base de 1 tarefa (comum
+   * em recortes pequenos, como uma equipe só) parece um erro de cálculo.
+   */
+  baseTaxaAtraso: number
 }
 
 export interface MetricasPorSetor {

@@ -132,7 +132,37 @@ describe('calcularMetricas', () => {
     expect(metricas.eficiencia).toBe(25) // (2 / 8) * 100
     // ativas: total(8) - concluidas(2) - adiadas(1) = 5
     // taxaAtraso: atrasadas(2) / ativas(5) = 40%
-    expect(metricas.taxaAtraso).toBe(40) 
+    expect(metricas.taxaAtraso).toBe(40)
+    expect(metricas.baseTaxaAtraso).toBe(5)
+  })
+
+  it('expõe a base pequena que explica uma taxa de 100% sem parecer erro', () => {
+    // Caso real: um recorte (ex.: uma equipe específica) pode ter só 1 tarefa
+    // ativa no momento. Se ela estiver atrasada, a taxa é 100% mesmo — não é
+    // bug, é base pequena. baseTaxaAtraso existe para a UI mostrar "1 de 1"
+    // em vez de só "100.0%" solto.
+    const tarefas = [
+      { status: 3, prazoFinal: '2024-01-01T12:00:00Z' }, // única ativa, atrasada
+      { status: 5, prazoFinal: '2024-01-05T12:00:00Z' },
+      { status: 5, prazoFinal: '2024-01-05T12:00:00Z' },
+    ] as Tarefa[]
+
+    const metricas = calcularMetricas(tarefas)
+    expect(metricas.atrasadas).toBe(1)
+    expect(metricas.baseTaxaAtraso).toBe(1)
+    expect(metricas.taxaAtraso).toBe(100)
+  })
+
+  it('usa o total geral como base quando modoTaxaAtraso é "total"', () => {
+    const tarefas = [
+      { status: 3, prazoFinal: '2024-01-01T12:00:00Z' }, // atrasada
+      { status: 5, prazoFinal: '2024-01-05T12:00:00Z' },
+      { status: 5, prazoFinal: '2024-01-05T12:00:00Z' },
+    ] as Tarefa[]
+
+    const metricas = calcularMetricas(tarefas, 'total')
+    expect(metricas.baseTaxaAtraso).toBe(3)
+    expect(metricas.taxaAtraso).toBeCloseTo((1 / 3) * 100)
   })
 })
 

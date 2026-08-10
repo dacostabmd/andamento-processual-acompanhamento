@@ -114,6 +114,7 @@ const METRICAS_STUB: MetricasTarefas = {
   aguardandoRevisao: 0,
   emAndamento: 0,
   taxaAtraso: 0,
+  baseTaxaAtraso: 0,
 }
 
 // Datas relativas a AGORA (2026-07-22).
@@ -269,6 +270,7 @@ describe('aiAssistantService', () => {
       aguardandoRevisao: 2,
       emAndamento: 50,
       taxaAtraso: 16.7,
+      baseTaxaAtraso: 60,
     }
     const filtros: FiltrosDashboard = { ...FILTROS, dataInicio: '2026-04-01' }
     const prompt = construirPromptContextual({ metricas, pacotes: null, filtros })

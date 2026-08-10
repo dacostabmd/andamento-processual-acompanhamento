@@ -79,15 +79,9 @@ export function calcularMetricas(
   const emAndamento = tarefas.filter((t) => tarefaNoPrazo(t, agora)).length
 
   const ativas = total - concluidas - tarefas.filter((t) => t.status === 6).length
+  const baseTaxaAtraso = modoTaxaAtraso === 'total' ? total : ativas
 
-  const taxaAtraso =
-    modoTaxaAtraso === 'total'
-      ? total === 0
-        ? 0
-        : (atrasadas / total) * 100
-      : ativas === 0
-        ? 0
-        : (atrasadas / ativas) * 100
+  const taxaAtraso = baseTaxaAtraso === 0 ? 0 : (atrasadas / baseTaxaAtraso) * 100
 
   return {
     total,
@@ -98,6 +92,7 @@ export function calcularMetricas(
     aguardandoRevisao,
     emAndamento,
     taxaAtraso,
+    baseTaxaAtraso,
   }
 }
 

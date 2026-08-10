@@ -30,7 +30,11 @@ function montarStats(metricas: MetricasTarefas) {
     {
       label: 'Taxa de Atraso',
       valor: `${metricas.taxaAtraso.toFixed(1)}%`,
-      descricao: 'Atrasadas em relação ao total ativo',
+      // Mostra o denominador junto: uma taxa de 100% sobre 1 tarefa é bem
+      // diferente de 100% sobre 500 — sem o "de quantas", a primeira parece
+      // um erro de cálculo em vez de uma base pequena. Frase neutra porque a
+      // base muda conforme o modo (fila ativa ou volume total).
+      descricao: `${metricas.atrasadas} de ${metricas.baseTaxaAtraso} tarefa(s) consideradas`,
     },
     {
       label: 'Concluídas',
