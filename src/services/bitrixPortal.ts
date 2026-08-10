@@ -10,9 +10,14 @@ function basePortalUrl(): string | null {
   return bruta.endsWith('/') ? bruta.slice(0, -1) : bruta
 }
 
-/** Deep-link nativo do Bitrix24 para abrir uma tarefa específica, ou null se VITE_BITRIX_PORTAL_URL não estiver configurada. */
-export function montarUrlTarefaBitrix(tarefaId: number): string | null {
+/**
+ * Deep-link nativo do Bitrix24 para abrir uma tarefa específica, ou null se
+ * VITE_BITRIX_PORTAL_URL não estiver configurada. O segmento `user/{id}` da
+ * rota precisa ser o RESPONSIBLE_ID real da tarefa — `0` não é um usuário
+ * "coringa" e o Bitrix responde com ERROR_METHOD_NOT_FOUND nesse caso.
+ */
+export function montarUrlTarefaBitrix(tarefaId: number, responsavelId: number | null): string | null {
   const base = basePortalUrl()
-  if (!base) return null
-  return `${base}/company/personal/user/0/tasks/task/view/${tarefaId}/`
+  if (!base || !responsavelId) return null
+  return `${base}/company/personal/user/${responsavelId}/tasks/task/view/${tarefaId}/`
 }

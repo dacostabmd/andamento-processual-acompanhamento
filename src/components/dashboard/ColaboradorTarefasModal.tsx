@@ -113,8 +113,8 @@ export function ColaboradorTarefasModal({ colaborador, aoFechar }: ColaboradorTa
             {pontualidade && pontualidade.percentualNoPrazo !== null && (
               <div>
                 <Text size="xs" c="dimmed" mb={4}>
-                  Pontualidade no fechamento — {pontualidade.noPrazo} no prazo,{' '}
-                  {pontualidade.comAtraso} com atraso
+                  Pontualidade no fechamento (só as {pontualidade.concluidas} concluídas) —{' '}
+                  {pontualidade.noPrazo} no prazo, {pontualidade.comAtraso} com atraso
                   {pontualidade.semPrazo > 0 ? `, ${pontualidade.semPrazo} sem prazo` : ''}
                 </Text>
                 <div className="flex items-center gap-2">
@@ -163,7 +163,7 @@ export function ColaboradorTarefasModal({ colaborador, aoFechar }: ColaboradorTa
                   </thead>
                   <tbody>
                     {cardsOrdenados.map((tarefa) => {
-                      const urlBitrix = montarUrlTarefaBitrix(tarefa.id)
+                      const urlBitrix = montarUrlTarefaBitrix(tarefa.id, tarefa.responsavelId)
                       return (
                         <tr key={tarefa.id} style={{ borderBottom: '1px solid var(--superficie-borda)' }}>
                           <td className="px-2 py-2">
