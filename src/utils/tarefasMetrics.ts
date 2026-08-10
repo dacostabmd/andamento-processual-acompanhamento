@@ -182,6 +182,35 @@ export function equipeDaTarefa(tarefa: Tarefa, visao: VisaoDashboard): EquipeAte
  * cards do mesmo responsável, com a equipe dele. Os pacotes vêm ordenados por
  * equipe (ordem fixa) e, dentro da equipe, do maior para o menor volume de cards.
  */
+/** Equipe mais frequente entre os cards da pessoa, ignorando 'indefinido' quando há alternativa.
+ *
+ * Antes a equipe do pacote travava na do PRIMEIRO card processado — como filtros
+ * (ex.: "Ocultar dados indefinidos") mudam quais cards sobrevivem sem mudar a
+ * ordem dos demais, isso fazia o card sobrevivente na frente do array virar
+ * "o primeiro", podendo trocar a equipe de uma pessoa inteira (e escondê-la do
+ * ripple da equipe certa) só por causa do filtro, não por causa dos dados dela.
+ */
+function equipeMaisFrequente(cards: Tarefa[], visao: VisaoDashboard): EquipeAtendimento {
+  const contagem = new Map<EquipeAtendimento, number>()
+  cards.forEach((c) => {
+    const equipe = equipeDaTarefa(c, visao)
+    contagem.set(equipe, (contagem.get(equipe) ?? 0) + 1)
+  })
+
+  let melhor: EquipeAtendimento = 'indefinido'
+  let melhorContagem = -1
+  contagem.forEach((total, equipe) => {
+    if (equipe === 'indefinido') return
+    if (total > melhorContagem) {
+      melhor = equipe
+      melhorContagem = total
+    }
+  })
+  if (melhorContagem >= 0) return melhor
+
+  return 'indefinido'
+}
+
 export function empacotarPorAtendimento(
   tarefas: Tarefa[],
   visao: VisaoDashboard = 'atendimento',
@@ -204,12 +233,16 @@ export function empacotarPorAtendimento(
       pacote = {
         responsavelAtendimentoId: pessoaId,
         responsavelAtendimentoNome: pessoaNome ?? nomeFallback,
-        equipe: equipeDaTarefa(tarefa, visao),
+        equipe: 'indefinido',
         cards: [],
       }
       pacotesPorChave.set(chave, pacote)
     }
     pacote.cards.push(tarefa)
+  })
+
+  pacotesPorChave.forEach((pacote) => {
+    pacote.equipe = equipeMaisFrequente(pacote.cards, visao)
   })
 
   return Array.from(pacotesPorChave.values()).sort((a, b) => {

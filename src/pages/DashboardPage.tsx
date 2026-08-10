@@ -30,16 +30,16 @@ import {
 } from '../types/domain'
 import classes from './DashboardPage.module.css'
 
-// Grupo "Acompanhamento Processual" — marcado por padrão na segmentação de
+// Grupo "Acompanhamento Mensal" — marcado por padrão na segmentação de
 // grupos, os demais grupos monitorados começam desmarcados.
-const GRUPO_PADRAO_ACOMPANHAMENTO_PROCESSUAL = 86
+const GRUPO_PADRAO_ACOMPANHAMENTO_MENSAL = 86
 
 export function DashboardPage() {
   const { estado, projetosPermitidos, mensagemErro } = useSessaoUsuario()
 
   const [filtros, setFiltros] = useState<FiltrosDashboard>(() => filtrosVazios(new Date()))
   const [gruposSelecionados, setGruposSelecionados] = useState<number[]>([
-    GRUPO_PADRAO_ACOMPANHAMENTO_PROCESSUAL,
+    GRUPO_PADRAO_ACOMPANHAMENTO_MENSAL,
   ])
   const [metricas, setMetricas] = useState<MetricasTarefas | null>(null)
   const [metricasPorEquipe, setMetricasPorEquipe] = useState<MetricasPorEquipe[]>([])

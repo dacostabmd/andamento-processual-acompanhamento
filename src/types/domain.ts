@@ -375,7 +375,7 @@ export function filtrosVazios(_agora?: Date): FiltrosDashboard {
     responsavelId: null,
     prioridade: null,
     estado: null,
-    ocultarIndefinidos: false,
+    ocultarIndefinidos: true,
     ocultarForaDasEquipes: false,
     modoTaxaAtraso: 'ativas',
   }

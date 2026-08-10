@@ -158,6 +158,48 @@ describe('empacotarPorAtendimento — divergência entre as visões', () => {
     expect(pacote.responsavelAtendimentoNome).toBe('Ainda não fechado')
     expect(pacote.equipe).toBe('indefinido')
   })
+
+  it('a equipe da pessoa não depende de qual card dela é o primeiro do array', () => {
+    // Bug real: a equipe do pacote travava na do PRIMEIRO card processado. Um
+    // filtro (ex.: "Ocultar dados indefinidos") que remove só o primeiro card
+    // de uma pessoa — sem mexer nos demais — não pode mudar a equipe dela.
+    const cardIndefinido = {
+      id: 1,
+      status: 5,
+      responsavelAtendimentoId: 118684,
+      responsavelAtendimentoNome: 'Lorena Pontes',
+      equipeAtendimento: 'indefinido',
+    } as unknown as Tarefa
+    const cardLorena1 = {
+      id: 2,
+      status: 5,
+      responsavelAtendimentoId: 118684,
+      responsavelAtendimentoNome: 'Lorena Pontes',
+      equipeAtendimento: 'Lorena Pontes',
+    } as unknown as Tarefa
+    const cardLorena2 = {
+      id: 3,
+      status: 5,
+      responsavelAtendimentoId: 118684,
+      responsavelAtendimentoNome: 'Lorena Pontes',
+      equipeAtendimento: 'Lorena Pontes',
+    } as unknown as Tarefa
+
+    const comIndefinidoNaFrente = empacotarPorAtendimento([cardIndefinido, cardLorena1, cardLorena2])
+    const semOIndefinido = empacotarPorAtendimento([cardLorena1, cardLorena2])
+
+    expect(comIndefinidoNaFrente[0].equipe).toBe('Lorena Pontes')
+    expect(semOIndefinido[0].equipe).toBe('Lorena Pontes')
+  })
+
+  it('só cai em indefinido quando TODOS os cards da pessoa são indefinido', () => {
+    const cards = [
+      { id: 1, status: 5, responsavelAtendimentoId: 42, responsavelAtendimentoNome: 'Fulano', equipeAtendimento: 'indefinido' },
+      { id: 2, status: 5, responsavelAtendimentoId: 42, responsavelAtendimentoNome: 'Fulano', equipeAtendimento: 'indefinido' },
+    ] as unknown as Tarefa[]
+    const [pacote] = empacotarPorAtendimento(cards)
+    expect(pacote.equipe).toBe('indefinido')
+  })
 })
 
 describe('calcularMetricasPorEquipe por visão', () => {

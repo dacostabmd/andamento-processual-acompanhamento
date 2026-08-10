@@ -15,7 +15,14 @@ export function modoMockDevAtivo(): boolean {
   return import.meta.env.DEV && !import.meta.env.VITE_SYNC_API_URL?.trim()
 }
 
+/** Nomes reais dos grupos monitorados — só usados no mock; em produção vêm do Bitrix via webhook. */
+const NOME_GRUPO_MOCK: Record<number, string> = {
+  86: 'Acompanhamento Mensal',
+  92: 'Cobrança Mensal',
+  94: 'Negociação Mensal',
+}
+
 /** Projetos permitidos "de mentira" (todos os monitorados) para o modo mock. */
 export function projetosMonitoradosMock(): Projeto[] {
-  return GRUPOS_MONITORADOS.map((id) => ({ id, nome: `Grupo ${id}` }))
+  return GRUPOS_MONITORADOS.map((id) => ({ id, nome: NOME_GRUPO_MOCK[id] ?? `Grupo ${id}` }))
 }
