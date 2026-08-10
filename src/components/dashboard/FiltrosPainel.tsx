@@ -48,9 +48,15 @@ interface FiltrosPainelProps {
   filtros: FiltrosDashboard
   onChange: (filtros: FiltrosDashboard) => void
   projetosPermitidos: Projeto[]
+  gruposSelecionados: number[]
 }
 
-export function FiltrosPainel({ filtros, onChange, projetosPermitidos }: FiltrosPainelProps) {
+export function FiltrosPainel({
+  filtros,
+  onChange,
+  projetosPermitidos,
+  gruposSelecionados,
+}: FiltrosPainelProps) {
   const [setoresDisponiveis, setSetoresDisponiveis] = useState<string[]>([])
   const [colaboradoresDisponiveis, setColaboradoresDisponiveis] = useState<
     Array<{ id: number; nome: string }>
@@ -109,6 +115,7 @@ export function FiltrosPainel({ filtros, onChange, projetosPermitidos }: Filtros
         modoTaxaAtraso,
       },
       projetosPermitidos,
+      gruposSelecionados,
     ).then((setores) => {
       if (!cancelado) setSetoresDisponiveis(setores)
     })
@@ -129,6 +136,7 @@ export function FiltrosPainel({ filtros, onChange, projetosPermitidos }: Filtros
     ocultarForaDasEquipes,
     modoTaxaAtraso,
     projetosPermitidos,
+    gruposSelecionados,
   ])
 
   useEffect(() => {
@@ -149,6 +157,7 @@ export function FiltrosPainel({ filtros, onChange, projetosPermitidos }: Filtros
         modoTaxaAtraso,
       },
       projetosPermitidos,
+      gruposSelecionados,
     ).then((colaboradores) => {
       if (!cancelado) setColaboradoresDisponiveis(colaboradores)
     })
@@ -169,6 +178,7 @@ export function FiltrosPainel({ filtros, onChange, projetosPermitidos }: Filtros
     ocultarForaDasEquipes,
     modoTaxaAtraso,
     projetosPermitidos,
+    gruposSelecionados,
   ])
 
   useEffect(() => {
@@ -189,6 +199,7 @@ export function FiltrosPainel({ filtros, onChange, projetosPermitidos }: Filtros
         modoTaxaAtraso,
       },
       projetosPermitidos,
+      gruposSelecionados,
     ).then((responsaveis) => {
       if (!cancelado) setResponsaveisDisponiveis(responsaveis)
     })
@@ -209,6 +220,7 @@ export function FiltrosPainel({ filtros, onChange, projetosPermitidos }: Filtros
     ocultarForaDasEquipes,
     modoTaxaAtraso,
     projetosPermitidos,
+    gruposSelecionados,
   ])
 
   useEffect(() => {
@@ -229,6 +241,7 @@ export function FiltrosPainel({ filtros, onChange, projetosPermitidos }: Filtros
         modoTaxaAtraso,
       },
       projetosPermitidos,
+      gruposSelecionados,
     ).then((estados) => {
       if (!cancelado) setEstadosDisponiveis(estados)
     })
@@ -249,6 +262,7 @@ export function FiltrosPainel({ filtros, onChange, projetosPermitidos }: Filtros
     ocultarForaDasEquipes,
     modoTaxaAtraso,
     projetosPermitidos,
+    gruposSelecionados,
   ])
 
 

@@ -22,7 +22,6 @@ import {
   type Projeto,
   type RankingFechadores,
   type Tarefa,
-  type VisaoDashboard,
 } from '../types/domain'
 
 let cacheDepartamentos: Promise<Map<number, string>> | null = null
@@ -71,14 +70,17 @@ interface SnapshotMetadata {
   runId: string
 }
 
-async function buscarTarefasDoSnapshot(): Promise<Tarefa[]> {
+async function buscarTarefasDoSnapshot(gruposSelecionados: number[]): Promise<Tarefa[]> {
   const base = baseSyncApiUrl()
   let erroConexao: string | null = null
 
   if (base) {
     try {
       // Envia o X-API-Token: o worker agora exige credencial em /snapshot.
-      const resposta = await fetchSyncApi('/snapshot')
+      // ?grupos= evita baixar o payload inteiro (~18 MB) quando só parte dos
+      // grupos monitorados está selecionada no multiselect do topo da página.
+      const query = gruposSelecionados.length > 0 ? `?grupos=${gruposSelecionados.join(',')}` : ''
+      const resposta = await fetchSyncApi(`/snapshot${query}`)
       if (resposta.ok) {
         const corpo = (await resposta.json()) as { tarefas: Tarefa[]; metadata: SnapshotMetadata }
         registrarSnapshotMetadata(corpo.metadata)
@@ -125,64 +127,85 @@ async function buscarTarefasDoSnapshot(): Promise<Tarefa[]> {
   )
 }
 
-function chaveDoCache(projetosPermitidos: Projeto[]): string {
-  return projetosPermitidos
-    .map((p) => p.id)
-    .sort((a, b) => a - b)
-    .join(',')
+function idsSelecionados(projetosPermitidos: Projeto[], gruposSelecionados: number[]): number[] {
+  const permitidos = new Set(projetosPermitidos.map((p) => p.id))
+  return gruposSelecionados.filter((id) => permitidos.has(id))
 }
 
-function carregarTarefasPermitidas(projetosPermitidos: Projeto[]): Promise<Tarefa[]> {
-  const chave = chaveDoCache(projetosPermitidos)
+function chaveDoCache(ids: number[]): string {
+  return [...ids].sort((a, b) => a - b).join(',')
+}
+
+/**
+ * `gruposSelecionados` restringe a análise aos grupos marcados no multiselect
+ * do topo da página — sempre interseccionado com `projetosPermitidos` (nunca
+ * expõe um grupo fora do que o usuário tem acesso). A interseção é reaplicada
+ * aqui (não só delegada ao worker) porque o snapshot mock local sempre traz
+ * todos os grupos, ignorando o `?grupos=` da query.
+ */
+function carregarTarefasPermitidas(
+  projetosPermitidos: Projeto[],
+  gruposSelecionados: number[],
+): Promise<Tarefa[]> {
+  const ids = idsSelecionados(projetosPermitidos, gruposSelecionados)
+  const chave = chaveDoCache(ids)
   if (cacheChave === chave && cachePromise) {
     return cachePromise
   }
 
-  const idsPermitidos = new Set(projetosPermitidos.map((p) => p.id))
+  const idsPermitidos = new Set(ids)
   cacheChave = chave
-  cachePromise = buscarTarefasDoSnapshot().then((tarefas) =>
+  cachePromise = buscarTarefasDoSnapshot(ids).then((tarefas) =>
     tarefas.filter((t) => t.projetoId !== null && idsPermitidos.has(t.projetoId)),
   )
   return cachePromise
 }
 
 /** Descarta o cache em memória, forçando nova leitura do snapshot mais recente. */
-export async function sincronizarComBitrix(projetosPermitidos: Projeto[]): Promise<void> {
+export async function sincronizarComBitrix(
+  projetosPermitidos: Projeto[],
+  gruposSelecionados: number[],
+): Promise<void> {
   cacheChave = null
   cachePromise = null
-  await carregarTarefasPermitidas(projetosPermitidos)
+  await carregarTarefasPermitidas(projetosPermitidos, gruposSelecionados)
 }
 
 // --- API pública consumida pelo front (mesma assinatura independente da fonte) ---
 
-export async function obterMetricasGerais(projetosPermitidos: Projeto[]): Promise<MetricasTarefas> {
-  const tarefas = await carregarTarefasPermitidas(projetosPermitidos)
+export async function obterMetricasGerais(
+  projetosPermitidos: Projeto[],
+  gruposSelecionados: number[],
+): Promise<MetricasTarefas> {
+  const tarefas = await carregarTarefasPermitidas(projetosPermitidos, gruposSelecionados)
   return calcularMetricas(tarefas)
 }
 
 export async function obterMetricasFiltradas(
   filtros: FiltrosDashboard,
   projetosPermitidos: Projeto[],
+  gruposSelecionados: number[],
 ): Promise<MetricasTarefas> {
-  const tarefas = await carregarTarefasPermitidas(projetosPermitidos)
+  const tarefas = await carregarTarefasPermitidas(projetosPermitidos, gruposSelecionados)
   return calcularMetricas(aplicarFiltros(tarefas, filtros), filtros.modoTaxaAtraso)
 }
 
 export async function obterMetricasPorSetorFiltradas(
   filtros: FiltrosDashboard,
   projetosPermitidos: Projeto[],
+  gruposSelecionados: number[],
 ): Promise<MetricasPorSetor[]> {
-  const tarefas = await carregarTarefasPermitidas(projetosPermitidos)
+  const tarefas = await carregarTarefasPermitidas(projetosPermitidos, gruposSelecionados)
   return calcularMetricasPorSetor(aplicarFiltros(tarefas, filtros))
 }
 
 export async function obterMetricasPorEquipeFiltradas(
   filtros: FiltrosDashboard,
   projetosPermitidos: Projeto[],
-  visao: VisaoDashboard = 'atendimento',
+  gruposSelecionados: number[],
 ): Promise<MetricasPorEquipe[]> {
-  const tarefas = await carregarTarefasPermitidas(projetosPermitidos)
-  return calcularMetricasPorEquipe(aplicarFiltros(tarefas, filtros), filtros.modoTaxaAtraso, visao)
+  const tarefas = await carregarTarefasPermitidas(projetosPermitidos, gruposSelecionados)
+  return calcularMetricasPorEquipe(aplicarFiltros(tarefas, filtros), filtros.modoTaxaAtraso, 'atendimento')
 }
 
 
@@ -194,10 +217,10 @@ export async function obterMetricasPorEquipeFiltradas(
 export async function obterPacotesAtendimento(
   filtros: FiltrosDashboard,
   projetosPermitidos: Projeto[],
-  visao: VisaoDashboard = 'atendimento',
+  gruposSelecionados: number[],
 ): Promise<PacoteAtendimento[]> {
-  const tarefas = await carregarTarefasPermitidas(projetosPermitidos)
-  return empacotarPorAtendimento(aplicarFiltros(tarefas, filtros), visao)
+  const tarefas = await carregarTarefasPermitidas(projetosPermitidos, gruposSelecionados)
+  return empacotarPorAtendimento(aplicarFiltros(tarefas, filtros), 'atendimento')
 }
 
 /**
@@ -208,22 +231,22 @@ export async function obterPacotesAtendimento(
 export async function obterTarefasFiltradas(
   filtros: FiltrosDashboard,
   projetosPermitidos: Projeto[],
+  gruposSelecionados: number[],
 ): Promise<Tarefa[]> {
-  const tarefas = await carregarTarefasPermitidas(projetosPermitidos)
+  const tarefas = await carregarTarefasPermitidas(projetosPermitidos, gruposSelecionados)
   return aplicarFiltros(tarefas, filtros)
 }
 
 /**
  * Ranking de quem mais fecha tarefas (`closedBy`), sob os filtros ativos.
- *
- * Não depende da visão selecionada: "quem fechou" é sempre o fechador. A visão
- * decide como os cards são AGRUPADOS nos gráficos, não quem executou o trabalho.
+ * Sempre por fechador — não depende de nenhuma outra dimensão de agrupamento.
  */
 export async function obterRankingFechadores(
   filtros: FiltrosDashboard,
   projetosPermitidos: Projeto[],
+  gruposSelecionados: number[],
 ): Promise<RankingFechadores> {
-  const tarefas = await carregarTarefasPermitidas(projetosPermitidos)
+  const tarefas = await carregarTarefasPermitidas(projetosPermitidos, gruposSelecionados)
   return calcularRankingFechadores(aplicarFiltros(tarefas, filtros))
 }
 
@@ -264,8 +287,9 @@ export async function resolverEquipesInformadas(): Promise<EquipeResolvida[]> {
 export async function listarSetoresDisponiveis(
   filtrosSemSetor: Omit<FiltrosDashboard, 'setor'>,
   projetosPermitidos: Projeto[],
+  gruposSelecionados: number[],
 ): Promise<string[]> {
-  const tarefas = await carregarTarefasPermitidas(projetosPermitidos)
+  const tarefas = await carregarTarefasPermitidas(projetosPermitidos, gruposSelecionados)
   const filtradas = aplicarFiltros(tarefas, { ...filtrosSemSetor, setor: null })
   const setores = new Set<string>()
   filtradas.forEach((t) => t.fechadoPorDepartamentos.forEach((d) => setores.add(d)))
@@ -276,8 +300,9 @@ export async function listarSetoresDisponiveis(
 export async function listarEstadosDisponiveis(
   filtrosSemEstado: Omit<FiltrosDashboard, 'estado'>,
   projetosPermitidos: Projeto[],
+  gruposSelecionados: number[],
 ): Promise<string[]> {
-  const tarefas = await carregarTarefasPermitidas(projetosPermitidos)
+  const tarefas = await carregarTarefasPermitidas(projetosPermitidos, gruposSelecionados)
   const filtradas = aplicarFiltros(tarefas, { ...filtrosSemEstado, estado: null })
   const estados = new Set<string>()
   filtradas.forEach((t) => {
@@ -290,8 +315,9 @@ export async function listarEstadosDisponiveis(
 export async function listarColaboradoresDisponiveis(
   filtrosSemFechadoPor: Omit<FiltrosDashboard, 'fechadoPorId'>,
   projetosPermitidos: Projeto[],
+  gruposSelecionados: number[],
 ): Promise<Array<{ id: number; nome: string }>> {
-  const tarefas = await carregarTarefasPermitidas(projetosPermitidos)
+  const tarefas = await carregarTarefasPermitidas(projetosPermitidos, gruposSelecionados)
   const filtradas = aplicarFiltros(tarefas, { ...filtrosSemFechadoPor, fechadoPorId: null })
   const colaboradores = new Map<number, string>()
   filtradas.forEach((t) => {
@@ -306,8 +332,9 @@ export async function listarColaboradoresDisponiveis(
 export async function listarResponsaveisDisponiveis(
   filtrosSemResponsavel: Omit<FiltrosDashboard, 'responsavelId'>,
   projetosPermitidos: Projeto[],
+  gruposSelecionados: number[],
 ): Promise<Array<{ id: number; nome: string }>> {
-  const tarefas = await carregarTarefasPermitidas(projetosPermitidos)
+  const tarefas = await carregarTarefasPermitidas(projetosPermitidos, gruposSelecionados)
   const filtradas = aplicarFiltros(tarefas, { ...filtrosSemResponsavel, responsavelId: null })
   const responsaveis = new Map<number, string>()
   filtradas.forEach((t) => {

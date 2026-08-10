@@ -176,23 +176,6 @@ export const EQUIPE_POR_NOME_DEPARTAMENTO: Record<string, EquipeAtendimento> = {
  */
 export type VisaoDashboard = 'atendimento' | 'executora'
 
-export const VISOES_DASHBOARD: Array<{
-  valor: VisaoDashboard
-  rotulo: string
-  descricao: string
-}> = [
-  {
-    valor: 'atendimento',
-    rotulo: 'Por atendimento',
-    descricao: 'Agrupa pelo responsável da tarefa, na equipe do departamento dele',
-  },
-  {
-    valor: 'executora',
-    rotulo: 'Por equipe executora',
-    descricao: 'Agrupa por quem fechou o card, na equipe do departamento do fechador',
-  },
-]
-
 /**
  * "Pacote" da tela de inteligência: todos os cards atribuídos a uma mesma
  * pessoa, já classificados na equipe dela. Quem é essa pessoa depende da

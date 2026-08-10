@@ -8,8 +8,8 @@ import { DebugBitrixPanel } from '../components/dashboard/DebugBitrixPanel'
 import { FiltrosPainel } from '../components/dashboard/FiltrosPainel'
 import { GraficosInteligencia } from '../components/dashboard/GraficosInteligencia'
 import { MetricasCards } from '../components/dashboard/MetricasCards'
-import { NavbarVisualizacoes } from '../components/dashboard/NavbarVisualizacoes'
 import { RankingFechadores } from '../components/dashboard/RankingFechadores'
+import { SeletorGrupos } from '../components/dashboard/SeletorGrupos'
 import { VERSAO_ATUAL, VersaoModal } from '../components/dashboard/VersaoModal'
 import { useSessaoUsuario } from '../hooks/useSessaoUsuario'
 import {
@@ -27,15 +27,20 @@ import {
   type PacoteAtendimento,
   type RankingFechadores as DadosRankingFechadores,
   type Tarefa,
-  type VisaoDashboard,
 } from '../types/domain'
 import classes from './DashboardPage.module.css'
+
+// Grupo "Acompanhamento Processual" — marcado por padrão na segmentação de
+// grupos, os demais grupos monitorados começam desmarcados.
+const GRUPO_PADRAO_ACOMPANHAMENTO_PROCESSUAL = 86
 
 export function DashboardPage() {
   const { estado, projetosPermitidos, mensagemErro } = useSessaoUsuario()
 
   const [filtros, setFiltros] = useState<FiltrosDashboard>(() => filtrosVazios(new Date()))
-  const [visao, setVisao] = useState<VisaoDashboard>('atendimento')
+  const [gruposSelecionados, setGruposSelecionados] = useState<number[]>([
+    GRUPO_PADRAO_ACOMPANHAMENTO_PROCESSUAL,
+  ])
   const [metricas, setMetricas] = useState<MetricasTarefas | null>(null)
   const [metricasPorEquipe, setMetricasPorEquipe] = useState<MetricasPorEquipe[]>([])
   const [pacotes, setPacotes] = useState<PacoteAtendimento[] | null>(null)
@@ -53,11 +58,11 @@ export function DashboardPage() {
     let cancelado = false
     setCarregandoFiltro(true)
     Promise.all([
-      obterMetricasFiltradas(filtros, projetosPermitidos),
-      obterMetricasPorEquipeFiltradas(filtros, projetosPermitidos, visao),
-      obterPacotesAtendimento(filtros, projetosPermitidos, visao),
-      obterRankingFechadores(filtros, projetosPermitidos),
-      obterTarefasFiltradas(filtros, projetosPermitidos),
+      obterMetricasFiltradas(filtros, projetosPermitidos, gruposSelecionados),
+      obterMetricasPorEquipeFiltradas(filtros, projetosPermitidos, gruposSelecionados),
+      obterPacotesAtendimento(filtros, projetosPermitidos, gruposSelecionados),
+      obterRankingFechadores(filtros, projetosPermitidos, gruposSelecionados),
+      obterTarefasFiltradas(filtros, projetosPermitidos, gruposSelecionados),
     ])
       .then(([novasMetricas, novasMetricasPorEquipe, novosPacotes, novoRanking, novasTarefas]) => {
         if (cancelado) return
@@ -78,7 +83,7 @@ export function DashboardPage() {
     return () => {
       cancelado = true
     }
-  }, [estado, filtros, projetosPermitidos, visao])
+  }, [estado, filtros, projetosPermitidos, gruposSelecionados])
 
   function aoMudarFiltros(novosFiltros: FiltrosDashboard) {
     setFiltros(novosFiltros)
@@ -140,12 +145,17 @@ export function DashboardPage() {
             <EstadoVazio titulo="Não foi possível carregar os dados" descricao={erroDados} />
           ) : (
             <>
-              <NavbarVisualizacoes visao={visao} onChange={setVisao} />
+              <SeletorGrupos
+                projetosPermitidos={projetosPermitidos}
+                selecionados={gruposSelecionados}
+                onChange={setGruposSelecionados}
+              />
 
               <FiltrosPainel
                 filtros={filtros}
                 onChange={aoMudarFiltros}
                 projetosPermitidos={projetosPermitidos}
+                gruposSelecionados={gruposSelecionados}
               />
 
               <MetricasCards
@@ -160,8 +170,7 @@ export function DashboardPage() {
                 </Title>
                 <Text size="sm" c="dimmed" mb="md">
                   Ranking por <code>closedBy</code> — quem efetivamente concluiu o card. É a
-                  atribuição de pessoa mais confiável do snapshot, e independe da visão
-                  selecionada acima.
+                  atribuição de pessoa mais confiável do snapshot.
                 </Text>
                 {rankingFechadores && (
                   <RankingFechadores
@@ -174,15 +183,12 @@ export function DashboardPage() {
 
               <div>
                 <Title order={3} mb="md">
-                  {visao === 'executora'
-                    ? 'Inteligência — visão por equipe executora (quem fechou)'
-                    : 'Inteligência — visão por equipe de atendimento'}
+                  Inteligência — visão por equipe de atendimento
                 </Title>
                 <Stack gap="md">
                   {pacotes && (
                     <GraficosInteligencia
                       pacotes={pacotes}
-                      visao={visao}
                       tarefasFiltradas={tarefasFiltradas}
                       onSelecionarColaborador={setColaboradorSelecionado}
                     />
@@ -209,7 +215,7 @@ export function DashboardPage() {
         colaborador={colaboradorSelecionado}
         aoFechar={() => setColaboradorSelecionado(null)}
       />
-      <AiAssistantChat metricas={metricas} pacotes={pacotes} filtros={filtros} visao={visao} />
+      <AiAssistantChat metricas={metricas} pacotes={pacotes} filtros={filtros} />
       <DebugBitrixPanel />
     </div>
   )

@@ -131,8 +131,8 @@ export function VersaoModal({ abertoManual, onCloseManual }: VersaoModalProps) {
                   </svg>
                 </div>
                 <div className={classes.featureText}>
-                  <h4>Visões de Atendimento e Executora</h4>
-                  <p>Alterne entre as visões, filtre por equipe e escolha a Taxa de Atraso sobre a Fila Ativa (backlog pendente) ou sobre o Volume Total. Tema claro e escuro incluídos.</p>
+                  <h4>Segmentação por Grupos de Tarefas</h4>
+                  <p>Escolha quais grupos de tarefas entram na análise, filtre por equipe e escolha a Taxa de Atraso sobre a Fila Ativa (backlog pendente) ou sobre o Volume Total. Tema claro e escuro incluídos.</p>
                 </div>
               </div>
 
