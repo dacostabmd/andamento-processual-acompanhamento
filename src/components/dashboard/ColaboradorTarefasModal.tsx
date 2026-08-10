@@ -106,47 +106,54 @@ export function ColaboradorTarefasModal({ colaborador, aoFechar }: ColaboradorTa
                 descricao="Não há tarefas contabilizadas para esta pessoa no recorte de filtros atual."
               />
             ) : (
-              <div className="overflow-x-auto">
-                <div className="max-h-[420px] min-w-[560px] overflow-y-auto">
-                  <table className="w-full border-collapse text-sm">
-                    <thead
-                      className="sticky top-0 z-10"
-                      style={{ backgroundColor: 'var(--superficie)' }}
-                    >
-                      <tr style={{ borderBottom: '1px solid var(--superficie-borda)' }}>
-                        <th className="px-2 py-2 text-left font-semibold opacity-70">Título</th>
-                        <th className="w-32 px-2 py-2 text-left font-semibold opacity-70">Status</th>
-                        <th className="w-24 px-2 py-2 text-left font-semibold opacity-70">Prazo</th>
-                        <th className="w-32 px-2 py-2 text-left font-semibold opacity-70">
-                          Finalizado em
-                        </th>
-                        <th className="w-14 px-2 py-2 text-right font-semibold opacity-70">Ação</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {cardsOrdenados.map((tarefa) => {
-                        const urlBitrix = montarUrlTarefaBitrix(tarefa.id)
-                        return (
-                          <tr key={tarefa.id} style={{ borderBottom: '1px solid var(--superficie-borda)' }}>
-                            <td className="px-2 py-2">
-                              <UnstyledButton onClick={() => setTarefaDetalhe(tarefa)}>
-                                <Text size="sm" lineClamp={1} className="hover:underline" style={{ cursor: 'pointer' }}>
-                                  {tarefa.titulo}
-                                </Text>
-                              </UnstyledButton>
-                            </td>
-                            <td className="px-2 py-2">
-                              <Badge size="sm" color={corDoStatus(tarefa)} variant="light">
-                                {STATUS_LABELS[tarefa.status]}
-                              </Badge>
-                            </td>
-                            <td className="px-2 py-2">
-                              <Text size="xs">{formatarData(tarefa.prazoFinal)}</Text>
-                            </td>
-                            <td className="px-2 py-2">
-                              <Text size="xs">{formatarDataHora(tarefa.finalizadoEm)}</Text>
-                            </td>
-                            <td className="px-2 py-2 text-right">
+              <div className="max-h-[420px] overflow-y-auto overflow-x-auto pr-1">
+                <table className="w-full min-w-[600px] border-collapse text-sm table-fixed">
+                  <colgroup>
+                    <col />
+                    <col className="w-32" />
+                    <col className="w-24" />
+                    <col className="w-32" />
+                    <col className="w-12" />
+                  </colgroup>
+                  <thead
+                    className="sticky top-0 z-10"
+                    style={{ backgroundColor: 'var(--superficie)' }}
+                  >
+                    <tr style={{ borderBottom: '1px solid var(--superficie-borda)' }}>
+                      <th className="px-2 py-2 text-left font-semibold opacity-70">Título</th>
+                      <th className="px-2 py-2 text-left font-semibold opacity-70">Status</th>
+                      <th className="px-2 py-2 text-left font-semibold opacity-70">Prazo</th>
+                      <th className="px-2 py-2 text-left font-semibold opacity-70">
+                        Finalizado em
+                      </th>
+                      <th className="px-2 py-2 text-center font-semibold opacity-70">Ação</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {cardsOrdenados.map((tarefa) => {
+                      const urlBitrix = montarUrlTarefaBitrix(tarefa.id)
+                      return (
+                        <tr key={tarefa.id} style={{ borderBottom: '1px solid var(--superficie-borda)' }}>
+                          <td className="px-2 py-2">
+                            <UnstyledButton onClick={() => setTarefaDetalhe(tarefa)}>
+                              <Text size="sm" lineClamp={1} className="hover:underline" style={{ cursor: 'pointer' }}>
+                                {tarefa.titulo}
+                              </Text>
+                            </UnstyledButton>
+                          </td>
+                          <td className="px-2 py-2">
+                            <Badge size="sm" color={corDoStatus(tarefa)} variant="light">
+                              {STATUS_LABELS[tarefa.status]}
+                            </Badge>
+                          </td>
+                          <td className="px-2 py-2">
+                            <Text size="xs">{formatarData(tarefa.prazoFinal)}</Text>
+                          </td>
+                          <td className="px-2 py-2">
+                            <Text size="xs">{formatarDataHora(tarefa.finalizadoEm)}</Text>
+                          </td>
+                          <td className="px-2 py-2">
+                            <div className="flex items-center justify-center">
                               {urlBitrix && (
                                 <Tooltip label="Abrir no Bitrix" withArrow>
                                   <ActionIcon
@@ -176,13 +183,13 @@ export function ColaboradorTarefasModal({ colaborador, aoFechar }: ColaboradorTa
                                   </ActionIcon>
                                 </Tooltip>
                               )}
-                            </td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
               </div>
             )}
           </Stack>
