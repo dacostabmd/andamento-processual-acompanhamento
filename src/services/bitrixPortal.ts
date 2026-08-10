@@ -30,3 +30,10 @@ export function montarUrlTarefaBitrix(
   if (responsavelId) return `${base}/company/personal/user/${responsavelId}/tasks/task/view/${tarefaId}/`
   return null
 }
+
+/** Link para a página de perfil do usuário no Bitrix24, ou null se a env var não estiver configurada ou não houver ID. */
+export function montarUrlPerfilBitrix(usuarioId: number | null): string | null {
+  const base = basePortalUrl()
+  if (!base || !usuarioId) return null
+  return `${base}/company/personal/user/${usuarioId}/`
+}

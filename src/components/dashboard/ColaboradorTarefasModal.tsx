@@ -2,7 +2,6 @@ import {
   ActionIcon,
   Badge,
   Modal,
-  Progress,
   SimpleGrid,
   Stack,
   Text,
@@ -11,7 +10,7 @@ import {
   UnstyledButton,
 } from '@mantine/core'
 import { useMemo, useState } from 'react'
-import { montarUrlTarefaBitrix } from '../../services/bitrixPortal'
+import { montarUrlPerfilBitrix, montarUrlTarefaBitrix } from '../../services/bitrixPortal'
 import { STATUS_LABELS, type EquipeAtendimento, type Tarefa } from '../../types/domain'
 import {
   calcularPontualidadeFechamento,
@@ -37,13 +36,6 @@ interface ColaboradorTarefasModalProps {
 }
 
 const SITUACOES_BREAKDOWN: Array<{ chave: keyof typeof COR_POR_SITUACAO; label: string }> = [
-  // "No prazo" e "Atrasadas" só existem enquanto a tarefa está aberta — uma
-  // vez concluída ela sai dessas duas categorias e vira só "Concluídas"
-  // (mesmo se tiver sido entregue com atraso). O rótulo deixa isso explícito
-  // para não parecer contradizer a pontualidade de fechamento, que reclassifica
-  // as concluídas comparando finalizadoEm x prazoFinal.
-  { chave: 'noPrazo', label: 'Abertas no prazo' },
-  { chave: 'atrasadas', label: 'Abertas em atraso' },
   { chave: 'concluidas', label: 'Concluídas' },
   { chave: 'adiadas', label: 'Adiadas' },
 ]
@@ -69,6 +61,26 @@ export function ColaboradorTarefasModal({ colaborador, aoFechar }: ColaboradorTa
     () => (colaborador ? calcularPontualidadeFechamento(colaborador.cards) : null),
     [colaborador],
   )
+
+  // Soma tarefas abertas já vencidas com tarefas concluídas que foram
+  // entregues depois do prazo — um único número de "atraso", em vez de dois
+  // separados (aberta x concluída) que faziam parecer haver uma contradição.
+  const totalAtrasadas = (contagem?.atrasadas ?? 0) + (pontualidade?.comAtraso ?? 0)
+
+  // ID da pessoa para o link de perfil — resolvido pelo mesmo campo que o
+  // papel indica (fechado por x responsável pelo atendimento), a partir de
+  // qualquer card do pacote (o critério de agrupamento garante que todos têm
+  // o mesmo ID nesse campo).
+  const urlPerfil = useMemo(() => {
+    if (!colaborador) return null
+    const primeiraTarefa = colaborador.cards[0]
+    if (!primeiraTarefa) return null
+    const pessoaId =
+      colaborador.papel === 'Fechado por'
+        ? primeiraTarefa.fechadoPorId
+        : primeiraTarefa.responsavelAtendimentoId
+    return montarUrlPerfilBitrix(pessoaId)
+  }, [colaborador])
 
   // Mais críticas primeiro: ajuda a achar o que precisa de atenção sem rolar tudo.
   const cardsOrdenados = useMemo(() => {
@@ -105,9 +117,39 @@ export function ColaboradorTarefasModal({ colaborador, aoFechar }: ColaboradorTa
         {colaborador && contagem && (
           <Stack gap="md">
             <div>
-              <Text fw={700} size="lg">
-                {colaborador.nome}
-              </Text>
+              <div className="flex items-center gap-2">
+                <Text fw={700} size="lg">
+                  {colaborador.nome}
+                </Text>
+                {urlPerfil && (
+                  <Tooltip label="Abrir perfil no Bitrix" withArrow>
+                    <ActionIcon
+                      component="a"
+                      href={urlPerfil}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      variant="subtle"
+                      size="sm"
+                      aria-label="Abrir perfil no Bitrix"
+                    >
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                        <path d="M15 3h6v6" />
+                        <path d="M10 14 21 3" />
+                      </svg>
+                    </ActionIcon>
+                  </Tooltip>
+                )}
+              </div>
               <Badge
                 mt={4}
                 size="sm"
@@ -130,6 +172,30 @@ export function ColaboradorTarefasModal({ colaborador, aoFechar }: ColaboradorTa
             </div>
 
             <SimpleGrid cols={4}>
+              <div>
+                <Text size="xl" fw={700} style={{ color: COR_POR_SITUACAO.noPrazo }}>
+                  {contagem.noPrazo}
+                </Text>
+                <Text size="xs" c="dimmed">
+                  Abertas no prazo
+                </Text>
+              </div>
+
+              <div>
+                <Text size="xl" fw={700} style={{ color: COR_POR_SITUACAO.atrasadas }}>
+                  {totalAtrasadas}
+                </Text>
+                <Text size="xs" c="dimmed">
+                  Atrasadas (total)
+                </Text>
+                {totalAtrasadas > 0 && (
+                  <Text size="xs" c="dimmed" opacity={0.7}>
+                    {contagem.atrasadas} aberta(s), {pontualidade?.comAtraso ?? 0} concluída(s) com
+                    atraso
+                  </Text>
+                )}
+              </div>
+
               {SITUACOES_BREAKDOWN.map((s) => (
                 <div key={s.chave}>
                   <Text size="xl" fw={700} style={{ color: COR_POR_SITUACAO[s.chave] }}>
@@ -141,28 +207,6 @@ export function ColaboradorTarefasModal({ colaborador, aoFechar }: ColaboradorTa
                 </div>
               ))}
             </SimpleGrid>
-
-            {pontualidade && pontualidade.percentualNoPrazo !== null && (
-              <div>
-                <Text size="xs" c="dimmed" mb={4}>
-                  Pontualidade no fechamento (só as {pontualidade.concluidas} concluídas) —{' '}
-                  {pontualidade.noPrazo} no prazo, {pontualidade.comAtraso} com atraso
-                  {pontualidade.semPrazo > 0 ? `, ${pontualidade.semPrazo} sem prazo` : ''}
-                </Text>
-                <div className="flex items-center gap-2">
-                  <Progress.Root size="sm" className="flex-1">
-                    <Progress.Section value={pontualidade.percentualNoPrazo} color="#158a6f" />
-                    <Progress.Section
-                      value={100 - pontualidade.percentualNoPrazo}
-                      color="#c0395a"
-                    />
-                  </Progress.Root>
-                  <Text size="xs" fw={600} className="tabular-nums whitespace-nowrap">
-                    {pontualidade.percentualNoPrazo.toFixed(0)}% no prazo
-                  </Text>
-                </div>
-              </div>
-            )}
 
             {cardsOrdenados.length === 0 ? (
               <EstadoVazio
