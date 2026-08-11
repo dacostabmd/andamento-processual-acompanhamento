@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { enviarMensagemAssistente, type MensagemChat } from '../../services/aiAssistantService'
+import {
+  enviarMensagemAssistente,
+  type MensagemChat,
+  type TarefaLink,
+} from '../../services/aiAssistantService'
 import type {
   FiltrosDashboard,
   MetricasTarefas,
@@ -92,6 +96,49 @@ function renderizarConteudoComMarkdown(texto: string) {
   )
 }
 
+/** Quantas tarefas a bolha mostra antes de resumir o resto. */
+const MAX_TAREFAS_VISIVEIS = 20
+
+/**
+ * Lista de tarefas do resultado, com link clicável montado pelo SERVIDOR.
+ *
+ * Substitui a lista que o modelo escrevia dentro do texto. Além de eliminar o
+ * tempo de geração das URLs (o que empurrava a pergunta de listagem para além do
+ * timeout do proxy), garante que o link seja exatamente o que o worker montou —
+ * transcrever URL de ~90 caracteres é justamente onde um LLM erra em silêncio.
+ */
+function ListaTarefasComLink({ tarefas }: { tarefas: TarefaLink[] }) {
+  const visiveis = tarefas.slice(0, MAX_TAREFAS_VISIVEIS)
+  const restantes = tarefas.length - visiveis.length
+
+  return (
+    <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+      {visiveis.map((t) => (
+        <div key={t.id} style={{ fontSize: '12px', lineHeight: 1.45 }}>
+          {t.link ? (
+            <a
+              href={t.link}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: 'var(--mantine-color-blue-4)', textDecoration: 'underline' }}
+            >
+              Tarefa {t.id}
+            </a>
+          ) : (
+            <span>Tarefa {t.id}</span>
+          )}
+          {t.titulo ? <span style={{ opacity: 0.85 }}> — {t.titulo}</span> : null}
+        </div>
+      ))}
+      {restantes > 0 && (
+        <div style={{ fontSize: '12px', opacity: 0.7, marginTop: '2px' }}>
+          e mais {restantes} {restantes === 1 ? 'tarefa' : 'tarefas'}.
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function AiAssistantChat({ metricas, pacotes, filtros, visao }: AiAssistantChatProps) {
   const [aberto, setAberto] = useState(false)
   const [mensagens, setMensagens] = useState<MensagemChat[]>([])
@@ -133,7 +180,8 @@ export function AiAssistantChat({ metricas, pacotes, filtros, visao }: AiAssista
       const mensagemIa: MensagemChat = {
         id: String(Date.now() + 1),
         remetente: 'assistant',
-        texto: respostaAssistente,
+        texto: respostaAssistente.texto,
+        ...(respostaAssistente.tarefas?.length ? { tarefas: respostaAssistente.tarefas } : {}),
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       }
 
@@ -234,6 +282,7 @@ export function AiAssistantChat({ metricas, pacotes, filtros, visao }: AiAssista
                     }`}
                   >
                     {renderizarConteudoComMarkdown(m.texto)}
+                    {m.tarefas?.length ? <ListaTarefasComLink tarefas={m.tarefas} /> : null}
                   </motion.div>
                 ))
               )}

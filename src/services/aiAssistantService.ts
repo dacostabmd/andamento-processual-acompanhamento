@@ -34,6 +34,53 @@ export interface MensagemChat {
   remetente: 'user' | 'assistant'
   texto: string
   timestamp: string
+  /** Tarefas do resultado, renderizadas como links de verdade. Ver TarefaLink. */
+  tarefas?: TarefaLink[]
+}
+
+/**
+ * Uma tarefa do resultado, com o link montado pelo SERVIDOR.
+ *
+ * Antes o worker já devolvia isto em `json.tarefas` e o frontend jogava fora,
+ * porque `enviarMensagemAssistente` retornava apenas string. Os links chegavam
+ * só dentro do texto que o LLM escrevia — o que custava caro em dois eixos:
+ *
+ *  - latência: uma URL do Bitrix tem ~90 caracteres, e o modelo digitava até 20
+ *    delas token por token. Era a maior parte do tempo de geração da resposta, e
+ *    o que empurrava a pergunta de listagem para além do timeout do proxy (504).
+ *  - correção: um caractere errado numa URL longa quebra o link em silêncio, e
+ *    transcrever URL é exatamente o tipo de tarefa em que LLM erra.
+ *
+ * Com o link vindo estruturado, ele é sempre exatamente o que o servidor montou.
+ */
+export interface TarefaLink {
+  id: number
+  link: string | null
+  titulo?: string
+}
+
+/** Resposta do assistente: o texto e, quando houver, as tarefas a renderizar. */
+export interface RespostaAssistente {
+  texto: string
+  tarefas?: TarefaLink[]
+}
+
+/**
+ * Remove do texto a lista de tarefas que o modelo escreveu à mão.
+ *
+ * Necessário durante a transição: a Vercel publica o frontend na hora, mas o
+ * worker só atualiza no `git pull` da VPS. Enquanto o worker antigo estiver no
+ * ar, ele continua mandando "- Tarefa 123 — TÍTULO: https://..." dentro do
+ * texto; sem esta limpeza a lista apareceria DUAS vezes — a do modelo e a
+ * renderizada. Com o worker novo não há nada para remover e a função é inócua.
+ */
+export function removerListaEscritaPeloModelo(texto: string): string {
+  return texto
+    .split('\n')
+    .filter((linha) => !/^\s*[-*]\s*Tarefa\s+\d+/i.test(linha))
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
 }
 
 interface ContextoDashboard {
@@ -219,7 +266,7 @@ INSTRUÇÕES DE RESPOSTA CRÍTICAS:
 export async function enviarMensagemAssistente(
   mensagens: MensagemChat[],
   contexto: ContextoDashboard,
-): Promise<string> {
+): Promise<RespostaAssistente> {
   const ultimaMensagem = mensagens[mensagens.length - 1]
   if (!ultimaMensagem || ultimaMensagem.remetente !== 'user') {
     throw new Error('Última mensagem inválida para resposta do assistente.')
@@ -268,7 +315,15 @@ export async function enviarMensagemAssistente(
 
       if (respostaWorker.ok) {
         const json = await respostaWorker.json()
-        if (json.resposta) return json.resposta
+        if (json.resposta) {
+          const tarefas: TarefaLink[] = Array.isArray(json.tarefas) ? json.tarefas : []
+          return {
+            // Só limpa quando há lista estruturada para pôr no lugar: sem
+            // `tarefas`, a lista escrita pelo modelo é a única que existe.
+            texto: tarefas.length ? removerListaEscritaPeloModelo(json.resposta) : json.resposta,
+            ...(tarefas.length ? { tarefas } : {}),
+          }
+        }
         // 200 com corpo sem `resposta` é contrato quebrado, não ausência de
         // dado — cair calado aqui esconderia um bug do worker.
         motivoFalhaWorker = 'o servidor respondeu sem conteúdo (HTTP 200 sem resposta)'
@@ -321,7 +376,9 @@ export async function enviarMensagemAssistente(
       if (resposta.ok) {
         const json = await resposta.json()
         const conteudo = json.choices?.[0]?.message?.content
-        if (conteudo) return conteudo
+        // Nível 2 fala com a LLM direto do browser, sem passar pelo banco: não
+        // há tarefas estruturadas a renderizar aqui.
+        if (conteudo) return { texto: conteudo }
       }
     } catch (err) {
       console.warn('Falha na chamada da API LLM direta, utilizando fallback local:', err)
@@ -337,15 +394,16 @@ export async function enviarMensagemAssistente(
   // devolve algum número. Sem este aviso, o gestor lê esse número como se
   // tivesse vindo da análise completa.
   if (motivoFalhaWorker) {
-    return (
-      `> ⚠️ **Modo limitado.** Não consegui usar a análise completa do servidor ` +
-      `(${motivoFalhaWorker}), então respondi a partir dos dados já carregados na ` +
-      `tela — o que pode não cobrir a sua pergunta. Vale reenviar em alguns instantes.\n\n` +
-      respostaLocal
-    )
+    return {
+      texto:
+        `> ⚠️ **Modo limitado.** Não consegui usar a análise completa do servidor ` +
+        `(${motivoFalhaWorker}), então respondi a partir dos dados já carregados na ` +
+        `tela — o que pode não cobrir a sua pergunta. Vale reenviar em alguns instantes.\n\n` +
+        respostaLocal,
+    }
   }
 
-  return respostaLocal
+  return { texto: respostaLocal }
 }
 
 /**

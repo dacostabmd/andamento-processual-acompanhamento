@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   construirPromptContextual,
   gerarRespostaSimuladaInteligente,
+  removerListaEscritaPeloModelo,
   type MensagemChat,
 } from './aiAssistantService'
 import {
@@ -717,5 +718,33 @@ describe('aiAssistantService', () => {
       expect(r).not.toContain('não está totalmente disponível')
       expect(r).toContain('concluídas')
     })
+  })
+})
+
+describe('removerListaEscritaPeloModelo', () => {
+  // Roda contra o worker ANTIGO durante a transição (Vercel publica na hora, a
+  // VPS só no git pull): sem isto a lista apareceria duas vezes na bolha.
+  it('remove as linhas de tarefa escritas pelo modelo e preserva a frase-resposta', () => {
+    const texto = [
+      'Encontrei 3 tarefas do grupo 86.',
+      '',
+      '- Tarefa 2737951 — ANDERSON MICHEL FURTADO: https://portal.bitrix24.com.br/x/1/',
+      '- Tarefa 2737950 — ALCIMAR FRANCISCO: https://portal.bitrix24.com.br/x/2/',
+      '* Tarefa 2737949 — Z MARINHO: https://portal.bitrix24.com.br/x/3/',
+    ].join('\n')
+
+    const limpo = removerListaEscritaPeloModelo(texto)
+    expect(limpo).toBe('Encontrei 3 tarefas do grupo 86.')
+    expect(limpo).not.toContain('bitrix24')
+  })
+
+  it('não come bullet que não seja item de tarefa', () => {
+    const texto = ['Resumo:', '- Concluídas: 10', '- Atrasadas: 4'].join('\n')
+    expect(removerListaEscritaPeloModelo(texto)).toBe(texto)
+  })
+
+  it('texto sem lista alguma passa intacto (worker novo)', () => {
+    const texto = 'São 287 tarefas de Bruno Borges no período.'
+    expect(removerListaEscritaPeloModelo(texto)).toBe(texto)
   })
 })
