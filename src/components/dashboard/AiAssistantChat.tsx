@@ -51,12 +51,73 @@ function BolinhasLoadingIA() {
   )
 }
 
+/** Estilo compartilhado por todo link renderizado na bolha do assistente. */
+const ESTILO_LINK: React.CSSProperties = {
+  color: 'var(--mantine-color-blue-4)',
+  textDecoration: 'underline',
+  wordBreak: 'break-word',
+}
+
+/**
+ * Uma linha de tarefa escrita pelo modelo, no formato que o worker pedia:
+ * "- Tarefa 2717103 — TÍTULO : https://portal/.../view/2717103/"
+ *
+ * Reconhecer o formato é o que torna a resposta legível sem depender da versão do
+ * worker: a URL do Bitrix tem ~90 caracteres e, impressa como texto, quebra em
+ * três linhas e enterra o título. Aqui ela vira o próprio "Tarefa <id>" clicável.
+ */
+const LINHA_DE_TAREFA = /^\s*[-*]\s*Tarefa\s+(\d+)\s*[—–-]?\s*(.*?)\s*:\s*(https?:\/\/\S+)\s*$/i
+
+/** URL solta em qualquer outro lugar do texto. */
+const URL_SOLTA = /(https?:\/\/\S+)/g
+
+/**
+ * Converte URLs soltas em links curtos. Imprimir a URL inteira não informa nada
+ * ao gestor — ele quer clicar, não ler o caminho do endpoint.
+ */
+type NoDeTexto = string | React.ReactElement
+
+function renderizarComLinks(nos: NoDeTexto[]): NoDeTexto[] {
+  return nos.flatMap<NoDeTexto>((no, indiceNo) => {
+    if (typeof no !== 'string') return [no]
+    return no.split(URL_SOLTA).map<NoDeTexto>((parte, i) => {
+      if (!/^https?:\/\//.test(parte)) return parte
+      return (
+        <a
+          key={`${indiceNo}-${i}`}
+          href={parte}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={ESTILO_LINK}
+        >
+          abrir
+        </a>
+      )
+    })
+  })
+}
+
 function renderizarConteudoComMarkdown(texto: string) {
   const linhas = texto.split('\n')
 
   return (
     <div>
       {linhas.map((linha, index) => {
+        // Linha de tarefa vem antes de qualquer outro tratamento: é o caso em que
+        // a formatação padrão produzia o resultado ilegível.
+        const tarefa = linha.match(LINHA_DE_TAREFA)
+        if (tarefa) {
+          const [, id, titulo, url] = tarefa
+          return (
+            <div key={index} style={{ marginBottom: '3px', fontSize: '12px', lineHeight: 1.45 }}>
+              <a href={url} target="_blank" rel="noopener noreferrer" style={ESTILO_LINK}>
+                Tarefa {id}
+              </a>
+              {titulo ? <span style={{ opacity: 0.85 }}> — {titulo}</span> : null}
+            </div>
+          )
+        }
+
         let processado = linha
         const isHeader3 = processado.startsWith('### ')
         const isHeader2 = processado.startsWith('## ')
@@ -67,12 +128,14 @@ function renderizarConteudoComMarkdown(texto: string) {
         else if (isHeader1) processado = processado.replace(/^#\s+/, '')
 
         const partesBold = processado.split(/(\*\*.*?\*\*)/g)
-        const elementosLinha = partesBold.map((parte, i) => {
-          if (parte.startsWith('**') && parte.endsWith('**') && parte.length > 4) {
-            return <strong key={i} style={{ fontWeight: 700 }}>{parte.slice(2, -2)}</strong>
-          }
-          return parte
-        })
+        const elementosLinha = renderizarComLinks(
+          partesBold.map((parte, i) => {
+            if (parte.startsWith('**') && parte.endsWith('**') && parte.length > 4) {
+              return <strong key={i} style={{ fontWeight: 700 }}>{parte.slice(2, -2)}</strong>
+            }
+            return parte
+          }),
+        )
 
         if (isHeader3 || isHeader2 || isHeader1) {
           return (
