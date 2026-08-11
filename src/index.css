@@ -94,3 +94,14 @@ body {
     transition: none !important;
   }
 }
+
+/* Efeito de hover dourado nos elementos e nomes clicáveis de estatísticas */
+.item-clicavel-hover {
+  transition: color 0.15s ease;
+}
+
+.item-clicavel-hover:hover {
+  color: var(--mantine-color-dourado-4, #cba556) !important;
+  text-decoration: underline;
+}
+

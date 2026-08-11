@@ -1,8 +1,10 @@
 import { STATUS_LABELS, type StatusTarefa, type Tarefa } from '../../types/domain'
+import { ROTULO_AUSENCIA_LEGIVEL, nomeDePessoaOuNulo } from '../../utils/pessoas'
 import {
   cardsDoRendimento,
   contar,
   contarPorEquipe,
+  contarSemPessoaIdentificada,
   filtrarPorEntidade,
   PREDICADOS,
   ranquear,
@@ -12,6 +14,7 @@ import {
   type ContagemEquipe,
   type TipoDimensaoGrupo,
 } from './agregacao'
+import type { RespostaComposta } from './grafico'
 import type { Entidade, Intencao, Periodo, TipoMetrica } from './intencao'
 
 /**
@@ -208,7 +211,7 @@ function ehTaxa(metrica: TipoMetrica): boolean {
   return metrica === 'taxaAtrasoAtiva' || metrica === 'taxaAtrasoTotal'
 }
 
-export function comporRanking(cards: Tarefa[], intencao: Intencao, agora: Date): string {
+export function comporRanking(cards: Tarefa[], intencao: Intencao, agora: Date): RespostaComposta {
   const dimensao = (intencao.entidade.tipo === 'nenhuma' ? 'equipe' : intencao.entidade.tipo) as TipoDimensaoGrupo
   const querPior = /\bpior\b|\bmenos\b|\bmenor\b/.test(intencao.textoNormalizado)
   const ordem = querPior ? 'asc' : 'desc'
@@ -219,7 +222,9 @@ export function comporRanking(cards: Tarefa[], intencao: Intencao, agora: Date):
   )
 
   if (itens.length === 0) {
-    return `Não encontrei dados suficientes para ranquear por ${NOME_DIMENSAO[dimensao]} com os filtros atuais.${rodapeSuposicoes(intencao)}`
+    return {
+      texto: `Não encontrei dados suficientes para ranquear por ${NOME_DIMENSAO[dimensao]} com os filtros atuais.${rodapeSuposicoes(intencao)}`,
+    }
   }
 
   const nomeMetrica = ehTaxa(metrica)
@@ -238,7 +243,32 @@ export function comporRanking(cards: Tarefa[], intencao: Intencao, agora: Date):
       return `${idx + 1}. **${i.chave}**: ${v}`
     }),
   ]
-  return linhas.join('\n') + rodapeSuposicoes(intencao)
+
+  // Ranking de pessoas exclui os cards sem atendente identificável (o rótulo
+  // "Responsável Indefinido" não é pessoa e vencia por volume). Excluir é certo;
+  // excluir calado faria a soma do ranking não fechar com o total.
+  if (dimensao === 'pessoa') {
+    const semPessoa = contarSemPessoaIdentificada(cards, metrica, intencao.periodo, agora)
+    if (semPessoa > 0) {
+      linhas.push(
+        `\n_${semPessoa} ${semPessoa === 1 ? 'tarefa' : 'tarefas'} ficaram fora do ranking por ` +
+          `estarem ${ROTULO_AUSENCIA_LEGIVEL} — ausência de atribuição não é uma pessoa._`,
+      )
+    }
+  }
+
+  // Gráfico só com 2+ categorias: 1 barra sozinha não diz mais que o texto.
+  const grafico =
+    top.length >= 2
+      ? {
+          categorias: top.map((i) => i.chave),
+          valores: top.map((i) => i.valor),
+          rotuloValor: nomeMetrica,
+          titulo: `Ranking por ${NOME_DIMENSAO[dimensao]}${per}`,
+        }
+      : undefined
+
+  return { texto: linhas.join('\n') + rodapeSuposicoes(intencao), ...(grafico ? { grafico } : {}) }
 }
 
 // ---------------------------------------------------------------------------
@@ -261,7 +291,7 @@ function valorParaComparacao(
   return contar(slice, m, agora)
 }
 
-export function comporComparacao(cards: Tarefa[], intencao: Intencao, agora: Date): string {
+export function comporComparacao(cards: Tarefa[], intencao: Intencao, agora: Date): RespostaComposta {
   const a = intencao.entidade
   const b = intencao.entidadeSecundaria
   if (!b || b.valorCanonico === null || a.valorCanonico === null) {
@@ -296,13 +326,22 @@ export function comporComparacao(cards: Tarefa[], intencao: Intencao, agora: Dat
     veredito = `**${lider}** ${taxa ? 'tem a menor taxa de atraso' : 'lidera'}.`
   }
 
-  return (
+  const texto =
     `**Comparação de ${nomeMetrica}**${per}:\n` +
     `- **${a.valorCanonico}**: ${fmt(va)}\n` +
     `- **${b.valorCanonico}**: ${fmt(vb)}\n\n` +
     veredito +
     rodapeSuposicoes(intencao)
-  )
+
+  return {
+    texto,
+    grafico: {
+      categorias: [String(a.valorCanonico), String(b.valorCanonico)],
+      valores: [va, vb],
+      rotuloValor: nomeMetrica,
+      titulo: `Comparação de ${nomeMetrica}${per}`,
+    },
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -342,7 +381,10 @@ export function comporDetalhe(cards: Tarefa[], intencao: Intencao, agora: Date):
   const linhas = lista.slice(0, LIMITE_DETALHE).map((c) => {
     const prazo = formatarData(c.prazoFinal)
     const status = STATUS_LABELS[c.status] ?? `status ${c.status}`
-    const resp = c.responsavelAtendimentoNome ?? c.responsavelNome ?? 'sem responsável'
+    const resp =
+      nomeDePessoaOuNulo(c.responsavelAtendimentoNome) ??
+      nomeDePessoaOuNulo(c.responsavelNome) ??
+      ROTULO_AUSENCIA_LEGIVEL
     return `- **${c.titulo}** — prazo ${prazo} · ${status} · ${resp}`
   })
 
@@ -371,7 +413,10 @@ export function comporExplicacao(cards: Tarefa[], intencao: Intencao, agora: Dat
   const introducao = `O número de **${lista.length} ${nome}**${alvo ? ` ${alvo}` : ''} é composto por estas tarefas:`
   const linhas = lista.slice(0, LIMITE_DETALHE).map((c) => {
     const prazo = formatarData(c.prazoFinal)
-    const resp = c.responsavelAtendimentoNome ?? c.responsavelNome ?? 'sem responsável'
+    const resp =
+      nomeDePessoaOuNulo(c.responsavelAtendimentoNome) ??
+      nomeDePessoaOuNulo(c.responsavelNome) ??
+      ROTULO_AUSENCIA_LEGIVEL
     return `- **${c.titulo}** — prazo ${prazo} · ${resp}`
   })
   const rodapeLista =

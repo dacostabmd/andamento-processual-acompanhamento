@@ -1,4 +1,5 @@
 import { EQUIPES_ATENDIMENTO, type Tarefa } from '../../types/domain'
+import { nomeDePessoaOuNulo } from '../../utils/pessoas'
 
 /**
  * Extração dimensional de intenção para o fallback offline do assistente.
@@ -377,10 +378,13 @@ function uniq(valores: Array<string | null | undefined>): string[] {
 export function catalogos(cards: Tarefa[]): Catalogos {
   return {
     equipes: uniq(cards.map((c) => c.equipeAtendimento)),
+    // `nomeDePessoaOuNulo` tira os rótulos de ausência ("Responsável
+    // Indefinido"): no catálogo eles viravam entidade `pessoa` resolvível, e
+    // qualquer pergunta sobre pessoas podia casar com um balde de nulos.
     pessoas: uniq([
-      ...cards.map((c) => c.responsavelAtendimentoNome),
-      ...cards.map((c) => c.responsavelNome),
-      ...cards.map((c) => c.fechadoPorNome),
+      ...cards.map((c) => nomeDePessoaOuNulo(c.responsavelAtendimentoNome)),
+      ...cards.map((c) => nomeDePessoaOuNulo(c.responsavelNome)),
+      ...cards.map((c) => nomeDePessoaOuNulo(c.fechadoPorNome)),
     ]),
     setores: uniq(cards.flatMap((c) => c.fechadoPorDepartamentos)),
     ufs: uniq(cards.map((c) => c.estadoUf)),

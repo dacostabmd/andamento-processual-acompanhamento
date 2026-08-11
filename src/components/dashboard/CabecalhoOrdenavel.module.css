@@ -1,0 +1,80 @@
+/* Cabeçalho de coluna clicável das tabelas do painel.
+   O projeto roda Tailwind SEM preflight, então o botão precisa dos resets
+   explícitos (fundo, borda, fonte, cor) — sem eles o `<th>` viria com o botão
+   cinza padrão do sistema. Mesmo motivo do reset em PilulaDeslizante.module.css. */
+
+.botao {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 4px;
+  /* Casa com o px-2 py-2 das colunas não ordenáveis: o clique cobre a célula
+     inteira, e a altura da linha do cabeçalho não muda. */
+  padding: 8px;
+  background: none;
+  border: 0;
+  font: inherit;
+  font-weight: 600;
+  color: inherit;
+  text-align: inherit;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.15s ease;
+}
+
+.botao:hover,
+.ativo {
+  opacity: 1;
+}
+
+.botao:focus-visible {
+  outline: 2px solid #cba556;
+  /* Para dentro: o `th` tem overflow contido, um outline externo seria cortado. */
+  outline-offset: -2px;
+}
+
+.esquerda {
+  justify-content: flex-start;
+}
+.direita {
+  justify-content: flex-end;
+}
+.centro {
+  justify-content: center;
+}
+
+.rotulo {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Invisível fora do hover nas colunas inativas: sem nenhuma seta, nada indica
+   que o cabeçalho ordena; com todas as setas visíveis, não se distingue a
+   coluna ativa. */
+.seta {
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.botao:hover .seta {
+  opacity: 0.45;
+}
+
+.setaAtiva,
+.botao:hover .setaAtiva {
+  opacity: 1;
+}
+
+.setaDescendente {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .botao,
+  .seta {
+    transition: none;
+  }
+}

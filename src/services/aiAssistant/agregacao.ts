@@ -5,6 +5,7 @@ import {
   type StatusTarefa,
   type Tarefa,
 } from '../../types/domain'
+import { nomeDePessoaOuNulo } from '../../utils/pessoas'
 import {
   equipeExecutoraDaTarefa,
   tarefaEstaAtrasada,
@@ -143,9 +144,14 @@ function chavesDoGrupo(card: Tarefa, dimensao: TipoDimensaoGrupo): string[] {
   switch (dimensao) {
     case 'equipe':
       return [card.equipeAtendimento]
-    case 'pessoa':
+    case 'pessoa': {
       // Pessoa relevante para ranking de volume é o responsável pelo atendimento.
-      return card.responsavelAtendimentoNome ? [card.responsavelAtendimentoNome] : []
+      // `nomeDePessoaOuNulo` barra o rótulo de ausência: card sem atendente
+      // identificável não entra em NENHUM grupo, em vez de formar um grupo
+      // chamado "Responsável Indefinido" que vence o ranking por volume.
+      const nome = nomeDePessoaOuNulo(card.responsavelAtendimentoNome)
+      return nome ? [nome] : []
+    }
     case 'setor':
       return card.fechadoPorDepartamentos
     case 'uf':
@@ -160,9 +166,38 @@ function chavesDoGrupo(card: Tarefa, dimensao: TipoDimensaoGrupo): string[] {
 /** Pessoa relevante para RENDIMENTO é quem fechou (fechadoPorNome). */
 function chavesDoGrupoRendimento(card: Tarefa, dimensao: TipoDimensaoGrupo): string[] {
   if (dimensao === 'pessoa') {
-    return card.fechadoPorNome ? [card.fechadoPorNome] : []
+    const nome = nomeDePessoaOuNulo(card.fechadoPorNome)
+    return nome ? [nome] : []
   }
   return chavesDoGrupo(card, dimensao)
+}
+
+/**
+ * Quantos cards NÃO têm pessoa identificável na dimensão pedida.
+ *
+ * Existe para o ranking poder declarar o que ficou fora: excluir o balde de
+ * ausência é correto, mas excluir em silêncio faz a soma do ranking não fechar
+ * com o total e ninguém saber por quê.
+ */
+export function contarSemPessoaIdentificada(
+  cards: Tarefa[],
+  metrica: TipoMetrica,
+  periodo: Periodo,
+  agora: Date,
+): number {
+  // Só conta o card que ENTRARIA na métrica: um card concluído não pesa num
+  // ranking de atrasadas, e citá-lo como "ficou de fora" seria ruído.
+  const elegiveis = metrica === 'rendimento' ? cardsDoRendimento(cards, periodo) : cards
+  const pred = metrica === 'rendimento' ? null : PREDICADOS[metrica]
+
+  return elegiveis.filter((card) => {
+    const chaves =
+      metrica === 'rendimento'
+        ? chavesDoGrupoRendimento(card, 'pessoa')
+        : chavesDoGrupo(card, 'pessoa')
+    if (chaves.length > 0) return false
+    return pred ? pred(card, agora) : true
+  }).length
 }
 
 export interface ItemRanking {

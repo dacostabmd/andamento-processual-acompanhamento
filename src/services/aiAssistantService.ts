@@ -6,7 +6,9 @@ import type {
   Tarefa,
   VisaoDashboard,
 } from '../types/domain'
+import { ROTULO_AUSENCIA_LEGIVEL, ehNomeDePessoa } from '../utils/pessoas'
 import { contarPorEquipe, periodoAtendivel } from './aiAssistant/agregacao'
+import type { DadosGrafico, RespostaComposta } from './aiAssistant/grafico'
 import { baseSyncApi, descreverErroHttp, fetchSyncApi } from './syncApi'
 import {
   comporComparacao,
@@ -36,6 +38,8 @@ export interface MensagemChat {
   timestamp: string
   /** Tarefas do resultado, renderizadas como links de verdade. Ver TarefaLink. */
   tarefas?: TarefaLink[]
+  /** Gráfico de barras do resultado, quando o dado é um agrupamento categórico. */
+  grafico?: DadosGrafico
 }
 
 /**
@@ -59,10 +63,24 @@ export interface TarefaLink {
   titulo?: string
 }
 
-/** Resposta do assistente: o texto e, quando houver, as tarefas a renderizar. */
+/**
+ * Dados prontos para desenhar um gráfico de barras a partir da resposta.
+ *
+ * Vem estruturado (não é o assistente "decidindo" mostrar gráfico em texto)
+ * pelo mesmo motivo de `TarefaLink`: o que soubermos de antemão sobre a forma
+ * do dado (aqui, "é um pequeno agrupamento categórico"), a interface desenha
+ * — o LLM não digita números de eixo nem inventa formatação de barra.
+ *
+ * Reexportado de aiAssistant/grafico (módulo de base) para quem só conhece
+ * este service, como o componente de chat.
+ */
+export type { DadosGrafico }
+
+/** Resposta do assistente: o texto e, quando houver, tarefas ou gráfico a renderizar. */
 export interface RespostaAssistente {
   texto: string
   tarefas?: TarefaLink[]
+  grafico?: DadosGrafico
 }
 
 /**
@@ -81,6 +99,31 @@ export function removerListaEscritaPeloModelo(texto: string): string {
     .join('\n')
     .replace(/\n{3,}/g, '\n\n')
     .trim()
+}
+
+/**
+ * Valida o `grafico` que o worker devolveu antes de confiar nele.
+ *
+ * O corpo da resposta vem de `fetch().json()` — tipado como `any` — e o worker
+ * é um serviço externo que pode estar numa versão mais antiga (o deploy dele
+ * não acompanha o da Vercel). Sem esta validação, um `grafico` ausente,
+ * incompleto ou com arrays de tamanhos diferentes chegaria direto ao
+ * componente de gráfico e quebraria o Chart.js em vez de simplesmente não
+ * mostrar gráfico nenhum.
+ */
+function validarGraficoDoWorker(valor: unknown): DadosGrafico | undefined {
+  if (!valor || typeof valor !== 'object') return undefined
+  const g = valor as Record<string, unknown>
+  if (!Array.isArray(g.categorias) || !Array.isArray(g.valores)) return undefined
+  if (g.categorias.length === 0 || g.categorias.length !== g.valores.length) return undefined
+  if (!g.categorias.every((c) => typeof c === 'string')) return undefined
+  if (!g.valores.every((v) => typeof v === 'number' && Number.isFinite(v))) return undefined
+  return {
+    categorias: g.categorias as string[],
+    valores: g.valores as number[],
+    ...(typeof g.rotuloValor === 'string' ? { rotuloValor: g.rotuloValor } : {}),
+    ...(typeof g.titulo === 'string' ? { titulo: g.titulo } : {}),
+  }
 }
 
 interface ContextoDashboard {
@@ -151,7 +194,27 @@ export function construirPromptContextual(contexto: ContextoDashboard): string {
       )
       .join('\n')
 
-    resumoColaboradoresAtendimento = pacotes
+    /**
+     * Por que os pacotes SEM responsável identificável saem da lista de
+     * colaboradores.
+     *
+     * O worker rotula esses cards como "Responsável Indefinido" para os
+     * gráficos. Listados aqui como `Colaborador(a) "Responsável Indefinido"`,
+     * eles se tornavam indistinguíveis de uma pessoa para o modelo — e como a
+     * maioria dos cards abertos não tem atendente identificável, esse era o
+     * maior número da seção. Resultado medido em produção: "o responsável com
+     * mais tarefas vencendo hoje é 'Responsável Indefinido', com 4.375 tarefas".
+     *
+     * O total não é escondido: ele vira uma linha explícita de AUSÊNCIA, fora da
+     * lista de pessoas, para o modelo poder citá-lo como lacuna de cadastro sem
+     * nunca tratá-lo como alguém.
+     */
+    const pacotesComPessoa = pacotes.filter((p) => ehNomeDePessoa(p.responsavelAtendimentoNome))
+    const cardsSemResponsavel = pacotes
+      .filter((p) => !ehNomeDePessoa(p.responsavelAtendimentoNome))
+      .reduce((soma, p) => soma + p.cards.length, 0)
+
+    resumoColaboradoresAtendimento = pacotesComPessoa
       .map((p) => {
         const departamentos = p.cards.find((c) => c.fechadoPorDepartamentos.length > 0)
           ?.fechadoPorDepartamentos.join(', ')
@@ -159,6 +222,13 @@ export function construirPromptContextual(contexto: ContextoDashboard): string {
         return `- Colaborador(a) "${p.responsavelAtendimentoNome}": Equipe "${p.equipe}" (${p.cards.length} tarefas)${deptoInfo}`
       })
       .join('\n')
+
+    if (cardsSemResponsavel > 0) {
+      resumoColaboradoresAtendimento +=
+        `\n- (NÃO É PESSOA) ${cardsSemResponsavel} tarefas estão ${ROTULO_AUSENCIA_LEGIVEL}: ` +
+        `o Bitrix não registra atendente nesses cards. Isto é uma LACUNA DE CADASTRO, ` +
+        `nunca um colaborador — jamais cite como nome de pessoa nem inclua em ranking de pessoas.`
+    }
 
     // Fechamento de tarefas por colaborador (campo fechadoPorNome)
     const NOMES_DEPARTAMENTO_EQUIPES = [
@@ -258,8 +328,13 @@ INSTRUÇÕES DE RESPOSTA CRÍTICAS:
    - Exemplo importante: **Victoria Persi** é uma colaboradora FORA das 4 equipes de atendimento que fechou o maior volume de tarefas no sistema.
    - Quando o usuário perguntar "quantos cards foram fechados por pessoas que não são das equipes?", consulte a seção [Fechamento de Tarefas] e informe a quantidade exata de tarefas fechadas fora das equipes.
    - Quando o usuário perguntar especificamente por **Victoria Persi**, confirme que ela existe no sistema, informe que ela é uma colaboradora fora das 4 equipes de atendimento e diga o número exato de tarefas que ela fechou.
-3. Responda de forma direta, cortês e fundamentada EXCLUSIVAMENTE nos dados acima.
-4. Formate a resposta em Markdown limpo (bullets, negritos, destaques).
+3. NUNCA trate ausência de dado como pessoa. "Responsável Indefinido", "Não informado",
+   "indefinido" e similares são RÓTULOS DE AUSÊNCIA de cadastro, não colaboradores.
+   - É PROIBIDO respondê-los como resposta de "quem"/"qual responsável"/"quem mais".
+   - Se o maior volume estiver nesse balde, diga que N tarefas estão sem responsável
+     identificado E dê o maior valor ENTRE AS PESSOAS DE VERDADE.
+4. Responda de forma direta, cortês e fundamentada EXCLUSIVAMENTE nos dados acima.
+5. Formate a resposta em Markdown limpo (bullets, negritos, destaques).
 `.trim()
 }
 
@@ -317,11 +392,13 @@ export async function enviarMensagemAssistente(
         const json = await respostaWorker.json()
         if (json.resposta) {
           const tarefas: TarefaLink[] = Array.isArray(json.tarefas) ? json.tarefas : []
+          const grafico = validarGraficoDoWorker(json.grafico)
           return {
             // Só limpa quando há lista estruturada para pôr no lugar: sem
             // `tarefas`, a lista escrita pelo modelo é a única que existe.
             texto: tarefas.length ? removerListaEscritaPeloModelo(json.resposta) : json.resposta,
             ...(tarefas.length ? { tarefas } : {}),
+            ...(grafico ? { grafico } : {}),
           }
         }
         // 200 com corpo sem `resposta` é contrato quebrado, não ausência de
@@ -399,11 +476,12 @@ export async function enviarMensagemAssistente(
         `> ⚠️ **Modo limitado.** Não consegui usar a análise completa do servidor ` +
         `(${motivoFalhaWorker}), então respondi a partir dos dados já carregados na ` +
         `tela — o que pode não cobrir a sua pergunta. Vale reenviar em alguns instantes.\n\n` +
-        respostaLocal,
+        respostaLocal.texto,
+      ...(respostaLocal.grafico ? { grafico: respostaLocal.grafico } : {}),
     }
   }
 
-  return { texto: respostaLocal }
+  return respostaLocal
 }
 
 /**
@@ -443,17 +521,17 @@ export function gerarRespostaSimuladaInteligente(
   pergunta: string,
   contexto: ContextoDashboard,
   historico: MensagemChat[] = [],
-): string {
+): RespostaComposta {
   const agora = new Date()
 
-  if (!contexto.metricas) return MSG_CARREGANDO
+  if (!contexto.metricas) return { texto: MSG_CARREGANDO }
 
   const cards = achatarCards(contexto)
 
   // 1. Fora de escopo (antes de tudo).
   const intencaoBruta = extrairIntencao(pergunta, cards, agora)
-  if (intencaoBruta.foraDeEscopo === 'escrita') return MSG_SOMENTE_LEITURA
-  if (intencaoBruta.foraDeEscopo === 'foraDominio') return MSG_FORA_DOMINIO
+  if (intencaoBruta.foraDeEscopo === 'escrita') return { texto: MSG_SOMENTE_LEITURA }
+  if (intencaoBruta.foraDeEscopo === 'foraDominio') return { texto: MSG_FORA_DOMINIO }
 
   // 2. Follow-up: herdar dimensões faltantes do contexto anterior.
   const anterior = ultimaIntencaoDoHistorico(historico, cards, agora)
@@ -465,7 +543,7 @@ export function gerarRespostaSimuladaInteligente(
   // 4. Casos degenerados -> esclarecimento.
   if (intencao.metrica === 'desconhecida' && intencao.entidade.tipo === 'nenhuma') {
     // Sem período e sem nada: pedir esclarecimento geral.
-    if (intencao.periodo.tipo === 'nenhum') return comporEsclarecimento('geral')
+    if (intencao.periodo.tipo === 'nenhum') return { texto: comporEsclarecimento('geral') }
     // "Me fala sobre a semana": período sem métrica -> resumo do período.
     intencao.metrica = 'resumo'
   }
@@ -474,7 +552,7 @@ export function gerarRespostaSimuladaInteligente(
     intencao.entidade.valorCanonico === null &&
     !intencao.entidade.todas
   ) {
-    return comporEsclarecimento(intencao.entidade.tipo)
+    return { texto: comporEsclarecimento(intencao.entidade.tipo) }
   }
 
   // 5. Viabilidade temporal: só recortes que dependem de finalizadoEm/janela.
@@ -484,28 +562,30 @@ export function gerarRespostaSimuladaInteligente(
   // lacuna de cobertura.
   if (dependeDeHistorico(intencao)) {
     const via = periodoAtendivel(cards, intencao.periodo)
-    if (!via.ok) return comporLimitacao(via.motivo ?? '', intencao.periodo)
+    if (!via.ok) return { texto: comporLimitacao(via.motivo ?? '', intencao.periodo) }
   }
 
   // 6. Tendência: não temos série histórica confiável no modo offline.
   if (intencao.agrupamento === 'tendencia') {
-    return comporLimitacao('janela-excede-dados-em-memoria', intencao.periodo)
+    return { texto: comporLimitacao('janela-excede-dados-em-memoria', intencao.periodo) }
   }
 
   // 7. Despacho por (agrupamento, métrica) — combinação, não cascata.
+  // Ranking e comparação podem vir com `grafico`; os demais compositores
+  // ainda respondem só em texto (o dado deles é escalar ou já é uma lista).
   if (intencao.agrupamento === 'ranking') return comporRanking(cards, intencao, agora)
   if (intencao.agrupamento === 'comparacao') return comporComparacao(cards, intencao, agora)
-  if (intencao.agrupamento === 'detalhe') return comporDetalhe(cards, intencao, agora)
+  if (intencao.agrupamento === 'detalhe') return { texto: comporDetalhe(cards, intencao, agora) }
 
-  if (intencao.metrica === 'explicacao') return comporExplicacao(cards, intencao, agora)
-  if (intencao.metrica === 'detalhe') return comporDetalhe(cards, intencao, agora)
-  if (intencao.metrica === 'porEquipe') return comporContagemPorEquipe(cards, intencao)
-  if (intencao.metrica === 'resumo') return comporResumo(cards, intencao, agora)
+  if (intencao.metrica === 'explicacao') return { texto: comporExplicacao(cards, intencao, agora) }
+  if (intencao.metrica === 'detalhe') return { texto: comporDetalhe(cards, intencao, agora) }
+  if (intencao.metrica === 'porEquipe') return { texto: comporContagemPorEquipe(cards, intencao) }
+  if (intencao.metrica === 'resumo') return { texto: comporResumo(cards, intencao, agora) }
   if (intencao.metrica === 'taxaAtrasoAtiva' || intencao.metrica === 'taxaAtrasoTotal')
-    return comporTaxa(cards, intencao, agora)
+    return { texto: comporTaxa(cards, intencao, agora) }
 
   // Escalar simples: entidade × métrica × período.
-  return comporEscalar(cards, intencao, agora)
+  return { texto: comporEscalar(cards, intencao, agora) }
 }
 
 /** Uma métrica/agrupamento que dependa de finalizadoEm ou janela histórica. */

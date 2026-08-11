@@ -3,18 +3,50 @@ import { useMemo, useState } from 'react'
 import type { RankingFechadores as DadosRanking, RankingFechador, Tarefa } from '../../types/domain'
 import { tarefasDaPessoa } from '../../utils/tarefasMetrics'
 import { EstadoVazio } from '../EstadoVazio'
+import { CabecalhoOrdenavel } from './CabecalhoOrdenavel'
 import type { ColaboradorSelecionado } from './ColaboradorTarefasModal'
+import {
+  compararNumero,
+  compararTexto,
+  useOrdenacaoTabela,
+  type DirecaoOrdem,
+} from './ordenacao'
 import { PilulaDeslizante, type OpcaoPilula } from './PilulaDeslizante'
 import { COR_POR_EQUIPE } from './tarefaApresentacao'
 
-type Coluna = 'total' | 'noPrazo' | 'comAtraso' | 'nome'
+type Coluna = 'total' | 'noPrazo' | 'comAtraso' | 'nome' | 'setor' | 'supervisor' | 'pontualidade'
 
-const ORDENACOES: ReadonlyArray<OpcaoPilula<Coluna>> = [
+type ColunaAtalho = 'total' | 'noPrazo' | 'comAtraso' | 'nome'
+
+/**
+ * Atalhos de ordenação. Continuam existindo depois dos cabeçalhos clicáveis
+ * porque duas das leituras mais pedidas — "quem tem mais atraso" e "quem tem
+ * mais no prazo" em número absoluto — não são colunas próprias: aparecem
+ * dentro da barra de prazo, que ordena por PERCENTUAL.
+ */
+const ORDENACOES: ReadonlyArray<OpcaoPilula<ColunaAtalho>> = [
   { valor: 'total', rotulo: 'Volume' },
   { valor: 'noPrazo', rotulo: 'No prazo' },
   { valor: 'comAtraso', rotulo: 'Com atraso' },
   { valor: 'nome', rotulo: 'A–Z' },
 ]
+
+/** Direção que cada atalho representa — usada para saber se ele está ativo. */
+const DIRECAO_DO_ATALHO: Record<ColunaAtalho, DirecaoOrdem> = {
+  total: 'desc',
+  noPrazo: 'desc',
+  comAtraso: 'desc',
+  nome: 'asc',
+}
+
+/**
+ * Pontualidade em percentual, excluindo quem não tem nenhuma tarefa com prazo
+ * (esses ficam no fim da ordenação, não em 0%).
+ */
+function pontualidade(linha: RankingFechador): number | null {
+  const comPrazo = linha.noPrazo + linha.comAtraso
+  return comPrazo === 0 ? null : (linha.noPrazo / comPrazo) * 100
+}
 
 interface Props {
   dados: DadosRanking
@@ -36,7 +68,10 @@ interface Props {
  */
 export function RankingFechadores({ dados, tarefas, onSelecionarColaborador }: Props) {
   const [busca, setBusca] = useState('')
-  const [coluna, setColuna] = useState<Coluna>('total')
+  const { ordem, setOrdem, alternar } = useOrdenacaoTabela<Coluna>({
+    chave: 'total',
+    direcao: 'desc',
+  })
 
   const linhas = useMemo(() => {
     const termo = busca
@@ -55,13 +90,30 @@ export function RankingFechadores({ dados, tarefas, onSelecionarColaborador }: P
         )
       : dados.linhas
 
-    const ordenadas = [...filtradas]
-    ordenadas.sort((a, b) => {
-      if (coluna === 'nome') return a.nome.localeCompare(b.nome)
-      return b[coluna] - a[coluna] || a.nome.localeCompare(b.nome)
-    })
-    return ordenadas
-  }, [dados.linhas, busca, coluna])
+    const { chave, direcao } = ordem
+    const comparar = (a: RankingFechador, b: RankingFechador): number => {
+      switch (chave) {
+        case 'nome':
+          return compararTexto(a.nome, b.nome, direcao)
+        case 'setor':
+          return compararTexto(a.setor, b.setor, direcao)
+        case 'supervisor':
+          return compararTexto(a.supervisor, b.supervisor, direcao)
+        case 'pontualidade':
+          return compararNumero(pontualidade(a), pontualidade(b), direcao)
+        default:
+          return compararNumero(a[chave], b[chave], direcao)
+      }
+    }
+    // Desempate sempre por nome: com 103 pessoas, muitos empates de contagem.
+    return [...filtradas].sort((a, b) => comparar(a, b) || compararTexto(a.nome, b.nome, 'asc'))
+  }, [dados.linhas, busca, ordem])
+
+  // O atalho só fica aceso se a ordenação atual for exatamente a dele — clicar
+  // num cabeçalho fora dos atalhos apaga todos, em vez de mentir.
+  const atalhoAtivo =
+    ORDENACOES.find((o) => o.valor === ordem.chave && DIRECAO_DO_ATALHO[o.valor] === ordem.direcao)
+      ?.valor ?? null
 
   if (dados.totalFechado === 0) {
     return (
@@ -112,8 +164,8 @@ export function RankingFechadores({ dados, tarefas, onSelecionarColaborador }: P
         />
         <PilulaDeslizante
           opcoes={ORDENACOES}
-          valor={coluna}
-          onChange={setColuna}
+          valor={atalhoAtivo}
+          onChange={(valor) => setOrdem({ chave: valor, direcao: DIRECAO_DO_ATALHO[valor] })}
           rotuloAcessivel="Ordenar ranking por"
           className="gap-0.5 p-0.5"
           classNameOpcao="px-3 py-1 text-xs font-semibold"
@@ -137,13 +189,43 @@ export function RankingFechadores({ dados, tarefas, onSelecionarColaborador }: P
               <thead className="sticky top-0 z-10" style={{ backgroundColor: 'var(--superficie)' }}>
                 <tr style={{ borderBottom: '1px solid var(--superficie-borda)' }}>
                   <th className="w-10 px-2 py-2 text-left font-semibold opacity-70">#</th>
-                  <th className="px-2 py-2 text-left font-semibold opacity-70">Pessoa</th>
-                  <th className="px-2 py-2 text-left font-semibold opacity-70">Setor</th>
-                  <th className="px-2 py-2 text-left font-semibold opacity-70">Supervisor</th>
-                  <th className="w-32 px-2 py-2 text-right font-semibold opacity-70">Fechados</th>
-                  <th className="w-40 px-2 py-2 text-left font-semibold opacity-70">
-                    Prazo (no prazo / atraso)
-                  </th>
+                  <CabecalhoOrdenavel
+                    chave="nome"
+                    rotulo="Pessoa"
+                    ordem={ordem}
+                    aoOrdenar={alternar}
+                  />
+                  <CabecalhoOrdenavel
+                    chave="setor"
+                    rotulo="Setor"
+                    ordem={ordem}
+                    aoOrdenar={alternar}
+                  />
+                  <CabecalhoOrdenavel
+                    chave="supervisor"
+                    rotulo="Supervisor"
+                    ordem={ordem}
+                    aoOrdenar={alternar}
+                  />
+                  <CabecalhoOrdenavel
+                    chave="total"
+                    rotulo="Fechados"
+                    ordem={ordem}
+                    aoOrdenar={alternar}
+                    direcaoInicial="desc"
+                    alinhamento="direita"
+                    className="w-32"
+                  />
+                  {/* Ordena pelo PERCENTUAL no prazo; os números absolutos
+                      continuam nos atalhos acima. */}
+                  <CabecalhoOrdenavel
+                    chave="pontualidade"
+                    rotulo="Prazo (% no prazo)"
+                    ordem={ordem}
+                    aoOrdenar={alternar}
+                    direcaoInicial="desc"
+                    className="w-40"
+                  />
                 </tr>
               </thead>
               <tbody>
@@ -153,7 +235,7 @@ export function RankingFechadores({ dados, tarefas, onSelecionarColaborador }: P
                     linha={linha}
                     posicao={indice + 1}
                     liderTotal={liderTotal}
-                    ordenadoPorVolume={coluna === 'total'}
+                    ordenadoPorVolume={ordem.chave === 'total' && ordem.direcao === 'desc'}
                     tarefas={tarefas}
                     onSelecionarColaborador={onSelecionarColaborador}
                   />
@@ -183,9 +265,9 @@ function LinhaFechador({
   onSelecionarColaborador: (colaborador: ColaboradorSelecionado) => void
 }) {
   // Base da pontualidade exclui os sem prazo: dividir por `total` puniria quem
-  // fecha muitas tarefas que nunca tiveram prazo definido.
-  const comPrazo = linha.noPrazo + linha.comAtraso
-  const pctNoPrazo = comPrazo === 0 ? null : (linha.noPrazo / comPrazo) * 100
+  // fecha muitas tarefas que nunca tiveram prazo definido. Mesma função usada
+  // na ordenação, para a coluna e a ordem nunca discordarem.
+  const pctNoPrazo = pontualidade(linha)
 
   return (
     <tr style={{ borderBottom: '1px solid var(--superficie-borda)' }}>
@@ -208,7 +290,7 @@ function LinhaFechador({
             size="sm"
             fw={posicao <= 3 && ordenadoPorVolume ? 700 : 400}
             lineClamp={1}
-            className="hover:underline"
+            className="item-clicavel-hover"
             style={{ cursor: 'pointer' }}
           >
             {linha.nome}

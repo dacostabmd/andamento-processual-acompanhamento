@@ -11,6 +11,8 @@ import type {
   PacoteAtendimento,
   VisaoDashboard,
 } from '../../types/domain'
+import { GraficoResposta } from './GraficoResposta'
+import { ResultadoTarefasModal } from './ResultadoTarefasModal'
 import classes from './AiAssistantChat.module.css'
 
 interface AiAssistantChatProps {
@@ -159,46 +161,22 @@ function renderizarConteudoComMarkdown(texto: string) {
   )
 }
 
-/** Quantas tarefas a bolha mostra antes de resumir o resto. */
-const MAX_TAREFAS_VISIVEIS = 20
-
 /**
- * Lista de tarefas do resultado, com link clicável montado pelo SERVIDOR.
+ * Botão que abre o modal com a listagem completa do resultado.
  *
- * Substitui a lista que o modelo escrevia dentro do texto. Além de eliminar o
- * tempo de geração das URLs (o que empurrava a pergunta de listagem para além do
- * timeout do proxy), garante que o link seja exatamente o que o worker montou —
- * transcrever URL de ~90 caracteres é justamente onde um LLM erra em silêncio.
+ * Substitui a lista de tarefas despejada inline na bolha: 40+ linhas dentro do
+ * chat tornavam a conversa ilegível e empurravam as mensagens seguintes para
+ * fora de vista. O chat agora mostra só o resumo (a frase que o assistente já
+ * escreve) e este botão; o detalhe fica a um clique, no modal.
  */
-function ListaTarefasComLink({ tarefas }: { tarefas: TarefaLink[] }) {
-  const visiveis = tarefas.slice(0, MAX_TAREFAS_VISIVEIS)
-  const restantes = tarefas.length - visiveis.length
-
+function BotaoVerResultado({ quantidade, onClick }: { quantidade: number; onClick: () => void }) {
   return (
-    <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
-      {visiveis.map((t) => (
-        <div key={t.id} style={{ fontSize: '12px', lineHeight: 1.45 }}>
-          {t.link ? (
-            <a
-              href={t.link}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ color: 'var(--mantine-color-blue-4)', textDecoration: 'underline' }}
-            >
-              Tarefa {t.id}
-            </a>
-          ) : (
-            <span>Tarefa {t.id}</span>
-          )}
-          {t.titulo ? <span style={{ opacity: 0.85 }}> — {t.titulo}</span> : null}
-        </div>
-      ))}
-      {restantes > 0 && (
-        <div style={{ fontSize: '12px', opacity: 0.7, marginTop: '2px' }}>
-          e mais {restantes} {restantes === 1 ? 'tarefa' : 'tarefas'}.
-        </div>
-      )}
-    </div>
+    <button type="button" className={classes.verResultadoButton} onClick={onClick}>
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
+      </svg>
+      Ver resultado ({quantidade})
+    </button>
   )
 }
 
@@ -207,6 +185,14 @@ export function AiAssistantChat({ metricas, pacotes, filtros, visao }: AiAssista
   const [mensagens, setMensagens] = useState<MensagemChat[]>([])
   const [textoInput, setTextoInput] = useState('')
   const [carregando, setCarregando] = useState(false)
+  /** Tarefas mostradas no modal "Ver resultado" — null fecha o modal. */
+  const [tarefasNoModal, setTarefasNoModal] = useState<TarefaLink[] | null>(null)
+  /**
+   * Alargado/alteado uma vez que a conversa produza um gráfico, e permanece
+   * assim pelo resto da sessão do widget — evitar encolher de novo a cada
+   * mensagem sem gráfico, o que faria a janela "respirar" a cada troca.
+   */
+  const [chatExpandido, setChatExpandido] = useState(false)
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
 
@@ -245,9 +231,13 @@ export function AiAssistantChat({ metricas, pacotes, filtros, visao }: AiAssista
         remetente: 'assistant',
         texto: respostaAssistente.texto,
         ...(respostaAssistente.tarefas?.length ? { tarefas: respostaAssistente.tarefas } : {}),
+        ...(respostaAssistente.grafico ? { grafico: respostaAssistente.grafico } : {}),
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       }
 
+      // Direto no handler, não num efeito reagindo a `mensagens`: dispara
+      // exatamente uma vez por resposta com gráfico, sem re-render em cascata.
+      if (respostaAssistente.grafico) setChatExpandido(true)
       setMensagens((prev) => [...prev, mensagemIa])
     } catch (err) {
       const mensagemErro: MensagemChat = {
@@ -302,7 +292,9 @@ export function AiAssistantChat({ metricas, pacotes, filtros, visao }: AiAssista
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.94, y: 20 }}
             transition={{ duration: 0.25, ease: 'easeOut' }}
-            className={classes.chatWidgetContainer}
+            className={`${classes.chatWidgetContainer} ${
+              chatExpandido ? classes.chatWidgetContainerExpandido : ''
+            }`}
           >
             {/* Header */}
             <div className={classes.header}>
@@ -328,7 +320,11 @@ export function AiAssistantChat({ metricas, pacotes, filtros, visao }: AiAssista
             </div>
 
             {/* Área de Mensagens */}
-            <div className={classes.messagesArea}>
+            <div
+              className={`${classes.messagesArea} ${
+                chatExpandido ? classes.messagesAreaExpandido : ''
+              }`}
+            >
               {mensagens.length === 0 ? (
                 <div className={classes.emptyStateText}>
                   O que você gostaria de explorar hoje? Faça perguntas, tire dúvidas sobre as métricas ou solicite análises do dashboard...
@@ -345,7 +341,13 @@ export function AiAssistantChat({ metricas, pacotes, filtros, visao }: AiAssista
                     }`}
                   >
                     {renderizarConteudoComMarkdown(m.texto)}
-                    {m.tarefas?.length ? <ListaTarefasComLink tarefas={m.tarefas} /> : null}
+                    {m.grafico ? <GraficoResposta dados={m.grafico} /> : null}
+                    {m.tarefas?.length ? (
+                      <BotaoVerResultado
+                        quantidade={m.tarefas.length}
+                        onClick={() => setTarefasNoModal(m.tarefas!)}
+                      />
+                    ) : null}
                   </motion.div>
                 ))
               )}
@@ -405,6 +407,8 @@ export function AiAssistantChat({ metricas, pacotes, filtros, visao }: AiAssista
         </motion.div>
       )}
     </AnimatePresence>
+
+      <ResultadoTarefasModal tarefas={tarefasNoModal} aoFechar={() => setTarefasNoModal(null)} />
     </>
   )
 }

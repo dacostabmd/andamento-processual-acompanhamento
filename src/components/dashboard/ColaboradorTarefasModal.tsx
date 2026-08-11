@@ -26,6 +26,8 @@ import {
   tarefaFoiConcluidaComAtraso,
 } from '../../utils/tarefasMetrics'
 import { EstadoVazio } from '../EstadoVazio'
+import { CabecalhoOrdenavel } from './CabecalhoOrdenavel'
+import { compararData, compararNumero, compararTexto, useOrdenacaoTabela } from './ordenacao'
 import { TarefaDetalheModal } from './TarefaDetalheModal'
 import { COR_POR_EQUIPE, COR_POR_SITUACAO, corDoStatus, formatarData, formatarDataHora } from './tarefaApresentacao'
 
@@ -47,6 +49,16 @@ const SITUACOES_BREAKDOWN: Array<{ chave: keyof typeof COR_POR_SITUACAO; label: 
   { chave: 'adiadas', label: 'Adiadas' },
 ]
 
+type ColunaModal = 'situacao' | 'titulo' | 'prazo' | 'finalizado'
+
+/** Peso de criticidade: menor = mais precisa de atenção. */
+function pesoSituacao(t: Tarefa, agora: Date): number {
+  if (tarefaEstaAtrasada(t, agora)) return 0
+  if (tarefaEstaConcluida(t)) return 2
+  if (t.status === 6) return 3
+  return 1 // no prazo
+}
+
 function normalizarBusca(texto: string): string {
   return texto
     .trim()
@@ -58,6 +70,10 @@ function normalizarBusca(texto: string): string {
 export function ColaboradorTarefasModal({ colaborador, aoFechar }: ColaboradorTarefasModalProps) {
   const [tarefaDetalhe, setTarefaDetalhe] = useState<Tarefa | null>(null)
   const [busca, setBusca] = useState('')
+  const { ordem, setOrdem, alternar } = useOrdenacaoTabela<ColunaModal>({
+    chave: 'situacao',
+    direcao: 'asc',
+  })
 
   const contagem = useMemo(
     () => (colaborador ? contarSituacoes(colaborador.cards) : null),
@@ -92,18 +108,30 @@ export function ColaboradorTarefasModal({ colaborador, aoFechar }: ColaboradorTa
     return { url, caminho }
   }, [colaborador])
 
-  // Mais críticas primeiro: ajuda a achar o que precisa de atenção sem rolar tudo.
+  // Padrão: mais críticas primeiro — ajuda a achar o que precisa de atenção sem
+  // rolar tudo. As outras colunas ficam a um clique no cabeçalho.
   const cardsOrdenados = useMemo(() => {
     if (!colaborador) return []
     const agora = new Date()
-    const pesoSituacao = (t: Tarefa): number => {
-      if (tarefaEstaAtrasada(t, agora)) return 0
-      if (tarefaEstaConcluida(t)) return 2
-      if (t.status === 6) return 3
-      return 1 // no prazo
+    const { chave, direcao } = ordem
+    const comparar = (a: Tarefa, b: Tarefa): number => {
+      switch (chave) {
+        case 'titulo':
+          return compararTexto(a.titulo, b.titulo, direcao)
+        case 'prazo':
+          return compararData(a.prazoFinal, b.prazoFinal, direcao)
+        case 'finalizado':
+          return compararData(a.finalizadoEm, b.finalizadoEm, direcao)
+        default:
+          return compararNumero(pesoSituacao(a, agora), pesoSituacao(b, agora), direcao)
+      }
     }
-    return [...colaborador.cards].sort((a, b) => pesoSituacao(a) - pesoSituacao(b))
-  }, [colaborador])
+    // Desempate por título: sem ele, tarefas com a mesma data (ou mesma
+    // situação) trocariam de lugar entre renders.
+    return [...colaborador.cards].sort(
+      (a, b) => comparar(a, b) || compararTexto(a.titulo, b.titulo, 'asc') || a.id - b.id,
+    )
+  }, [colaborador, ordem])
 
   const cardsFiltrados = useMemo(() => {
     const termo = normalizarBusca(busca)
@@ -116,7 +144,10 @@ export function ColaboradorTarefasModal({ colaborador, aoFechar }: ColaboradorTa
       <Modal
         opened={colaborador !== null}
         onClose={aoFechar}
-        onExitTransitionEnd={() => setBusca('')}
+        onExitTransitionEnd={() => {
+          setBusca('')
+          setOrdem({ chave: 'situacao', direcao: 'asc' })
+        }}
         title="Tarefas contabilizadas"
         centered
         size="auto"
@@ -250,12 +281,33 @@ export function ColaboradorTarefasModal({ colaborador, aoFechar }: ColaboradorTa
                         style={{ backgroundColor: 'var(--superficie)' }}
                       >
                         <tr style={{ borderBottom: '1px solid var(--superficie-borda)' }}>
-                          <th className="px-2 py-2 text-left font-semibold opacity-70">Título</th>
-                          <th className="px-2 py-2 text-left font-semibold opacity-70">Status</th>
-                          <th className="px-2 py-2 text-left font-semibold opacity-70">Prazo</th>
-                          <th className="px-2 py-2 text-left font-semibold opacity-70">
-                            Finalizado em
-                          </th>
+                          <CabecalhoOrdenavel
+                            chave="titulo"
+                            rotulo="Título"
+                            ordem={ordem}
+                            aoOrdenar={alternar}
+                          />
+                          <CabecalhoOrdenavel
+                            chave="situacao"
+                            rotulo="Status"
+                            ordem={ordem}
+                            aoOrdenar={alternar}
+                          />
+                          {/* Prazo crescente = vencendo primeiro; finalização
+                              decrescente = entregas mais recentes primeiro. */}
+                          <CabecalhoOrdenavel
+                            chave="prazo"
+                            rotulo="Prazo"
+                            ordem={ordem}
+                            aoOrdenar={alternar}
+                          />
+                          <CabecalhoOrdenavel
+                            chave="finalizado"
+                            rotulo="Finalizado em"
+                            ordem={ordem}
+                            aoOrdenar={alternar}
+                            direcaoInicial="desc"
+                          />
                           <th className="px-2 py-2 text-center font-semibold opacity-70">Ação</th>
                         </tr>
                       </thead>
@@ -275,7 +327,7 @@ export function ColaboradorTarefasModal({ colaborador, aoFechar }: ColaboradorTa
                             <tr key={tarefa.id} style={{ borderBottom: '1px solid var(--superficie-borda)' }}>
                               <td className="px-2 py-2">
                                 <UnstyledButton onClick={() => setTarefaDetalhe(tarefa)}>
-                                  <Text size="sm" lineClamp={1} className="hover:underline" style={{ cursor: 'pointer' }}>
+                                  <Text size="sm" lineClamp={1} className="item-clicavel-hover" style={{ cursor: 'pointer' }}>
                                     {tarefa.titulo}
                                   </Text>
                                 </UnstyledButton>

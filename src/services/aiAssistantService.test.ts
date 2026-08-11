@@ -240,7 +240,7 @@ function perguntar(texto: string, historico: MensagemChat[] = []): string {
     ...historico,
     { id: 'x', remetente: 'user', texto, timestamp: '' },
   ]
-  return gerarRespostaSimuladaInteligente(texto, ctx, mensagens)
+  return gerarRespostaSimuladaInteligente(texto, ctx, mensagens).texto
 }
 
 function msgUser(texto: string): MensagemChat {
@@ -508,7 +508,7 @@ describe('aiAssistantService', () => {
         pacotes: [pacote('Cinthia Filgueiras', cards.slice(0, 2), 'Ana Souza'), pacote('Simone Freitas', [cards[2]], 'Bruno Lima')],
         filtros: FILTROS,
       }
-      const r = gerarRespostaSimuladaInteligente('quantas tarefas cada equipe fechou', contexto)
+      const r = gerarRespostaSimuladaInteligente('quantas tarefas cada equipe fechou', contexto).texto
       expect(r).toContain('Cinthia Filgueiras')
       expect(r).toMatch(/fechou \*\*1\*\*/)
       expect(r).toContain('Simone Freitas')
@@ -558,6 +558,61 @@ describe('aiAssistantService', () => {
       expect(r).toContain('Ana Souza')
       expect(r).toContain('concluídas')
       expect(r).toMatch(/\b2\b/)
+    })
+
+    it('BUG: ranking por pessoa nunca elege "Responsável Indefinido" como líder', () => {
+      // Reproduz o caso de produção: "o responsável com mais tarefas vencendo
+      // hoje é 'Responsável Indefinido', com 4.375 tarefas" — o balde de
+      // ausência (3 cards aqui) tinha MAIS volume que qualquer pessoa real e
+      // vencia o ranking. Ana Souza (2) tem mais que Bruno Lima (1) entre as
+      // pessoas de verdade.
+      const semResponsavel = Array.from({ length: 3 }, () =>
+        tarefa({ responsavelAtendimentoNome: 'Responsável Indefinido' }),
+      )
+      const contexto = {
+        metricas: METRICAS_STUB,
+        pacotes: [
+          pacote('Cinthia Filgueiras', [
+            ...semResponsavel,
+            tarefa({ responsavelAtendimentoNome: 'Ana Souza' }),
+            tarefa({ responsavelAtendimentoNome: 'Ana Souza' }),
+            tarefa({ responsavelAtendimentoNome: 'Bruno Lima' }),
+          ]),
+        ],
+        filtros: FILTROS,
+      }
+      const r = gerarRespostaSimuladaInteligente('Qual pessoa tem mais tarefas?', contexto)
+      expect(r.texto).not.toContain('Responsável Indefinido')
+      expect(r.texto).toMatch(/1\.\s*\*\*Ana Souza\*\*/)
+      expect(r.texto).toContain('3 tarefas ficaram fora do ranking')
+      expect(r.texto).toContain('não é uma pessoa')
+    })
+
+    it('ranking por pessoa/equipe vem com dados de gráfico (2+ categorias)', () => {
+      const r = perguntar('Qual equipe teve mais tarefas concluidas?')
+      expect(r).toContain('Ranking por equipe')
+      // `perguntar` só devolve o texto; confirmamos o gráfico chamando a função
+      // de base diretamente com o mesmo contexto.
+      const completo = gerarRespostaSimuladaInteligente(
+        'Qual equipe teve mais tarefas concluidas?',
+        contextoRico(),
+      )
+      expect(completo.grafico?.categorias.length).toBeGreaterThanOrEqual(2)
+      expect(completo.grafico?.valores.length).toBe(completo.grafico?.categorias.length)
+    })
+
+    it('resposta escalar (sem agrupamento) não vem com gráfico', () => {
+      const r = gerarRespostaSimuladaInteligente('Quantas tarefas concluidas?', contextoRico())
+      expect(r.grafico).toBeUndefined()
+    })
+
+    it('comparação entre duas entidades vem com gráfico de 2 categorias', () => {
+      const r = gerarRespostaSimuladaInteligente(
+        'Comparar Cinthia Filgueiras e Simone Freitas em tarefas concluidas',
+        contextoRico(),
+      )
+      expect(r.grafico?.categorias).toEqual(['Cinthia Filgueiras', 'Simone Freitas'])
+      expect(r.grafico?.valores.length).toBe(2)
     })
 
     it('#31 concluídas por setor (Negociação)', () => {

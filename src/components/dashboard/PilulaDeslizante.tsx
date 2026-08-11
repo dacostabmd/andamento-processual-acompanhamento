@@ -10,7 +10,8 @@ export interface OpcaoPilula<T extends string> {
 
 interface Props<T extends string> {
   opcoes: ReadonlyArray<OpcaoPilula<T>>
-  valor: T
+  /** `null` quando nenhuma opção corresponde ao estado atual — o indicador some. */
+  valor: T | null
   onChange: (valor: T) => void
   /** `tablist`/`tab` na navbar de visões; `group` nos seletores comuns. */
   papel?: 'tablist' | 'group'
@@ -55,8 +56,15 @@ export function PilulaDeslizante<T extends string>({
 
   const medir = useCallback(() => {
     const grupo = grupoRef.current
-    const ativo = grupo?.querySelector<HTMLButtonElement>('[data-ativo="true"]')
-    if (!grupo || !ativo) return
+    if (!grupo) return
+    const ativo = grupo.querySelector<HTMLButtonElement>('[data-ativo="true"]')
+    // Sem opção ativa (o ranking pode estar ordenado por uma coluna que não é
+    // preset) o indicador precisa SAIR — se apenas retornássemos, ele ficaria
+    // parado sobre a última opção, afirmando uma ordenação que não vale mais.
+    if (!ativo) {
+      setPilula(null)
+      return
+    }
     // offsetLeft é relativo ao grupo (position: relative), então não precisa de
     // getBoundingClientRect nem compensar scroll.
     const left = ativo.offsetLeft

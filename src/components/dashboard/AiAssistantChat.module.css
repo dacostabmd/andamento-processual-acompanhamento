@@ -56,6 +56,18 @@
   overflow: hidden;
   backdrop-filter: blur(16px);
   animation: surgimentoWidget 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  /* `right` fica fixo — crescer a largura empurra a borda esquerda para a
+     esquerda sozinho, sem transform: é o "slide" pedido, de graça. */
+  transition:
+    width 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+    height 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Ativada quando a conversa produz um gráfico: espaço extra para o infográfico
+   não ficar espremido ao lado do texto da resposta. */
+.chatWidgetContainerExpandido {
+  width: min(880px, calc(100vw - 32px));
+  height: 720px;
 }
 
 @keyframes surgimentoWidget {
@@ -156,6 +168,12 @@
   gap: 14px;
   max-height: 460px;
   min-height: 240px;
+  transition: max-height 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Acompanha o delta de altura de .chatWidgetContainerExpandido (+70px). */
+.messagesAreaExpandido {
+  max-height: 530px;
 }
 
 
@@ -184,6 +202,33 @@
   color: var(--mantine-color-text);
   padding: 10px 14px;
   border-radius: 16px 16px 16px 4px;
+}
+
+.verResultadoButton {
+  margin-top: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  background-color: rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--superficie-borda);
+  color: var(--mantine-color-text);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+:global([data-mantine-color-scheme='dark']) .verResultadoButton {
+  background-color: rgba(255, 255, 255, 0.06);
+}
+
+.verResultadoButton:hover {
+  border-color: var(--mantine-color-dourado-4);
+  color: var(--mantine-color-dourado-4);
 }
 
 .emptyStateText {
