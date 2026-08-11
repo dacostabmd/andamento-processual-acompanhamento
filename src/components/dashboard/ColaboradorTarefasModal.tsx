@@ -51,11 +51,19 @@ const SITUACOES_BREAKDOWN: Array<{ chave: keyof typeof COR_POR_SITUACAO; label: 
 
 type ColunaModal = 'situacao' | 'titulo' | 'prazo' | 'finalizado'
 
-/** Peso de criticidade: menor = mais precisa de atenção. */
-function pesoSituacao(t: Tarefa, agora: Date): number {
+/**
+ * Peso de criticidade: menor = mais precisa de atenção.
+ *
+ * Tem de separar "concluída com atraso" de "concluída" — são dois badges
+ * visuais diferentes na coluna Status (laranja x verde). Antes as duas caíam
+ * no mesmo peso (bastava `tarefaEstaConcluida`), então ordenar por Status
+ * intercalava os dois badges em vez de agrupá-los.
+ */
+export function pesoSituacao(t: Tarefa, agora: Date): number {
   if (tarefaEstaAtrasada(t, agora)) return 0
-  if (tarefaEstaConcluida(t)) return 2
-  if (t.status === 6) return 3
+  if (tarefaFoiConcluidaComAtraso(t)) return 2
+  if (tarefaEstaConcluida(t)) return 3
+  if (t.status === 6) return 4
   return 1 // no prazo
 }
 
