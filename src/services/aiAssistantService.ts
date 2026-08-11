@@ -7,7 +7,7 @@ import type {
   VisaoDashboard,
 } from '../types/domain'
 import { contarPorEquipe, periodoAtendivel } from './aiAssistant/agregacao'
-import { baseSyncApi, fetchSyncApi } from './syncApi'
+import { baseSyncApi, descreverErroHttp, fetchSyncApi } from './syncApi'
 import {
   comporComparacao,
   comporContagemPorEquipe,
@@ -225,6 +225,22 @@ export async function enviarMensagemAssistente(
     throw new Error('Última mensagem inválida para resposta do assistente.')
   }
 
+  /**
+   * Por que a falha do worker é RASTREADA em vez de só logada.
+   *
+   * O `console.warn` era invisível para o gestor: o Text-to-SQL falhava e o
+   * fallback local de palavra-chave respondia no lugar dele, com a mesma
+   * aparência de confiança e números calculados por outro critério. Em produção
+   * isso produziu "Há 287 tarefas de Bruno Borges" para a pergunta "quais as
+   * últimas tarefas do grupo 86" — e atribuir a causa exigiu cinco rodadas de
+   * investigação, porque o único lugar que sabia o status HTTP era um log de
+   * console que ninguém tinha aberto.
+   *
+   * Uma resposta errada com cara de certa é pior que um erro. O motivo agora
+   * sobe junto com a resposta degradada.
+   */
+  let motivoFalhaWorker: string | null = null
+
   // 1. Prioridade: Text-to-SQL no worker (LangChain + GPT-4 sobre o PostgreSQL).
   if (baseSyncApi()) {
     try {
@@ -253,15 +269,23 @@ export async function enviarMensagemAssistente(
       if (respostaWorker.ok) {
         const json = await respostaWorker.json()
         if (json.resposta) return json.resposta
+        // 200 com corpo sem `resposta` é contrato quebrado, não ausência de
+        // dado — cair calado aqui esconderia um bug do worker.
+        motivoFalhaWorker = 'o servidor respondeu sem conteúdo (HTTP 200 sem resposta)'
+        console.warn('[IA] Worker respondeu 200 sem campo `resposta`; usando fallback local.')
       } else {
         // Sem `else`, um 401 (token errado) ou 429 (limite) era indistinguível de
         // "worker offline" e caía calado no fallback local, que responde com
         // números diferentes — o usuário não tinha como saber que mudou de motor.
+        motivoFalhaWorker = `${descreverErroHttp(respostaWorker.status, baseSyncApi() ?? '')} (HTTP ${respostaWorker.status})`
         console.warn(
           `[IA] Worker respondeu HTTP ${respostaWorker.status}; usando fallback local.`,
         )
       }
     } catch (err) {
+      // Rede, CORS, timeout de proxy e abort caem todos aqui — e são justamente
+      // os que não deixam status HTTP para trás.
+      motivoFalhaWorker = `não foi possível alcançar o servidor de análise (${err instanceof Error ? err.message : 'erro de rede'})`
       console.warn('Falha ao consultar endpoint Text-to-SQL do Worker, tentando fallback de cliente:', err)
     }
   }
@@ -305,7 +329,23 @@ export async function enviarMensagemAssistente(
   }
 
   // 3. Fallback analítico inteligente local para dev/demo offline
-  return gerarRespostaSimuladaInteligente(ultimaMensagem.texto, contexto, mensagens)
+  const respostaLocal = gerarRespostaSimuladaInteligente(ultimaMensagem.texto, contexto, mensagens)
+
+  // O motor que respondeu tem de ficar explícito. O fallback local decide por
+  // palavra-chave sobre os cards já em memória: não faz SQL, não vê o banco
+  // inteiro e não sabe recusar uma pergunta que não entendeu — ele sempre
+  // devolve algum número. Sem este aviso, o gestor lê esse número como se
+  // tivesse vindo da análise completa.
+  if (motivoFalhaWorker) {
+    return (
+      `> ⚠️ **Modo limitado.** Não consegui usar a análise completa do servidor ` +
+      `(${motivoFalhaWorker}), então respondi a partir dos dados já carregados na ` +
+      `tela — o que pode não cobrir a sua pergunta. Vale reenviar em alguns instantes.\n\n` +
+      respostaLocal
+    )
+  }
+
+  return respostaLocal
 }
 
 /**

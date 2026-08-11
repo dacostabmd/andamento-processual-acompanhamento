@@ -369,6 +369,20 @@ describe('aiAssistantService', () => {
       expect(entidade.valorCanonico).toBe('Cinthia Filgueiras')
     })
 
+    it('BUG: "grupo 86" não vira pessoa por colisão fuzzy ("grupo" ~ "bruno")', () => {
+      // Regressão de produção: "Quais foram as últimas tarefas do grupo 86
+      // (Acompanhamento Mensal)?" foi respondida com "Há 287 tarefas de Bruno
+      // Borges". "grupo" está a distância Levenshtein 2 de "bruno", e o limiar
+      // antigo aceitava 2 edições em token de 5 caracteres.
+      const cards = contextoRico().pacotes.flatMap((p) => p.cards)
+      const { entidade } = resolverEntidade(
+        'quais foram as ultimas tarefas do grupo 86',
+        catalogos(cards),
+      )
+      expect(entidade.tipo).not.toBe('pessoa')
+      expect(entidade.valorCanonico).not.toBe('Bruno Lima')
+    })
+
     it('UF por nome do estado: "Rio de Janeiro" -> RJ', () => {
       const cards = contextoRico().pacotes.flatMap((p) => p.cards)
       const { entidade } = resolverEntidade('tarefas do rio de janeiro concluidas', catalogos(cards))

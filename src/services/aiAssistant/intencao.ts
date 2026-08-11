@@ -464,8 +464,19 @@ function matchNoCatalogo(txt: string, valores: string[]): ResultadoMatch | null 
         continue
       }
       // typo em um token: Levenshtein pequeno relativo ao tamanho.
+      //
+      // Distância 2 SÓ em token longo (8+). Antes o teto era 2 a partir de 5
+      // caracteres, e duas edições em cinco letras são 40% da palavra — o
+      // suficiente para "grupo" casar com "bruno" (g→b, p→n). Em produção isso
+      // fez "as últimas tarefas do grupo 86" responder "Há 287 tarefas de Bruno
+      // Borges": um nome de pessoa inventado a partir de uma palavra comum.
+      //
+      // Os typos reais que precisamos tolerar são todos de UMA edição
+      // ("cintia"→"cinthia", "simoni"→"simone", "freytas"→"freitas") ou vêm de
+      // pontuação colada ("cinthia?"→"cinthia", 8 caracteres), então este teto
+      // não custa nenhum acerto legítimo.
       const casouFuzzy = tokensTxt.some((tt) => {
-        const limiar = tt.length <= 4 ? 1 : 2
+        const limiar = tt.length >= 8 ? 2 : 1
         return levenshtein(tt, ta) <= limiar
       })
       if (casouFuzzy) tokensFuzzy += 1
