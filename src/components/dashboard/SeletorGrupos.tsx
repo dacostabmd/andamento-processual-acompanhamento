@@ -41,7 +41,6 @@ export function SeletorGrupos({ projetosPermitidos, selecionados, onChange }: Se
       onChange={aoMudar}
       searchable
       clearable={false}
-      maw={420}
     />
   )
 }

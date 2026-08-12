@@ -17,6 +17,8 @@ import {
 } from '../../types/domain'
 import classes from './FiltrosPainel.module.css'
 
+import { SeletorGrupos } from './SeletorGrupos'
+
 const OPCOES_STATUS: Array<{ value: FiltroStatus; label: string }> = [
   { value: 'todos', label: 'Todos' },
   { value: 'concluido', label: 'Concluído' },
@@ -49,6 +51,7 @@ interface FiltrosPainelProps {
   onChange: (filtros: FiltrosDashboard) => void
   projetosPermitidos: Projeto[]
   gruposSelecionados: number[]
+  onMudarGrupos: (ids: number[]) => void
 }
 
 export function FiltrosPainel({
@@ -56,6 +59,7 @@ export function FiltrosPainel({
   onChange,
   projetosPermitidos,
   gruposSelecionados,
+  onMudarGrupos,
 }: FiltrosPainelProps) {
   const [setoresDisponiveis, setSetoresDisponiveis] = useState<string[]>([])
   const [colaboradoresDisponiveis, setColaboradoresDisponiveis] = useState<
@@ -269,6 +273,42 @@ export function FiltrosPainel({
   return (
     <div>
       <Grid align="flex-end">
+        {/* LINHA 1: Grupos de tarefas (6) + Status (3) + Prazo (3) = 12 spans */}
+        <Grid.Col span={{ base: 12, md: 6 }}>
+          <SeletorGrupos
+            projetosPermitidos={projetosPermitidos}
+            selecionados={gruposSelecionados}
+            onChange={onMudarGrupos}
+          />
+        </Grid.Col>
+        <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
+          <Select
+            radius="lg"
+            classNames={CLASSES_INPUT}
+            label="Status"
+            data={OPCOES_STATUS}
+            value={filtros.status}
+            onChange={(valor) =>
+              onChange({ ...filtros, status: (valor as FiltroStatus | null) ?? 'todos' })
+            }
+            allowDeselect={false}
+          />
+        </Grid.Col>
+        <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
+          <Select
+            radius="lg"
+            classNames={CLASSES_INPUT}
+            label="Prazo"
+            data={OPCOES_PRAZO}
+            value={filtros.filtroPrazo}
+            onChange={(valor) =>
+              onChange({ ...filtros, filtroPrazo: (valor as FiltroPrazo | null) ?? 'todas' })
+            }
+            allowDeselect={false}
+          />
+        </Grid.Col>
+
+        {/* LINHA 2: Data início (3) + Data fim (3) + Departamento (3) + Estado UF (3) = 12 spans */}
         <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
           <DatePickerInput
             radius="lg"
@@ -291,32 +331,6 @@ export function FiltrosPainel({
             clearable
           />
         </Grid.Col>
-        <Grid.Col span={{ base: 12, sm: 6, md: 2.4 }}>
-          <Select
-            radius="lg"
-            classNames={CLASSES_INPUT}
-            label="Status"
-            data={OPCOES_STATUS}
-            value={filtros.status}
-            onChange={(valor) =>
-              onChange({ ...filtros, status: (valor as FiltroStatus | null) ?? 'todos' })
-            }
-            allowDeselect={false}
-          />
-        </Grid.Col>
-        <Grid.Col span={{ base: 12, sm: 6, md: 2.4 }}>
-          <Select
-            radius="lg"
-            classNames={CLASSES_INPUT}
-            label="Prazo"
-            data={OPCOES_PRAZO}
-            value={filtros.filtroPrazo}
-            onChange={(valor) =>
-              onChange({ ...filtros, filtroPrazo: (valor as FiltroPrazo | null) ?? 'todas' })
-            }
-            allowDeselect={false}
-          />
-        </Grid.Col>
         <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
           <Select
             radius="lg"
@@ -329,8 +343,22 @@ export function FiltrosPainel({
             clearable
           />
         </Grid.Col>
+        <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
+          <Select
+            radius="lg"
+            classNames={CLASSES_INPUT}
+            label="Estado (UF)"
+            placeholder="Todos"
+            data={estadosDisponiveis}
+            value={filtros.estado}
+            onChange={(valor) => onChange({ ...filtros, estado: valor })}
+            searchable
+            clearable
+          />
+        </Grid.Col>
 
-        <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
+        {/* LINHA 3: Fechado por (6) + Responsável (6) = 12 spans */}
+        <Grid.Col span={{ base: 12, md: 6 }}>
           <Select
             radius="lg"
             classNames={CLASSES_INPUT}
@@ -345,7 +373,7 @@ export function FiltrosPainel({
             clearable
           />
         </Grid.Col>
-        <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
+        <Grid.Col span={{ base: 12, md: 6 }}>
           <Select
             radius="lg"
             classNames={CLASSES_INPUT}
@@ -356,19 +384,6 @@ export function FiltrosPainel({
             onChange={(valor) =>
               onChange({ ...filtros, responsavelId: valor === null ? null : Number(valor) })
             }
-            searchable
-            clearable
-          />
-        </Grid.Col>
-        <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
-          <Select
-            radius="lg"
-            classNames={CLASSES_INPUT}
-            label="Estado (UF)"
-            placeholder="Todos"
-            data={estadosDisponiveis}
-            value={filtros.estado}
-            onChange={(valor) => onChange({ ...filtros, estado: valor })}
             searchable
             clearable
           />

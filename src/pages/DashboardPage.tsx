@@ -1,4 +1,4 @@
-import { Button, Center, Group, Loader, Stack, Text, Title } from '@mantine/core'
+import { Button, Center, Group, Loader, Stack, Title } from '@mantine/core'
 import { useEffect, useState, type ReactNode } from 'react'
 import { EstadoVazio } from '../components/EstadoVazio'
 import { ThemeToggle } from '../components/ThemeToggle'
@@ -9,7 +9,6 @@ import { FiltrosPainel } from '../components/dashboard/FiltrosPainel'
 import { GraficosInteligencia } from '../components/dashboard/GraficosInteligencia'
 import { MetricasCards } from '../components/dashboard/MetricasCards'
 import { RankingFechadores } from '../components/dashboard/RankingFechadores'
-import { SeletorGrupos } from '../components/dashboard/SeletorGrupos'
 import { VERSAO_ATUAL, VersaoModal } from '../components/dashboard/VersaoModal'
 import { useSessaoUsuario } from '../hooks/useSessaoUsuario'
 import {
@@ -152,17 +151,12 @@ export function DashboardPage() {
             <EstadoVazio titulo="Não foi possível carregar os dados" descricao={erroDados} />
           ) : (
             <>
-              <SeletorGrupos
-                projetosPermitidos={projetosComNomes}
-                selecionados={gruposSelecionados}
-                onChange={setGruposSelecionados}
-              />
-
               <FiltrosPainel
                 filtros={filtros}
                 onChange={aoMudarFiltros}
-                projetosPermitidos={projetosPermitidos}
+                projetosPermitidos={projetosComNomes}
                 gruposSelecionados={gruposSelecionados}
+                onMudarGrupos={setGruposSelecionados}
               />
 
               <MetricasCards
@@ -172,13 +166,9 @@ export function DashboardPage() {
               />
 
               <div>
-                <Title order={3} mb="xs">
+                <Title order={3} mb="md">
                   Quem está fechando mais tarefas
                 </Title>
-                <Text size="sm" c="dimmed" mb="md">
-                  Ranking por <code>closedBy</code> — quem efetivamente concluiu o card. É a
-                  atribuição de pessoa mais confiável do snapshot.
-                </Text>
                 {rankingFechadores && (
                   <RankingFechadores
                     dados={rankingFechadores}
