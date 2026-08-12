@@ -71,21 +71,7 @@ export function FiltrosPainel({
   const [estadosDisponiveis, setEstadosDisponiveis] = useState<string[]>([])
   const [ripples, setRipples] = useState<Ripple[]>([])
 
-  const {
-    dataInicio,
-    dataFim,
-    status,
-    filtroPrazo,
-    setor,
-    projetoId,
-    fechadoPorId,
-    responsavelId,
-    prioridade,
-    estado,
-    ocultarIndefinidos,
-    ocultarForaDasEquipes,
-    modoTaxaAtraso,
-  } = filtros
+
 
   const handleLimparFiltros = (e: React.MouseEvent<HTMLButtonElement>) => {
     const rect = e.currentTarget.getBoundingClientRect()
@@ -103,171 +89,47 @@ export function FiltrosPainel({
 
   useEffect(() => {
     let cancelado = false
-    listarSetoresDisponiveis(
-      {
-        dataInicio,
-        dataFim,
-        status,
-        filtroPrazo,
-        projetoId,
-        fechadoPorId,
-        responsavelId,
-        prioridade,
-        estado,
-        ocultarIndefinidos,
-        ocultarForaDasEquipes,
-        modoTaxaAtraso,
-      },
-      projetosPermitidos,
-      gruposSelecionados,
-    ).then((setores) => {
+    listarSetoresDisponiveis(filtros, projetosPermitidos, gruposSelecionados).then((setores) => {
       if (!cancelado) setSetoresDisponiveis(setores)
     })
     return () => {
       cancelado = true
     }
-  }, [
-    dataInicio,
-    dataFim,
-    status,
-    filtroPrazo,
-    projetoId,
-    fechadoPorId,
-    responsavelId,
-    prioridade,
-    estado,
-    ocultarIndefinidos,
-    ocultarForaDasEquipes,
-    modoTaxaAtraso,
-    projetosPermitidos,
-    gruposSelecionados,
-  ])
+  }, [projetosPermitidos, gruposSelecionados])
 
   useEffect(() => {
     let cancelado = false
-    listarColaboradoresDisponiveis(
-      {
-        dataInicio,
-        dataFim,
-        status,
-        filtroPrazo,
-        setor,
-        projetoId,
-        responsavelId,
-        prioridade,
-        estado,
-        ocultarIndefinidos,
-        ocultarForaDasEquipes,
-        modoTaxaAtraso,
+    listarColaboradoresDisponiveis(filtros, projetosPermitidos, gruposSelecionados).then(
+      (colaboradores) => {
+        if (!cancelado) setColaboradoresDisponiveis(colaboradores)
       },
-      projetosPermitidos,
-      gruposSelecionados,
-    ).then((colaboradores) => {
-      if (!cancelado) setColaboradoresDisponiveis(colaboradores)
-    })
+    )
     return () => {
       cancelado = true
     }
-  }, [
-    dataInicio,
-    dataFim,
-    status,
-    filtroPrazo,
-    setor,
-    projetoId,
-    responsavelId,
-    prioridade,
-    estado,
-    ocultarIndefinidos,
-    ocultarForaDasEquipes,
-    modoTaxaAtraso,
-    projetosPermitidos,
-    gruposSelecionados,
-  ])
+  }, [projetosPermitidos, gruposSelecionados])
 
   useEffect(() => {
     let cancelado = false
-    listarResponsaveisDisponiveis(
-      {
-        dataInicio,
-        dataFim,
-        status,
-        filtroPrazo,
-        setor,
-        projetoId,
-        fechadoPorId,
-        prioridade,
-        estado,
-        ocultarIndefinidos,
-        ocultarForaDasEquipes,
-        modoTaxaAtraso,
+    listarResponsaveisDisponiveis(filtros, projetosPermitidos, gruposSelecionados).then(
+      (responsaveis) => {
+        if (!cancelado) setResponsaveisDisponiveis(responsaveis)
       },
-      projetosPermitidos,
-      gruposSelecionados,
-    ).then((responsaveis) => {
-      if (!cancelado) setResponsaveisDisponiveis(responsaveis)
-    })
+    )
     return () => {
       cancelado = true
     }
-  }, [
-    dataInicio,
-    dataFim,
-    status,
-    filtroPrazo,
-    setor,
-    projetoId,
-    fechadoPorId,
-    prioridade,
-    estado,
-    ocultarIndefinidos,
-    ocultarForaDasEquipes,
-    modoTaxaAtraso,
-    projetosPermitidos,
-    gruposSelecionados,
-  ])
+  }, [projetosPermitidos, gruposSelecionados])
 
   useEffect(() => {
     let cancelado = false
-    listarEstadosDisponiveis(
-      {
-        dataInicio,
-        dataFim,
-        status,
-        filtroPrazo,
-        setor,
-        projetoId,
-        fechadoPorId,
-        responsavelId,
-        prioridade,
-        ocultarIndefinidos,
-        ocultarForaDasEquipes,
-        modoTaxaAtraso,
-      },
-      projetosPermitidos,
-      gruposSelecionados,
-    ).then((estados) => {
+    listarEstadosDisponiveis(filtros, projetosPermitidos, gruposSelecionados).then((estados) => {
       if (!cancelado) setEstadosDisponiveis(estados)
     })
     return () => {
       cancelado = true
     }
-  }, [
-    dataInicio,
-    dataFim,
-    status,
-    filtroPrazo,
-    setor,
-    projetoId,
-    fechadoPorId,
-    responsavelId,
-    prioridade,
-    ocultarIndefinidos,
-    ocultarForaDasEquipes,
-    modoTaxaAtraso,
-    projetosPermitidos,
-    gruposSelecionados,
-  ])
+  }, [projetosPermitidos, gruposSelecionados])
 
 
   return (

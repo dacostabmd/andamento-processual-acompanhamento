@@ -13,6 +13,7 @@ import {
 import {
   DEPARTAMENTO_ID_POR_EQUIPE,
   EQUIPES_ATENDIMENTO,
+  NOMES_DEPARTAMENTO_EQUIPES,
   type EquipeResolvida,
   type FiltrosDashboard,
   type MetricasPorSetor,
@@ -315,44 +316,42 @@ export async function resolverEquipesInformadas(): Promise<EquipeResolvida[]> {
 }
 
 
-/** Setores populados a partir dos demais filtros ativos, exceto o próprio setor. */
+/** Setores populados a partir de todas as tarefas dos grupos selecionados, garantindo também os departamentos das equipes. */
 export async function listarSetoresDisponiveis(
-  filtrosSemSetor: Omit<FiltrosDashboard, 'setor'>,
+  _filtrosSemSetor: Omit<FiltrosDashboard, 'setor'>,
   projetosPermitidos: Projeto[],
   gruposSelecionados: number[],
 ): Promise<string[]> {
   const tarefas = await carregarTarefasPermitidas(projetosPermitidos, gruposSelecionados)
-  const filtradas = aplicarFiltros(tarefas, { ...filtrosSemSetor, setor: null })
   const setores = new Set<string>()
-  filtradas.forEach((t) => t.fechadoPorDepartamentos.forEach((d) => setores.add(d)))
+  tarefas.forEach((t) => t.fechadoPorDepartamentos.forEach((d) => setores.add(d)))
+  NOMES_DEPARTAMENTO_EQUIPES.forEach((d) => setores.add(d))
   return Array.from(setores).sort((a, b) => a.localeCompare(b))
 }
 
-/** Estados (UF) presentes nos dados, populados a partir dos demais filtros ativos. */
+/** Estados (UF) presentes nos dados dos grupos selecionados. */
 export async function listarEstadosDisponiveis(
-  filtrosSemEstado: Omit<FiltrosDashboard, 'estado'>,
+  _filtrosSemEstado: Omit<FiltrosDashboard, 'estado'>,
   projetosPermitidos: Projeto[],
   gruposSelecionados: number[],
 ): Promise<string[]> {
   const tarefas = await carregarTarefasPermitidas(projetosPermitidos, gruposSelecionados)
-  const filtradas = aplicarFiltros(tarefas, { ...filtrosSemEstado, estado: null })
   const estados = new Set<string>()
-  filtradas.forEach((t) => {
+  tarefas.forEach((t) => {
     if (t.estadoUf) estados.add(t.estadoUf)
   })
   return Array.from(estados).sort((a, b) => a.localeCompare(b))
 }
 
-/** Colaboradores (que fecharam tarefas) populados a partir dos demais filtros ativos. */
+/** Colaboradores (que fecharam tarefas) presentes nos dados dos grupos selecionados. */
 export async function listarColaboradoresDisponiveis(
-  filtrosSemFechadoPor: Omit<FiltrosDashboard, 'fechadoPorId'>,
+  _filtrosSemFechadoPor: Omit<FiltrosDashboard, 'fechadoPorId'>,
   projetosPermitidos: Projeto[],
   gruposSelecionados: number[],
 ): Promise<Array<{ id: number; nome: string }>> {
   const tarefas = await carregarTarefasPermitidas(projetosPermitidos, gruposSelecionados)
-  const filtradas = aplicarFiltros(tarefas, { ...filtrosSemFechadoPor, fechadoPorId: null })
   const colaboradores = new Map<number, string>()
-  filtradas.forEach((t) => {
+  tarefas.forEach((t) => {
     if (t.fechadoPorId !== null) colaboradores.set(t.fechadoPorId, t.fechadoPorNome ?? `Usuário ${t.fechadoPorId}`)
   })
   return Array.from(colaboradores.entries())
@@ -360,16 +359,15 @@ export async function listarColaboradoresDisponiveis(
     .sort((a, b) => a.nome.localeCompare(b.nome))
 }
 
-/** Responsáveis atuais (RESPONSIBLE_ID) populados a partir dos demais filtros ativos. */
+/** Responsáveis atuais (RESPONSIBLE_ID) presentes nos dados dos grupos selecionados. */
 export async function listarResponsaveisDisponiveis(
-  filtrosSemResponsavel: Omit<FiltrosDashboard, 'responsavelId'>,
+  _filtrosSemResponsavel: Omit<FiltrosDashboard, 'responsavelId'>,
   projetosPermitidos: Projeto[],
   gruposSelecionados: number[],
 ): Promise<Array<{ id: number; nome: string }>> {
   const tarefas = await carregarTarefasPermitidas(projetosPermitidos, gruposSelecionados)
-  const filtradas = aplicarFiltros(tarefas, { ...filtrosSemResponsavel, responsavelId: null })
   const responsaveis = new Map<number, string>()
-  filtradas.forEach((t) => {
+  tarefas.forEach((t) => {
     if (t.responsavelId !== null)
       responsaveis.set(t.responsavelId, t.responsavelNome ?? `Usuário ${t.responsavelId}`)
   })
