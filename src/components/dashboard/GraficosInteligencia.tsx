@@ -25,11 +25,15 @@ import {
 import {
   calcularInteligencia,
   calcularTopFechadoPor,
+  chaveMes,
+  classificarUrgenciaTarefa,
   equipeExecutoraDaTarefa,
+  tarefaEstaConcluida,
   tarefasDaPessoa,
 } from '../../utils/tarefasMetrics'
 import { EstadoVazio } from '../EstadoVazio'
 import type { ColaboradorSelecionado } from './ColaboradorTarefasModal'
+import type { MetricaSelecionada } from './MetricaTarefasModal'
 import { COR_POR_EQUIPE, COR_POR_SITUACAO } from './tarefaApresentacao'
 import classes from './GraficosInteligencia.module.css'
 
@@ -120,6 +124,17 @@ interface GraficosInteligenciaProps {
   tarefasFiltradas: Tarefa[]
   /** Disparado ao clicar numa barra de ranking (responsáveis ou fechado-por). */
   onSelecionarColaborador: (colaborador: ColaboradorSelecionado) => void
+  /** Disparado ao clicar num ponto/barra dos demais gráficos (UF, urgência, tendência mensal). */
+  onSelecionarMetrica: (metrica: MetricaSelecionada) => void
+  /**
+   * Esconde o ripple de filtro por equipe e os 2 cartões que comparam equipe
+   * contra equipe ("Tarefas por equipe e situação", "Participação por
+   * equipe") — usado pelo painel do supervisor, onde `pacotes` já chega
+   * filtrado para uma única equipe e esses cartões ficariam triviais
+   * (1 categoria, 1 fatia de 100%). Os demais gráficos continuam mostrando os
+   * dados da(s) equipe(s) recebida(s) em `pacotes`/`tarefasFiltradas`.
+   */
+  ocultarComparativoEquipes?: boolean
 }
 
 /** Só as equipes com pelo menos 1 tarefa entram nos gráficos (evita ruído vazio). */
@@ -149,6 +164,8 @@ export function GraficosInteligencia({
   visao = 'atendimento',
   tarefasFiltradas,
   onSelecionarColaborador,
+  onSelecionarMetrica,
+  ocultarComparativoEquipes = false,
 }: GraficosInteligenciaProps) {
   // Equipe selecionada pelo ripple; null = todas.
   const [equipeSelecionada, setEquipeSelecionada] = useState<EquipeAtendimento | null>(null)
@@ -158,12 +175,8 @@ export function GraficosInteligencia({
   const cores = useMemo(() => coresChrome(scheme), [scheme])
   const opcoesEmpilhado = useMemo(() => montarOpcoesEmpilhado(cores), [cores])
   const opcoesRosca = useMemo(() => montarOpcoesRosca(cores), [cores])
-  const rotuloPapelResponsavel = visao === 'executora' ? 'Fechado por' : 'Responsável pelo atendimento'
-  const opcoesTendencia = useMemo(() => montarOpcoesTendencia(cores, 'contagem'), [cores])
-  const opcoesTendenciaPercentual = useMemo(
-    () => montarOpcoesTendencia(cores, 'percentual'),
-    [cores],
-  )
+  const rotuloPapelResponsavel =
+    visao === 'executora' ? 'Fechado por' : 'Responsável pelo atendimento'
 
   // Contagem de tarefas por equipe (para os rótulos dos ripples) — sempre do total,
   // independente da seleção, para o usuário ver o tamanho de cada equipe.
@@ -174,14 +187,16 @@ export function GraficosInteligencia({
     return mapa
   }, [pacotes])
 
-  // Dados recalculados para o recorte atual: se há equipe selecionada, só os
-  // pacotes dela; senão, todos. Assim TODOS os gráficos respeitam o ripple.
-  const dados = useMemo(() => {
-    const recorte = equipeSelecionada
-      ? pacotes.filter((p) => p.equipe === equipeSelecionada)
-      : pacotes
-    return calcularInteligencia(recorte)
-  }, [pacotes, equipeSelecionada])
+  // Recorte atual: se há equipe selecionada, só os pacotes dela; senão, todos.
+  // Assim TODOS os gráficos (e os cliques neles) respeitam o ripple.
+  const recorte = useMemo(
+    () => (equipeSelecionada ? pacotes.filter((p) => p.equipe === equipeSelecionada) : pacotes),
+    [pacotes, equipeSelecionada],
+  )
+  const dados = useMemo(() => calcularInteligencia(recorte), [recorte])
+  // Tarefas cruas do recorte — base dos cliques em UF/urgência/tendência, que
+  // localizam tarefas por critério (não por pessoa, como o ranking/fechado-por).
+  const cardsDoRecorte = useMemo(() => recorte.flatMap((p) => p.cards), [recorte])
 
   // "Fechado por" é uma dimensão à parte (equipe de quem FECHOU, não de quem
   // atende) — calculado direto de `tarefasFiltradas` (cru, sem agrupar por
@@ -278,7 +293,9 @@ export function GraficosInteligencia({
     (index: number) => {
       const item = dados.topResponsaveis[index]
       if (!item) return
-      const pacote = pacotes.find((p) => p.responsavelAtendimentoId === item.responsavelAtendimentoId)
+      const pacote = pacotes.find(
+        (p) => p.responsavelAtendimentoId === item.responsavelAtendimentoId,
+      )
       if (!pacote) return
       onSelecionarColaborador({
         nome: item.nome,
@@ -308,7 +325,79 @@ export function GraficosInteligencia({
     [topFechadoPor, tarefasFiltradas, onSelecionarColaborador],
   )
 
-  const opcoesRanking = useMemo(() => montarOpcoesRanking(cores), [cores])
+  // Clique numa barra de "Volume por Estado (UF)": localiza pelo mesmo campo
+  // usado no agregado (estadoUf), dentro do recorte atual (respeita o ripple).
+  const aoClicarUf = useCallback(
+    (index: number) => {
+      const item = dados.porUf[index]
+      if (!item) return
+      const tarefas = cardsDoRecorte.filter((t) => t.estadoUf === item.uf)
+      onSelecionarMetrica({
+        titulo: `Estado: ${item.uf}`,
+        subtitulo: `${tarefas.length} tarefa(s) com UF = ${item.uf} no recorte atual.`,
+        tarefas,
+      })
+    },
+    [dados, cardsDoRecorte, onSelecionarMetrica],
+  )
+
+  // Clique numa faixa de "Urgência por prazo": mesmo classificador por card
+  // usado para montar o agregado (classificarUrgenciaTarefa), então a lista
+  // aberta aqui sempre soma exatamente ao número da barra clicada.
+  const aoClicarUrgencia = useCallback(
+    (index: number) => {
+      const faixa = FAIXAS_URGENCIA_LABELS[index]
+      if (!faixa) return
+      const agora = new Date()
+      const tarefas = cardsDoRecorte.filter(
+        (t) => classificarUrgenciaTarefa(t, agora) === faixa.chave,
+      )
+      onSelecionarMetrica({
+        titulo: `Urgência: ${faixa.label}`,
+        subtitulo: `${tarefas.length} tarefa(s) ativa(s) na faixa "${faixa.label}".`,
+        tarefas,
+      })
+    },
+    [cardsDoRecorte, onSelecionarMetrica],
+  )
+
+  // Clique num ponto de qualquer gráfico de tendência mensal: as duas séries
+  // (concluídas / pontualidade) compartilham o mesmo eixo X e o mesmo conjunto
+  // de tarefas por mês — mesmo critério de calcularTendenciaMensal.
+  const aoClicarTendencia = useCallback(
+    (index: number) => {
+      const ponto = dados.tendenciaMensal[index]
+      if (!ponto) return
+      const tarefas = cardsDoRecorte.filter(
+        (t) =>
+          tarefaEstaConcluida(t) &&
+          t.finalizadoEm !== null &&
+          t.prazoFinal !== null &&
+          chaveMes(new Date(t.prazoFinal)) === ponto.mes,
+      )
+      onSelecionarMetrica({
+        titulo: `Concluídas em ${ponto.label}`,
+        subtitulo: `${tarefas.length} tarefa(s) concluída(s) com prazo em ${ponto.label}.`,
+        tarefas,
+      })
+    },
+    [dados, cardsDoRecorte, onSelecionarMetrica],
+  )
+
+  const opcoesTendencia = useMemo(
+    () => montarOpcoesTendencia(cores, 'contagem', aoClicarTendencia),
+    [cores, aoClicarTendencia],
+  )
+  const opcoesTendenciaPercentual = useMemo(
+    () => montarOpcoesTendencia(cores, 'percentual', aoClicarTendencia),
+    [cores, aoClicarTendencia],
+  )
+
+  const opcoesRankingUf = useMemo(() => montarOpcoesRanking(cores, aoClicarUf), [cores, aoClicarUf])
+  const opcoesRankingUrgencia = useMemo(
+    () => montarOpcoesRanking(cores, aoClicarUrgencia),
+    [cores, aoClicarUrgencia],
+  )
   const opcoesRankingResponsaveis = useMemo(
     () => montarOpcoesRanking(cores, aoClicarRanking),
     [cores, aoClicarRanking],
@@ -400,62 +489,74 @@ export function GraficosInteligencia({
 
   return (
     <div>
-      {/* Ripples: clicar filtra TODOS os gráficos para a equipe; clicar de novo limpa. */}
-      <div className={classes.ripples} role="group" aria-label="Filtrar gráficos por equipe">
-        {ripplesEquipes.map((equipe) => {
-          const ativo = equipeSelecionada === equipe
-          const apagado = equipeSelecionada !== null && !ativo
-          return (
-            <button
-              key={equipe}
-              type="button"
-              aria-pressed={ativo}
-              className={`${classes.ripple} ${ativo ? classes.rippleAtivo : ''} ${
-                apagado ? classes.rippleApagado : ''
-              }`}
-              style={{ ['--cor-equipe' as string]: COR_POR_EQUIPE[equipe] }}
-              onClick={(e) => {
-                dispararOnda(e)
-                setEquipeSelecionada((atual) => (atual === equipe ? null : equipe))
-              }}
-            >
-              {rotuloEquipe(equipe)}
-              <span className={classes.rippleContagem}>{totaisPorEquipe.get(equipe) ?? 0}</span>
-            </button>
-          )
-        })}
-      </div>
+      {/* Ripples: clicar filtra TODOS os gráficos para a equipe; clicar de novo limpa.
+          Sem sentido quando o recorte já é de uma equipe só (painel do supervisor). */}
+      {!ocultarComparativoEquipes && (
+        <div className={classes.ripples} role="group" aria-label="Filtrar gráficos por equipe">
+          {ripplesEquipes.map((equipe) => {
+            const ativo = equipeSelecionada === equipe
+            const apagado = equipeSelecionada !== null && !ativo
+            return (
+              <button
+                key={equipe}
+                type="button"
+                aria-pressed={ativo}
+                className={`${classes.ripple} ${ativo ? classes.rippleAtivo : ''} ${
+                  apagado ? classes.rippleApagado : ''
+                }`}
+                style={{ ['--cor-equipe' as string]: COR_POR_EQUIPE[equipe] }}
+                onClick={(e) => {
+                  dispararOnda(e)
+                  setEquipeSelecionada((atual) => (atual === equipe ? null : equipe))
+                }}
+              >
+                {rotuloEquipe(equipe)}
+                <span className={classes.rippleContagem}>{totaisPorEquipe.get(equipe) ?? 0}</span>
+              </button>
+            )
+          })}
+        </div>
+      )}
 
       {dados.totalCards === 0 ? (
         <EstadoVazio
           titulo="Sem dados para os gráficos"
-          descricao="Ajuste os filtros ou selecione outra equipe."
+          descricao={
+            ocultarComparativoEquipes
+              ? 'Ajuste o período nos filtros para visualizar dados desta equipe.'
+              : 'Ajuste os filtros ou selecione outra equipe.'
+          }
         />
       ) : (
         <div className={classes.grade}>
-          <div className={classes.cartao}>
-            <Text className={classes.tituloCartao} fw={700}>
-              Tarefas por equipe e situação
-            </Text>
-            <Text className={classes.subtitulo} size="xs">
-              Distribuição das tarefas de cada equipe entre no prazo, adiadas, concluídas e atrasadas.
-            </Text>
-            <div className={classes.areaGrafico}>
-              <Bar data={empilhado} options={opcoesEmpilhado} />
-            </div>
-          </div>
+          {!ocultarComparativoEquipes && (
+            <>
+              <div className={classes.cartao}>
+                <Text className={classes.tituloCartao} fw={700}>
+                  Tarefas por equipe e situação
+                </Text>
+                <Text className={classes.subtitulo} size="xs">
+                  Distribuição das tarefas de cada equipe entre no prazo, adiadas, concluídas e
+                  atrasadas.
+                </Text>
+                <div className={classes.areaGrafico}>
+                  <Bar data={empilhado} options={opcoesEmpilhado} />
+                </div>
+              </div>
 
-          <div className={classes.cartao}>
-            <Text className={classes.tituloCartao} fw={700}>
-              Participação por equipe
-            </Text>
-            <Text className={classes.subtitulo} size="xs">
-              Fatia de cada equipe no total de {dados.totalCards} tarefa(s) filtrada(s).
-            </Text>
-            <div className={classes.areaGrafico}>
-              <Doughnut data={distribuicao} options={opcoesRosca} />
-            </div>
-          </div>
+              <div className={classes.cartao}>
+                <Text className={classes.tituloCartao} fw={700}>
+                  Participação por equipe
+                </Text>
+                <Text className={classes.subtitulo} size="xs">
+                  Fatia de cada equipe no total de {dados.totalCards} tarefa(s) filtrada(s).
+                </Text>
+                <div className={classes.areaGrafico}>
+                  <Doughnut data={distribuicao} options={opcoesRosca} />
+                </div>
+              </div>
+            </>
+          )}
 
           <div className={`${classes.cartao} ${classes.cartaoLargo}`}>
             <Text className={classes.tituloCartao} fw={700}>
@@ -476,8 +577,8 @@ export function GraficosInteligencia({
               Fechado por
             </Text>
             <Text className={classes.subtitulo} size="xs">
-              Top {topFechadoPor.length} pessoas por volume de tarefas fechadas (campo
-              customizado da tarefa).
+              Top {topFechadoPor.length} pessoas por volume de tarefas fechadas (campo customizado
+              da tarefa).
             </Text>
             <div className={classes.areaGraficoAlta}>
               <Bar data={fechadoPor} options={opcoesRankingFechadoPor} />
@@ -493,7 +594,7 @@ export function GraficosInteligencia({
               entram no ranking.
             </Text>
             <div className={classes.areaGrafico}>
-              <Bar data={porUf} options={opcoesRanking} />
+              <Bar data={porUf} options={opcoesRankingUf} />
             </div>
           </div>
 
@@ -505,7 +606,7 @@ export function GraficosInteligencia({
               Tarefas ativas (não concluídas, não adiadas) por faixa de dias até o vencimento.
             </Text>
             <div className={classes.areaGrafico}>
-              <Bar data={urgencia} options={opcoesRanking} />
+              <Bar data={urgencia} options={opcoesRankingUrgencia} />
             </div>
           </div>
 
@@ -526,8 +627,8 @@ export function GraficosInteligencia({
               Tendência — pontualidade na entrega
             </Text>
             <Text className={classes.subtitulo} size="xs">
-              Das tarefas concluídas com prazo em cada mês, % que terminou depois do prazo —
-              últimos {dados.tendenciaMensal.length} meses.
+              Das tarefas concluídas com prazo em cada mês, % que terminou depois do prazo — últimos{' '}
+              {dados.tendenciaMensal.length} meses.
             </Text>
             <div className={classes.areaGrafico}>
               <Line data={tendenciaAtraso} options={opcoesTendenciaPercentual} />
@@ -614,9 +715,11 @@ function montarOpcoesRanking(
  * — as duas séries de tendência vivem em cards/gráficos separados
  * propositalmente, para não incorrer no anti-padrão de dual-axis.
  */
+/** `onClickIndice`, quando informado, torna os pontos clicáveis (mesmo padrão de montarOpcoesRanking). */
 function montarOpcoesTendencia(
   cores: CoresChrome,
   modo: 'contagem' | 'percentual',
+  onClickIndice?: (index: number) => void,
 ): ChartOptions<'line'> {
   return {
     maintainAspectRatio: false,
@@ -637,5 +740,17 @@ function montarOpcoesTendencia(
             : { color: cores.texto, precision: 0 },
       },
     },
+    onClick: onClickIndice
+      ? (_event, elements) => {
+          const index = elements[0]?.index
+          if (index !== undefined) onClickIndice(index)
+        }
+      : undefined,
+    onHover: onClickIndice
+      ? (event, elements) => {
+          const target = event.native?.target as HTMLElement | null
+          if (target) target.style.cursor = elements.length ? 'pointer' : 'default'
+        }
+      : undefined,
   }
 }

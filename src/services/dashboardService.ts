@@ -1,6 +1,7 @@
 import { listarTodasPaginas } from './bitrixTransport'
 import { registrarSnapshotMetadata } from './debugSnapshot'
 import { modoMockDevAtivo } from './modoMockDev'
+import { registrarSnapshotInfo } from './snapshotInfo'
 import { baseSyncApi, descreverErroHttp, fetchSyncApi } from './syncApi'
 import {
   aplicarFiltros,
@@ -34,13 +35,11 @@ interface DepartamentoBitrix {
 
 function obterDepartamentosBitrix(): Promise<Map<number, string>> {
   if (!cacheDepartamentos) {
-    cacheDepartamentos = listarTodasPaginas<DepartamentoBitrix>('department.get').then(
-      (deps) => {
-        const mapa = new Map<number, string>()
-        deps.forEach((d) => mapa.set(Number(d.ID), d.NAME))
-        return mapa
-      },
-    )
+    cacheDepartamentos = listarTodasPaginas<DepartamentoBitrix>('department.get').then((deps) => {
+      const mapa = new Map<number, string>()
+      deps.forEach((d) => mapa.set(Number(d.ID), d.NAME))
+      return mapa
+    })
   }
   return cacheDepartamentos
 }
@@ -115,6 +114,7 @@ async function buscarTarefasDoSnapshot(gruposSelecionados: number[]): Promise<Ta
       if (resposta.ok) {
         const corpo = (await resposta.json()) as { tarefas: Tarefa[]; metadata: SnapshotMetadata }
         registrarSnapshotMetadata(corpo.metadata)
+        registrarSnapshotInfo(corpo.metadata)
         registrarNomesDeGrupo(corpo.metadata)
         return corpo.tarefas
       }
@@ -133,21 +133,25 @@ async function buscarTarefasDoSnapshot(gruposSelecionados: number[]): Promise<Ta
     }
     const mock = (await resposta.json()) as { tarefas: Tarefa[]; metadata: SnapshotMetadata }
     registrarSnapshotMetadata(mock.metadata)
+    registrarSnapshotInfo(mock.metadata)
     registrarNomesDeGrupo(mock.metadata)
 
     // Ajusta dinamicamente as datas do mock em relação à data atual para ter tarefas
     // em andamento e com risco de atraso em ambiente de desenvolvimento (mock offline).
     const agora = new Date()
     const tarefasComPrazo = mock.tarefas.filter((t) => t.prazoFinal !== null)
-    const maxMockTime = tarefasComPrazo.length > 0
-      ? Math.max(...tarefasComPrazo.map((t) => new Date(t.prazoFinal!).getTime()))
-      : agora.getTime()
+    const maxMockTime =
+      tarefasComPrazo.length > 0
+        ? Math.max(...tarefasComPrazo.map((t) => new Date(t.prazoFinal!).getTime()))
+        : agora.getTime()
     const targetMaxTime = agora.getTime() + 20 * 24 * 60 * 60 * 1000
     const deltaMs = targetMaxTime - maxMockTime
 
     return mock.tarefas.map((t) => ({
       ...t,
-      prazoFinal: t.prazoFinal ? new Date(new Date(t.prazoFinal).getTime() + deltaMs).toISOString() : null,
+      prazoFinal: t.prazoFinal
+        ? new Date(new Date(t.prazoFinal).getTime() + deltaMs).toISOString()
+        : null,
     }))
   }
 
@@ -238,9 +242,12 @@ export async function obterMetricasPorEquipeFiltradas(
   gruposSelecionados: number[],
 ): Promise<MetricasPorEquipe[]> {
   const tarefas = await carregarTarefasPermitidas(projetosPermitidos, gruposSelecionados)
-  return calcularMetricasPorEquipe(aplicarFiltros(tarefas, filtros), filtros.modoTaxaAtraso, 'atendimento')
+  return calcularMetricasPorEquipe(
+    aplicarFiltros(tarefas, filtros),
+    filtros.modoTaxaAtraso,
+    'atendimento',
+  )
 }
-
 
 /**
  * Pacotes de atendimento: cada card é agrupado pelo responsável pelo atendimento
@@ -315,7 +322,6 @@ export async function resolverEquipesInformadas(): Promise<EquipeResolvida[]> {
   }
 }
 
-
 /** Setores populados a partir de todas as tarefas dos grupos selecionados, garantindo também os departamentos das equipes. */
 export async function listarSetoresDisponiveis(
   _filtrosSemSetor: Omit<FiltrosDashboard, 'setor'>,
@@ -352,7 +358,8 @@ export async function listarColaboradoresDisponiveis(
   const tarefas = await carregarTarefasPermitidas(projetosPermitidos, gruposSelecionados)
   const colaboradores = new Map<number, string>()
   tarefas.forEach((t) => {
-    if (t.fechadoPorId !== null) colaboradores.set(t.fechadoPorId, t.fechadoPorNome ?? `Usuário ${t.fechadoPorId}`)
+    if (t.fechadoPorId !== null)
+      colaboradores.set(t.fechadoPorId, t.fechadoPorNome ?? `Usuário ${t.fechadoPorId}`)
   })
   return Array.from(colaboradores.entries())
     .map(([id, nome]) => ({ id, nome }))

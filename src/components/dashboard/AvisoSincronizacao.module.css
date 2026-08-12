@@ -1,0 +1,20 @@
+/* Cartão informativo — mesma linguagem visual de .cartao em
+   GraficosInteligencia.module.css, com um acento azul de "informação" na
+   borda esquerda para se diferenciar dos cartões de dado. */
+.aviso {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--mantine-spacing-sm);
+  background-color: var(--superficie);
+  border: 1px solid var(--superficie-borda);
+  border-left: 3px solid #2f6fb0;
+  border-radius: var(--mantine-radius-md);
+  padding: var(--mantine-spacing-sm) var(--mantine-spacing-md);
+  color: var(--mantine-color-text);
+}
+
+.icone {
+  flex: none;
+  margin-top: 2px;
+  color: #2f6fb0;
+}

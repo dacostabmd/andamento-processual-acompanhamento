@@ -96,7 +96,6 @@ export function calcularMetricas(
   }
 }
 
-
 export function aplicarFiltros(tarefas: Tarefa[], filtros: FiltrosDashboard): Tarefa[] {
   const agora = new Date()
   const dataInicioLimite = filtros.dataInicio ? new Date(`${filtros.dataInicio}T00:00:00`) : null
@@ -127,7 +126,8 @@ export function aplicarFiltros(tarefas: Tarefa[], filtros: FiltrosDashboard): Ta
     if (filtros.setor && !tarefa.fechadoPorDepartamentos.includes(filtros.setor)) return false
     if (filtros.projetoId !== null && tarefa.projetoId !== filtros.projetoId) return false
     if (filtros.fechadoPorId !== null && tarefa.fechadoPorId !== filtros.fechadoPorId) return false
-    if (filtros.responsavelId !== null && tarefa.responsavelId !== filtros.responsavelId) return false
+    if (filtros.responsavelId !== null && tarefa.responsavelId !== filtros.responsavelId)
+      return false
     if (filtros.prioridade !== null && tarefa.prioridade !== filtros.prioridade) return false
     if (filtros.estado !== null && tarefa.estadoUf !== filtros.estado) return false
     if (filtros.ocultarIndefinidos) {
@@ -231,9 +231,9 @@ export function empacotarPorAtendimento(
 
   tarefas.forEach((tarefa) => {
     // Na visão executora a pessoa do pacote é quem fechou o card, não o participante.
-    const pessoaId =
-      visao === 'executora' ? tarefa.fechadoPorId : tarefa.responsavelAtendimentoId
-    const pessoaNome = visao === 'executora' ? tarefa.fechadoPorNome : tarefa.responsavelAtendimentoNome
+    const pessoaId = visao === 'executora' ? tarefa.fechadoPorId : tarefa.responsavelAtendimentoId
+    const pessoaNome =
+      visao === 'executora' ? tarefa.fechadoPorNome : tarefa.responsavelAtendimentoNome
     const nomeFallback =
       visao === 'executora' ? 'Ainda não fechado' : 'Sem responsável pelo atendimento'
 
@@ -288,8 +288,7 @@ export function contarSituacoes(cards: Tarefa[]): ContagemSituacao {
 
 /** Critério para localizar as tarefas de uma pessoa: cada dimensão usa um ID diferente da tarefa. */
 export type CriterioPessoa =
-  | { tipo: 'responsavelAtendimento'; id: number | null }
-  | { tipo: 'fechadoPor'; id: number | null }
+  { tipo: 'responsavelAtendimento'; id: number | null } | { tipo: 'fechadoPor'; id: number | null }
 
 /**
  * Localiza as tarefas de uma pessoa num recorte de tarefas cruas, usado pelos
@@ -550,6 +549,22 @@ const SETE_DIAS_MS = 7 * 24 * 60 * 60 * 1000
 const QUINZE_DIAS_MS = 15 * 24 * 60 * 60 * 1000
 
 /**
+ * Faixa de urgência de UM card, ou `null` se ele não entra em nenhuma
+ * (concluído, adiado, ou sem prazo definido) — mesmo critério de
+ * `calcularFaixasUrgencia`, fatorado para reuso no clique do gráfico (achar
+ * quais tarefas caem numa faixa, não só contá-las).
+ */
+export function classificarUrgenciaTarefa(card: Tarefa, agora: Date): keyof FaixasUrgencia | null {
+  if (card.status === STATUS_CONCLUIDO || card.status === 6 || !card.prazoFinal) return null
+  const diff = new Date(card.prazoFinal).getTime() - agora.getTime()
+  if (diff < 0) return 'vencidas'
+  if (diff <= TRES_DIAS_MS) return 'ateTresDias'
+  if (diff <= SETE_DIAS_MS) return 'quatroASeteDias'
+  if (diff <= QUINZE_DIAS_MS) return 'oitoAQuinzeDias'
+  return 'maisDeQuinzeDias'
+}
+
+/**
  * Classifica cards ativos (nem concluídos, nem adiados) em faixas de dias até
  * o vencimento — transforma o número estático de "vence em breve" numa
  * distribuição acionável. Cards concluídos/adiados não entram em nenhuma faixa.
@@ -564,13 +579,8 @@ function calcularFaixasUrgencia(pacotes: PacoteAtendimento[], agora: Date): Faix
   }
   pacotes.forEach((pacote) => {
     pacote.cards.forEach((card) => {
-      if (card.status === STATUS_CONCLUIDO || card.status === 6 || !card.prazoFinal) return
-      const diff = new Date(card.prazoFinal).getTime() - agora.getTime()
-      if (diff < 0) faixas.vencidas += 1
-      else if (diff <= TRES_DIAS_MS) faixas.ateTresDias += 1
-      else if (diff <= SETE_DIAS_MS) faixas.quatroASeteDias += 1
-      else if (diff <= QUINZE_DIAS_MS) faixas.oitoAQuinzeDias += 1
-      else faixas.maisDeQuinzeDias += 1
+      const faixa = classificarUrgenciaTarefa(card, agora)
+      if (faixa) faixas[faixa] += 1
     })
   })
   return faixas
@@ -578,7 +588,8 @@ function calcularFaixasUrgencia(pacotes: PacoteAtendimento[], agora: Date): Faix
 
 const MESES_TENDENCIA = 6
 
-function chaveMes(data: Date): string {
+/** Chave "AAAA-MM" de uma data — usada para agrupar por mês e para localizar as tarefas de um ponto da tendência mensal ao clicar no gráfico. */
+export function chaveMes(data: Date): string {
   return `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}`
 }
 
@@ -597,7 +608,10 @@ function rotuloMes(chave: string): string {
  * real, não a data da consulta, e é uma medida histórica de pontualidade de
  * entrega, não de urgência atual (essa já existe em calcularFaixasUrgencia).
  */
-function calcularTendenciaMensal(pacotes: PacoteAtendimento[], agora: Date): PontoTendenciaMensal[] {
+function calcularTendenciaMensal(
+  pacotes: PacoteAtendimento[],
+  agora: Date,
+): PontoTendenciaMensal[] {
   const chaves: string[] = []
   const cursor = new Date(agora.getFullYear(), agora.getMonth(), 1)
   for (let i = MESES_TENDENCIA - 1; i >= 0; i--) {
@@ -626,7 +640,8 @@ function calcularTendenciaMensal(pacotes: PacoteAtendimento[], agora: Date): Pon
       mes: chave,
       label: rotuloMes(chave),
       concluidas: bucket.concluidas,
-      taxaAtraso: bucket.concluidas === 0 ? 0 : (bucket.concluidasComAtraso / bucket.concluidas) * 100,
+      taxaAtraso:
+        bucket.concluidas === 0 ? 0 : (bucket.concluidasComAtraso / bucket.concluidas) * 100,
     }
   })
 }
@@ -666,5 +681,3 @@ export function calcularMetricasPorEquipe(
     }
   })
 }
-
-

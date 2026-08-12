@@ -1,0 +1,30 @@
+/* Empilhado abaixo do botão de tema (fixo em top:16px/left:16px, ~42px de
+   altura) — mesmo canto, mesmo z-index, só um degrau mais abaixo. */
+.pilha {
+  position: fixed;
+  top: 68px;
+  left: 16px;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.botao {
+  font-weight: 700;
+  font-size: 11px;
+  box-shadow: 0 2px 8px var(--sombra-contraste);
+  transition: transform 0.12s ease, box-shadow 0.2s ease, filter 0.15s ease;
+}
+
+.botao:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px var(--sombra-contraste);
+  filter: brightness(1.15);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .botao {
+    transition: none;
+  }
+}

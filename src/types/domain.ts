@@ -357,12 +357,20 @@ export interface FiltrosDashboard {
   modoTaxaAtraso: 'ativas' | 'total'
 }
 
-/** Janela padrão de busca: evita baixar o histórico inteiro (grupos monitorados somam centenas de milhares de tarefas). */
-export const JANELA_PADRAO_DIAS = 90
+/**
+ * Janela de dias retroativos que o worker mantém sincronizada com o Bitrix
+ * (`CONFIG.SYNC_DIAS_JANELA` em worker-nodejs-andamento/src/config.ts, hoje
+ * 10 — reduzida de 90 em 2026-07-31 a pedido do usuário). Tarefas criadas
+ * antes disso nunca chegam ao snapshot, então não há filtro de data que as
+ * traga de volta. A API não expõe essa janela no metadata do snapshot (só o
+ * início/fim da EXECUÇÃO do sync, não da janela de dados) — por isso este
+ * número é um literal, não algo lido dinamicamente. Se `SYNC_DIAS_JANELA`
+ * mudar no worker, atualizar aqui também. Consumido por AvisoSincronizacao.tsx.
+ */
+export const JANELA_PADRAO_DIAS = 10
 
 /** Filtros vazios sem restrição inicial de data por padrão. */
 export function filtrosVazios(_agora?: Date): FiltrosDashboard {
-
   return {
     dataInicio: null,
     dataFim: null,
@@ -379,8 +387,6 @@ export function filtrosVazios(_agora?: Date): FiltrosDashboard {
     modoTaxaAtraso: 'ativas',
   }
 }
-
-
 
 export interface MetricasTarefas {
   total: number

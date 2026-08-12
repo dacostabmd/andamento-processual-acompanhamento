@@ -1,3 +1,5 @@
+import { EQUIPES_ATENDIMENTO, type EquipeAtendimento } from '../types/domain'
+
 /**
  * Quem é, e quem NÃO é, uma pessoa nos dados de tarefa.
  *
@@ -42,11 +44,7 @@ const NAO_SAO_PESSOAS = new Set([
 ])
 
 function normalizar(nome: string): string {
-  return nome
-    .trim()
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
+  return nome.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
 }
 
 /** `true` só quando o valor identifica uma pessoa de verdade. */
@@ -59,4 +57,19 @@ export function ehNomeDePessoa(nome: string | null | undefined): boolean {
 /** O nome, ou `null` se for rótulo de ausência — pronto para `?? fallback`. */
 export function nomeDePessoaOuNulo(nome: string | null | undefined): string | null {
   return ehNomeDePessoa(nome) ? (nome as string) : null
+}
+
+/**
+ * Equipe cujo nome de supervisora (ver EQUIPES_ATENDIMENTO) bate com o nome
+ * informado, ignorando acento/caixa. As 4 equipes são batizadas com o nome da
+ * própria supervisora, então reconhecer o usuário logado no Bitrix como
+ * supervisor(a) é comparar o nome dele contra essa lista — não depende de
+ * UF_HEAD, que não está cadastrado para Lorena e Quézia no Bitrix.
+ */
+export function equipeSupervisionadaPeloNome(
+  nome: string | null | undefined,
+): EquipeAtendimento | null {
+  if (!nome) return null
+  const alvo = normalizar(nome)
+  return EQUIPES_ATENDIMENTO.find((equipe) => normalizar(equipe) === alvo) ?? null
 }
