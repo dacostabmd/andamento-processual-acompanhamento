@@ -68,7 +68,7 @@ export function SupervisorAcessoBotoes({
         <ActionIcon
           key={equipe}
           variant="default"
-          size="lg"
+          size={43}
           radius="xl"
           className={classes.botao}
           style={{
@@ -92,7 +92,7 @@ export function SupervisorAcessoBotoes({
                 backgroundColor: 'transparent',
                 color: COR_POR_EQUIPE[equipe],
                 fontWeight: 700,
-                fontSize: '0.8rem',
+                fontSize: '1rem',
               },
             }}
           >

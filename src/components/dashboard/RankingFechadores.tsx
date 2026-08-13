@@ -293,7 +293,7 @@ function LinhaFechador({
           }
         >
           <Group gap="xs" wrap="nowrap" align="center">
-            <UserAvatar nome={linha.nome} fotoUrl={fotoUrl} size={28} />
+            <UserAvatar nome={linha.nome} fotoUrl={fotoUrl} size={35} />
             <Text
               size="sm"
               fw={posicao <= 3 && ordenadoPorVolume ? 700 : 400}

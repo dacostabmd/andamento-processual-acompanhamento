@@ -222,7 +222,7 @@ export function DashboardPage() {
                 </Stack>
               </div>
 
-              <ComentariosForum />
+              <ComentariosForum colaborador={colaborador} />
             </>
           )}
         </Stack>

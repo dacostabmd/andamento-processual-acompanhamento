@@ -8,8 +8,8 @@
  *
  * `fonteAtiva()` diz qual está em uso (também exibido no painel de diagnóstico).
  */
-import { bx24Disponivel, callMethodTodasPaginas } from './bitrixSdk'
-import { callMethodTodasPaginasRest, webhookDisponivel } from './bitrixRest'
+import { bx24Disponivel, callMethod, callMethodTodasPaginas } from './bitrixSdk'
+import { callMethodRest, callMethodTodasPaginasRest, webhookDisponivel } from './bitrixRest'
 
 export type FonteBitrix = 'bx24' | 'webhook' | 'nenhuma'
 
@@ -31,6 +31,22 @@ export function listarTodasPaginas<T>(
   const fonte = fonteAtiva()
   if (fonte === 'bx24') return callMethodTodasPaginas<T>(method, params, extrairLista)
   if (fonte === 'webhook') return callMethodTodasPaginasRest<T>(method, params, extrairLista)
+  throw new Error(
+    'Fonte de dados do Bitrix não configurada. Rode embutido no Bitrix24 ou defina VITE_BITRIX_API_URL.',
+  )
+}
+
+/**
+ * Chama um método não paginado (devolve um único registro/array pequeno já
+ * completo) pela fonte real ativa. Preferível a `listarTodasPaginas` quando o
+ * pedido já é filtrado para poucos registros (ex.: `FILTER: { ID: [...] }`) —
+ * evita depender da paginação (BX24.callBatch/`next()`) para algo que cabe
+ * numa chamada só.
+ */
+export function chamarMetodo<T>(method: string, params: Record<string, unknown> = {}): Promise<T> {
+  const fonte = fonteAtiva()
+  if (fonte === 'bx24') return callMethod<T>(method, params)
+  if (fonte === 'webhook') return callMethodRest<T>(method, params)
   throw new Error(
     'Fonte de dados do Bitrix não configurada. Rode embutido no Bitrix24 ou defina VITE_BITRIX_API_URL.',
   )

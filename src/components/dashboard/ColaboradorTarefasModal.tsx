@@ -172,10 +172,10 @@ export function ColaboradorTarefasModal({ colaborador, aoFechar }: ColaboradorTa
         transitionProps={{ transition: 'slide-up', duration: 250 }}
       >
         {colaborador && contagem && (
-          <Stack gap="md">
-            <Stack gap={8}>
+          <Stack gap="xl">
+            <Stack gap={10}>
               <div className="flex items-center gap-2">
-                <UserAvatar nome={colaborador.nome} fotoUrl={fotoUrl} size={36} />
+                <UserAvatar nome={colaborador.nome} fotoUrl={fotoUrl} size={45} />
                 <Text fw={700} size="lg">
                   {colaborador.nome}
                 </Text>
