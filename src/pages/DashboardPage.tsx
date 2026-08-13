@@ -14,6 +14,7 @@ import {
   type MetricaSelecionada,
 } from '../components/dashboard/MetricaTarefasModal'
 import { MetricasCards } from '../components/dashboard/MetricasCards'
+import { NavegacaoSecoesDashboard } from '../components/dashboard/NavegacaoSecoesDashboard'
 import { PainelSupervisorEquipe } from '../components/dashboard/PainelSupervisorEquipe'
 import { RankingFechadores } from '../components/dashboard/RankingFechadores'
 import { SupervisorAcessoBotoes } from '../components/dashboard/SupervisorAcessoBotoes'
@@ -193,7 +194,7 @@ export function DashboardPage() {
                 metricasPorEquipe={metricasPorEquipe}
               />
 
-              <div>
+              <div id="secao-ranking">
                 <Title order={3} mb="md">
                   Quem está fechando mais tarefas
                 </Title>
@@ -206,7 +207,7 @@ export function DashboardPage() {
                 )}
               </div>
 
-              <div>
+              <div id="secao-inteligencia">
                 <Title order={3} mb="md">
                   Inteligência — visão por equipe de atendimento
                 </Title>
@@ -222,7 +223,9 @@ export function DashboardPage() {
                 </Stack>
               </div>
 
-              <ComentariosForum colaborador={colaborador} />
+              <div id="secao-comentarios">
+                <ComentariosForum colaborador={colaborador} />
+              </div>
             </>
           )}
         </Stack>
@@ -240,6 +243,15 @@ export function DashboardPage() {
         onAbrirEquipe={setEquipeSupervisorAberta}
       />
       {conteudo}
+      {estado === 'ok' && !erroDados && (
+        <NavegacaoSecoesDashboard
+          secoes={[
+            { id: 'secao-ranking', rotulo: 'Ranking' },
+            { id: 'secao-inteligencia', rotulo: 'Inteligência' },
+            { id: 'secao-comentarios', rotulo: 'Comentários' },
+          ]}
+        />
+      )}
       <VersaoModal
         abertoManual={modalVersaoAberto}
         onCloseManual={() => setModalVersaoAberto(false)}

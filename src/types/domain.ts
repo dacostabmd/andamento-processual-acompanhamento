@@ -134,6 +134,22 @@ export const DEPARTAMENTO_ID_POR_EQUIPE: Record<(typeof EQUIPES_ATENDIMENTO)[num
 }
 
 /**
+ * ID de usuário (Bitrix24) da supervisora de cada equipe, usado como
+ * fallback quando `department.get` não retorna `UF_HEAD` — é o caso de
+ * Quézia Karen e Lorena Pontes, cujos departamentos nunca tiveram o campo de
+ * chefia preenchido no Bitrix (confirmado ao vivo: `UF_HEAD` vem vazio para
+ * os IDs 1418/1416 acima, mesmo repetindo a consulta). Sem este fallback o
+ * avatar delas nunca resolve a foto, pois `obterSupervisorIdPorEquipe` não
+ * tem de onde tirar o ID de usuário. IDs confirmados ao vivo via `user.get`.
+ */
+export const SUPERVISOR_ID_POR_EQUIPE_FALLBACK: Partial<
+  Record<(typeof EQUIPES_ATENDIMENTO)[number], number>
+> = {
+  'Quézia Karen': 1205,
+  'Lorena Pontes': 999,
+}
+
+/**
  * Nomes (não IDs) dos 4 departamentos das equipes, confirmados ao vivo via
  * department.get — usados para checar `fechadoPorDepartamentos` (que o worker
  * grava como nome, não ID). Ex.: Victoria Persi fecha tarefas nos grupos

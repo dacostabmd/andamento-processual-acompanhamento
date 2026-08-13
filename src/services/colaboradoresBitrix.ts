@@ -1,5 +1,9 @@
 import { chamarMetodo, listarTodasPaginas } from './bitrixTransport'
-import { DEPARTAMENTO_ID_POR_EQUIPE, type EquipeAtendimento } from '../types/domain'
+import {
+  DEPARTAMENTO_ID_POR_EQUIPE,
+  SUPERVISOR_ID_POR_EQUIPE_FALLBACK,
+  type EquipeAtendimento,
+} from '../types/domain'
 
 interface UsuarioBitrixApi {
   ID: string
@@ -122,9 +126,9 @@ export function obterFotosColaboradores(idsRelevantes: number[]): Promise<Map<nu
   return cacheFotos
 }
 
-// v2: v1 podia ter ficado gravado incompleto (paginação truncada antes da
-// correção acima) — a troca de chave invalida esse cache antigo de uma vez.
-const CHAVE_CACHE_SUPERVISOR_ID = 'dashboard_supervisor_id_por_equipe_v2'
+// v3: v2 podia ter ficado gravado sem Quézia/Lorena (UF_HEAD vazio, sem o
+// fallback abaixo) — a troca de chave invalida esse cache antigo de uma vez.
+const CHAVE_CACHE_SUPERVISOR_ID = 'dashboard_supervisor_id_por_equipe_v3'
 
 let cacheSupervisorIdPorEquipe: Promise<Partial<Record<EquipeAtendimento, number>>> | null = null
 
@@ -144,6 +148,12 @@ let cacheSupervisorIdPorEquipe: Promise<Partial<Record<EquipeAtendimento, number
  * assim a supervisora aparece mesmo quando a equipe dela não tem nenhuma
  * tarefa no recorte de filtros atual. Mesmo cache em duas camadas (memória +
  * localStorage) de `obterFotosColaboradores`.
+ *
+ * Quézia Karen e Lorena Pontes nunca tiveram `UF_HEAD` cadastrado nos
+ * respectivos departamentos (1418/1416) — não é truncamento de paginação,
+ * o campo mesmo vem vazio. `SUPERVISOR_ID_POR_EQUIPE_FALLBACK` cobre os IDs
+ * de usuário delas diretamente, aplicado por cima do resultado de
+ * `department.get` para as equipes que ele não resolveu.
  */
 export function obterSupervisorIdPorEquipe(): Promise<Partial<Record<EquipeAtendimento, number>>> {
   if (cacheSupervisorIdPorEquipe) return cacheSupervisorIdPorEquipe
@@ -175,7 +185,10 @@ export function obterSupervisorIdPorEquipe(): Promise<Partial<Record<EquipeAtend
       const resultado: Partial<Record<EquipeAtendimento, number>> = {}
       Object.entries(DEPARTAMENTO_ID_POR_EQUIPE).forEach(([equipe, departamentoId]) => {
         const head = headPorDepartamentoId.get(departamentoId)
+        const fallback =
+          SUPERVISOR_ID_POR_EQUIPE_FALLBACK[equipe as keyof typeof SUPERVISOR_ID_POR_EQUIPE_FALLBACK]
         if (head !== undefined) resultado[equipe as EquipeAtendimento] = head
+        else if (fallback !== undefined) resultado[equipe as EquipeAtendimento] = fallback
       })
       salvarCachePersistido(CHAVE_CACHE_SUPERVISOR_ID, resultado)
       return resultado
