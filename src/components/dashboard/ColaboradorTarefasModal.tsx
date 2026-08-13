@@ -26,6 +26,7 @@ import {
   tarefaFoiConcluidaComAtraso,
 } from '../../utils/tarefasMetrics'
 import { EstadoVazio } from '../EstadoVazio'
+import { UserAvatar } from '../UserAvatar'
 import { CabecalhoOrdenavel } from './CabecalhoOrdenavel'
 import { compararData, compararNumero, compararTexto, useOrdenacaoTabela } from './ordenacao'
 import { TarefaDetalheModal } from './TarefaDetalheModal'
@@ -152,6 +153,7 @@ export function ColaboradorTarefasModal({ colaborador, aoFechar }: ColaboradorTa
       <Modal
         opened={colaborador !== null}
         onClose={aoFechar}
+        zIndex={1000}
         onExitTransitionEnd={() => {
           setBusca('')
           setOrdem({ chave: 'situacao', direcao: 'asc' })
@@ -167,6 +169,7 @@ export function ColaboradorTarefasModal({ colaborador, aoFechar }: ColaboradorTa
           <Stack gap="md">
             <div>
               <div className="flex items-center gap-2" style={{ marginTop: 4 }}>
+                <UserAvatar nome={colaborador.nome} size={36} />
                 <Text fw={700} size="lg">
                   {colaborador.nome}
                 </Text>

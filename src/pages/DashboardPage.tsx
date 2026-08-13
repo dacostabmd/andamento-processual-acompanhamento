@@ -4,10 +4,8 @@ import { EstadoVazio } from '../components/EstadoVazio'
 import { ThemeToggle } from '../components/ThemeToggle'
 import { AiAssistantChat } from '../components/dashboard/AiAssistantChat'
 import { AvisoSincronizacao } from '../components/dashboard/AvisoSincronizacao'
-import {
-  ColaboradorTarefasModal,
-  type ColaboradorSelecionado,
-} from '../components/dashboard/ColaboradorTarefasModal'
+import { ColaboradorTarefasModal, type ColaboradorSelecionado } from '../components/dashboard/ColaboradorTarefasModal'
+import { ComentariosForum } from '../components/dashboard/ComentariosForum'
 import { DebugBitrixPanel } from '../components/dashboard/DebugBitrixPanel'
 import { FiltrosPainel } from '../components/dashboard/FiltrosPainel'
 import { GraficosInteligencia } from '../components/dashboard/GraficosInteligencia'
@@ -223,6 +221,8 @@ export function DashboardPage() {
                   )}
                 </Stack>
               </div>
+
+              <ComentariosForum />
             </>
           )}
         </Stack>
@@ -236,6 +236,7 @@ export function DashboardPage() {
       <ThemeToggle />
       <SupervisorAcessoBotoes
         equipeDoUsuario={equipeDoUsuario}
+        nomeUsuario={colaborador?.nome}
         onAbrirEquipe={setEquipeSupervisorAberta}
       />
       {conteudo}

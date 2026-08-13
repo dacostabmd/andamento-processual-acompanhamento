@@ -61,6 +61,14 @@ export interface TarefaLink {
   id: number
   link: string | null
   titulo?: string
+  /** Quem concluiu o card — presente quando a consulta trouxe fechado_por_nome. */
+  fechadoPorNome?: string
+  /** Equipe de quem fechou (equipe_executora) — presente quando a consulta a trouxe. */
+  equipe?: string
+  /** Status em texto (status_label) — presente quando a consulta o trouxe. */
+  statusLabel?: string
+  /** Data/hora de conclusão, ISO 8601 — presente só em tarefas já concluídas. */
+  finalizadoEm?: string
 }
 
 /**

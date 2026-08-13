@@ -202,8 +202,18 @@ export function AiAssistantChat({ metricas, pacotes, filtros, visao }: AiAssista
     }
   }, [mensagens, aberto])
 
-  const handleEnviar = async () => {
-    const texto = textoInput.trim()
+  /**
+   * Envia uma pergunta pelo mesmo caminho do input de texto — reaproveitada
+   * pelo campo de digitação E pelo clique num nome do gráfico (drill-down),
+   * que monta a pergunta programaticamente em vez de o usuário digitá-la.
+   *
+   * `autoAbrirModal`: quando a pergunta é o drill-down de um gráfico, o
+   * usuário já demonstrou a intenção de VER a lista ao clicar — pedir um
+   * segundo clique em "Ver resultado" seria fricção sem motivo. No envio
+   * manual pelo campo de texto isso não se aplica: ali quem decide abrir o
+   * modal é o botão, como já funcionava.
+   */
+  const enviarPergunta = async (texto: string, autoAbrirModal = false) => {
     if (!texto || carregando) return
 
     const mensagemUsuario: MensagemChat = {
@@ -215,7 +225,6 @@ export function AiAssistantChat({ metricas, pacotes, filtros, visao }: AiAssista
 
     const novasMensagens = [...mensagens, mensagemUsuario]
     setMensagens(novasMensagens)
-    setTextoInput('')
     setCarregando(true)
 
     try {
@@ -239,6 +248,10 @@ export function AiAssistantChat({ metricas, pacotes, filtros, visao }: AiAssista
       // exatamente uma vez por resposta com gráfico, sem re-render em cascata.
       if (respostaAssistente.grafico) setChatExpandido(true)
       setMensagens((prev) => [...prev, mensagemIa])
+
+      if (autoAbrirModal && respostaAssistente.tarefas?.length) {
+        setTarefasNoModal(respostaAssistente.tarefas)
+      }
     } catch (err) {
       const mensagemErro: MensagemChat = {
         id: String(Date.now() + 1),
@@ -250,6 +263,30 @@ export function AiAssistantChat({ metricas, pacotes, filtros, visao }: AiAssista
     } finally {
       setCarregando(false)
     }
+  }
+
+  const handleEnviar = () => {
+    const texto = textoInput.trim()
+    if (!texto || carregando) return
+    setTextoInput('')
+    enviarPergunta(texto)
+  }
+
+  /**
+   * Clique num nome/categoria de um gráfico do assistente ("Ver as tarefas de
+   * Anna Ferreira"). Em vez de filtrar `pacotes` local — que reflete os
+   * filtros do DASHBOARD, não necessariamente o mesmo recorte de período que
+   * a pergunta original usou (ex.: "ontem" pode não bater com o filtro de
+   * data ativo na tela) —, refaz a pergunta pelo mesmo caminho Text-to-SQL,
+   * citando a pergunta original para o modelo herdar o período/critério dela
+   * (ver regra de follow-up em INSTRUCOES_SQL no worker). Isso garante que a
+   * lista aberta é exatamente o detalhamento do que está no gráfico.
+   */
+  const handleCategoriaClick = (categoria: string, perguntaOriginal: string | null) => {
+    const pergunta = perguntaOriginal
+      ? `Com base na pergunta "${perguntaOriginal}", quais tarefas correspondem a "${categoria}"? Liste as tarefas individuais com data de conclusão, equipe e quem fechou.`
+      : `Quais tarefas correspondem a "${categoria}"? Liste as tarefas individuais com data de conclusão, equipe e quem fechou.`
+    enviarPergunta(pergunta, true)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -330,7 +367,7 @@ export function AiAssistantChat({ metricas, pacotes, filtros, visao }: AiAssista
                   O que você gostaria de explorar hoje? Faça perguntas, tire dúvidas sobre as métricas ou solicite análises do dashboard...
                 </div>
               ) : (
-                mensagens.map((m) => (
+                mensagens.map((m, indice) => (
                   <motion.div
                     key={m.id}
                     initial={{ opacity: 0, y: 12, scale: 0.98 }}
@@ -341,7 +378,22 @@ export function AiAssistantChat({ metricas, pacotes, filtros, visao }: AiAssista
                     }`}
                   >
                     {renderizarConteudoComMarkdown(m.texto)}
-                    {m.grafico ? <GraficoResposta dados={m.grafico} /> : null}
+                    {m.grafico ? (
+                      <GraficoResposta
+                        dados={m.grafico}
+                        onCategoriaClick={(categoria) =>
+                          handleCategoriaClick(
+                            categoria,
+                            // Pergunta do usuário imediatamente anterior a esta resposta —
+                            // dá ao worker o mesmo período/critério para herdar no drill-down.
+                            mensagens
+                              .slice(0, indice)
+                              .reverse()
+                              .find((anterior) => anterior.remetente === 'user')?.texto ?? null,
+                          )
+                        }
+                      />
+                    ) : null}
                     {m.tarefas?.length ? (
                       <BotaoVerResultado
                         quantidade={m.tarefas.length}

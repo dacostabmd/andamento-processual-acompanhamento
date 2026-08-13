@@ -35,6 +35,8 @@ function coresChrome(scheme: 'light' | 'dark') {
 
 interface Props {
   dados: DadosGrafico
+  /** Chamado com a categoria (ex.: nome da pessoa) quando o usuário clica numa barra/rótulo. */
+  onCategoriaClick?: (categoria: string) => void
 }
 
 /**
@@ -48,7 +50,7 @@ interface Props {
  * categorias não deveriam ocupar o mesmo espaço nem ficar igualmente
  * espremidas.
  */
-export function GraficoResposta({ dados }: Props) {
+export function GraficoResposta({ dados, onCategoriaClick }: Props) {
   const scheme = useComputedColorScheme('dark', { getInitialValueInEffect: true })
   const cores = useMemo(() => coresChrome(scheme), [scheme])
 
@@ -73,6 +75,26 @@ export function GraficoResposta({ dados }: Props) {
       indexAxis: 'y' as const,
       responsive: true,
       maintainAspectRatio: false,
+      // 'nearest' + eixo 'y' + intersect:false: o clique/hover resolve pela
+      // linha inteira, não só quando o cursor está sobre a barra. É o que
+      // torna o RÓTULO (nome da pessoa, à esquerda) clicável — ele é
+      // desenhado no mesmo canvas, fora da área da barra, e sem isto o clique
+      // ali não encontraria nenhum elemento.
+      interaction: { mode: 'nearest', axis: 'y', intersect: false },
+      onClick: onCategoriaClick
+        ? (_event, elements) => {
+            const indice = elements[0]?.index
+            if (indice === undefined) return
+            const categoria = dados.categorias[indice]
+            if (categoria) onCategoriaClick(categoria)
+          }
+        : undefined,
+      onHover: onCategoriaClick
+        ? (event, elements) => {
+            const alvo = event.native?.target as HTMLElement | undefined
+            if (alvo) alvo.style.cursor = elements.length ? 'pointer' : 'default'
+          }
+        : undefined,
       plugins: {
         legend: { display: false },
         tooltip: {
@@ -93,7 +115,7 @@ export function GraficoResposta({ dados }: Props) {
         },
       },
     }),
-    [cores, dados.rotuloValor],
+    [cores, dados.rotuloValor, dados.categorias, onCategoriaClick],
   )
 
   return (
@@ -106,6 +128,11 @@ export function GraficoResposta({ dados }: Props) {
       <div style={{ height: Math.max(90, dados.categorias.length * 32) }}>
         <Bar data={chartData} options={options} />
       </div>
+      {onCategoriaClick && (
+        <Text size="xs" c="dimmed" mt={4} style={{ opacity: 0.7 }}>
+          Clique num nome para ver as tarefas
+        </Text>
+      )}
     </div>
   )
 }

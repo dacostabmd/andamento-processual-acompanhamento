@@ -46,6 +46,7 @@ export function TarefaDetalheModal({ tarefa, aoFechar }: TarefaDetalheModalProps
     <Modal
       opened={tarefa !== null}
       onClose={aoFechar}
+      zIndex={1100}
       title="Andamento processual"
       centered
       size="auto"

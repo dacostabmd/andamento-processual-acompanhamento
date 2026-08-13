@@ -1,7 +1,8 @@
-import { Badge, Progress, Text, TextInput, Tooltip, UnstyledButton } from '@mantine/core'
+import { Badge, Group, Progress, Text, TextInput, Tooltip, UnstyledButton } from '@mantine/core'
 import { useMemo, useState } from 'react'
 import type { RankingFechadores as DadosRanking, RankingFechador, Tarefa } from '../../types/domain'
 import { tarefasDaPessoa } from '../../utils/tarefasMetrics'
+import { UserAvatar } from '../UserAvatar'
 import { EstadoVazio } from '../EstadoVazio'
 import { CabecalhoOrdenavel } from './CabecalhoOrdenavel'
 import type { ColaboradorSelecionado } from './ColaboradorTarefasModal'
@@ -286,15 +287,18 @@ function LinhaFechador({
             })
           }
         >
-          <Text
-            size="sm"
-            fw={posicao <= 3 && ordenadoPorVolume ? 700 : 400}
-            lineClamp={1}
-            className="item-clicavel-hover"
-            style={{ cursor: 'pointer' }}
-          >
-            {linha.nome}
-          </Text>
+          <Group gap="xs" wrap="nowrap" align="center">
+            <UserAvatar nome={linha.nome} size={28} />
+            <Text
+              size="sm"
+              fw={posicao <= 3 && ordenadoPorVolume ? 700 : 400}
+              lineClamp={1}
+              className="item-clicavel-hover"
+              style={{ cursor: 'pointer' }}
+            >
+              {linha.nome}
+            </Text>
+          </Group>
         </UnstyledButton>
       </td>
       {/* Setor é o departamento cadastrado na pessoa — mais específico que a

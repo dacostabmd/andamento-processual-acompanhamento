@@ -73,3 +73,11 @@ export function equipeSupervisionadaPeloNome(
   const alvo = normalizar(nome)
   return EQUIPES_ATENDIMENTO.find((equipe) => normalizar(equipe) === alvo) ?? null
 }
+
+/** `true` se o usuário for o administrador Caio Marques (acesso total às equipes). */
+export function ehCaioMarques(nome: string | null | undefined): boolean {
+  if (!nome) return false
+  const alvo = normalizar(nome)
+  return alvo.includes('caio marques') || alvo.includes('caio')
+}
+

@@ -86,6 +86,7 @@ export function MetricaTarefasModal({ metrica, aoFechar }: MetricaTarefasModalPr
       <Modal
         opened={metrica !== null}
         onClose={aoFechar}
+        zIndex={1000}
         onExitTransitionEnd={() => {
           setBusca('')
           setOrdem({ chave: 'situacao', direcao: 'asc' })
