@@ -54,7 +54,7 @@ export function NavegacaoSecoesDashboard({ secoes }: NavegacaoSecoesDashboardPro
         items={secoes.map((secao) => secao.rotulo)}
         activeIndex={indiceAtivo}
         onItemClick={aoClicar}
-        accentColor="#A855F7"
+        accentColor="#cba556"
         textColor="var(--mantine-color-dimmed)"
         markerColor="var(--mantine-color-dimmed)"
         proximityRadius={90}
