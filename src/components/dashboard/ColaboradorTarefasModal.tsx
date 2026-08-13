@@ -113,7 +113,8 @@ export function ColaboradorTarefasModal({ colaborador, aoFechar }: ColaboradorTa
       : primeiraTarefa.responsavelAtendimentoId
   }, [colaborador])
 
-  const fotos = useFotosColaboradores()
+  const idsColaboradores = useMemo(() => (pessoaId ? [pessoaId] : []), [pessoaId])
+  const fotos = useFotosColaboradores(idsColaboradores)
   const fotoUrl = pessoaId ? fotos.get(pessoaId) : undefined
 
   const perfilBitrix = useMemo(() => {

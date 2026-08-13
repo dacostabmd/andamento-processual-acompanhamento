@@ -2,6 +2,7 @@ import { Badge, Group, Progress, Text, TextInput, Tooltip, UnstyledButton } from
 import { useMemo, useState } from 'react'
 import { useFotosColaboradores } from '../../hooks/useFotosColaboradores'
 import type { RankingFechadores as DadosRanking, RankingFechador, Tarefa } from '../../types/domain'
+import { idsColaboradoresDasTarefas } from '../../utils/pessoas'
 import { tarefasDaPessoa } from '../../utils/tarefasMetrics'
 import { UserAvatar } from '../UserAvatar'
 import { EstadoVazio } from '../EstadoVazio'
@@ -70,7 +71,8 @@ interface Props {
  */
 export function RankingFechadores({ dados, tarefas, onSelecionarColaborador }: Props) {
   const [busca, setBusca] = useState('')
-  const fotos = useFotosColaboradores()
+  const idsColaboradores = useMemo(() => idsColaboradoresDasTarefas(tarefas), [tarefas])
+  const fotos = useFotosColaboradores(idsColaboradores)
   const { ordem, setOrdem, alternar } = useOrdenacaoTabela<Coluna>({
     chave: 'total',
     direcao: 'desc',

@@ -8,6 +8,7 @@ import type {
   PacoteAtendimento,
   Tarefa,
 } from '../../types/domain'
+import { idsColaboradoresDasTarefas } from '../../utils/pessoas'
 import { calcularRankingFechadores, tarefaFoiConcluidaComAtraso } from '../../utils/tarefasMetrics'
 import { UserAvatar } from '../UserAvatar'
 import type { ColaboradorSelecionado } from './ColaboradorTarefasModal'
@@ -50,10 +51,8 @@ export function PainelSupervisorEquipe({
   if (equipe !== null && equipe !== equipeExibida) {
     setEquipeExibida(equipe)
   }
-  const fotos = useFotosColaboradores()
   const supervisorIds = useSupervisorIdPorEquipe()
   const supervisoraId = equipeExibida ? supervisorIds[equipeExibida] : undefined
-  const fotoSupervisora = supervisoraId ? fotos.get(supervisoraId) : undefined
   const [metricaSelecionada, setMetricaSelecionada] = useState<MetricaSelecionada | null>(null)
 
   const pacotesDaEquipe = useMemo(
@@ -65,6 +64,13 @@ export function PainelSupervisorEquipe({
       equipeExibida ? tarefasFiltradas.filter((t) => t.equipeAtendimento === equipeExibida) : [],
     [tarefasFiltradas, equipeExibida],
   )
+  const idsColaboradores = useMemo(() => {
+    const ids = idsColaboradoresDasTarefas(tarefasDaEquipe)
+    if (supervisoraId) ids.push(supervisoraId)
+    return ids
+  }, [tarefasDaEquipe, supervisoraId])
+  const fotos = useFotosColaboradores(idsColaboradores)
+  const fotoSupervisora = supervisoraId ? fotos.get(supervisoraId) : undefined
   const metricasDaEquipe =
     metricasPorEquipe.find((m) => m.equipe === equipeExibida)?.metricas ?? null
 

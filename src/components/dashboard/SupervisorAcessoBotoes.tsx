@@ -1,4 +1,5 @@
 import { ActionIcon, Avatar } from '@mantine/core'
+import { useMemo } from 'react'
 import { useFotosColaboradores } from '../../hooks/useFotosColaboradores'
 import { useSupervisorIdPorEquipe } from '../../hooks/useSupervisorIdPorEquipe'
 import { EQUIPES_ATENDIMENTO, type EquipeAtendimento } from '../../types/domain'
@@ -50,8 +51,9 @@ export function SupervisorAcessoBotoes({
   onAbrirEquipe,
 }: SupervisorAcessoBotoesProps) {
   const eCaioMarques = ehCaioMarques(nomeUsuario)
-  const fotos = useFotosColaboradores()
   const supervisorIds = useSupervisorIdPorEquipe()
+  const idsColaboradores = useMemo(() => Object.values(supervisorIds), [supervisorIds])
+  const fotos = useFotosColaboradores(idsColaboradores)
 
   const equipesVisiveis: EquipeAtendimento[] =
     import.meta.env.DEV || eCaioMarques

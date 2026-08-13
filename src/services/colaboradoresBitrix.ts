@@ -48,26 +48,47 @@ function salvarCachePersistido<T>(chave: string, dados: T): void {
   }
 }
 
-const CHAVE_CACHE_FOTOS = 'dashboard_fotos_colaboradores_v1'
+const CHAVE_CACHE_FOTOS = 'dashboard_fotos_colaboradores_v2'
 
 let cacheFotos: Promise<Map<number, string>> | null = null
+let cacheFotosChaveIds = ''
 
 /**
- * Foto de perfil (PERSONAL_PHOTO) de cada usuário do Bitrix24, por ID.
+ * Foto de perfil (PERSONAL_PHOTO) dos usuários do Bitrix24 informados em
+ * `idsRelevantes`, por ID.
  *
- * Uma única chamada `user.get` (paginada, mesma fonte ativa — BX24 ou
- * webhook — que o resto do app já usa para identificar o usuário logado),
- * cacheada em memória (sessão) E em localStorage (entre sessões, TTL acima):
- * os avatares de colaboradores e supervisores consultam este mapa em vez de
- * repetir a chamada por card renderizado. Vazio (nunca rejeita) quando a
- * fonte Bitrix não está disponível — os avatares caem no fallback de
- * iniciais do `UserAvatar`, não quebram a tela.
+ * v2: mesmo bug já corrigido em `obterSupervisorIdPorEquipe` (ver comentário
+ * lá) também afetava aqui, sem nunca ter sido corrigido — `user.get` SEM
+ * filtro pagina o portal INTEIRO (paginação real do BX24/webhook, não
+ * dedupe por card), e era isso que fazia os avatares "aparecerem muito tempo
+ * depois" do resto da tela (o cold start relatado pelo usuário) e também
+ * fazia os avatares de Quézia (1205) e Lorena (999) sumirem quando a
+ * paginação truncava antes de alcançar o ID delas. Filtrar por
+ * `FILTER: { ID: idsRelevantes }` — os IDs de responsável/fechador/atendimento
+ * das tarefas já carregadas — elimina os dois problemas de uma vez: a chamada
+ * cobre só dezenas de pessoas (não milhares) e nunca depende de a paginação
+ * "chegar até o fim" para incluir alguém específico.
+ *
+ * Cacheado em memória (sessão) E em localStorage (entre sessões, TTL acima),
+ * pela CHAVE dos IDs pedidos: se uma tela pedir um conjunto diferente (ex.:
+ * filtro de grupo mudou e trouxe gente nova), a busca é refeita só para essa
+ * chave nova. Vazio (nunca rejeita) quando a fonte Bitrix não está disponível
+ * ou `idsRelevantes` está vazio — os avatares caem no fallback de iniciais do
+ * `UserAvatar`, não quebram a tela.
  */
-export function obterFotosColaboradores(): Promise<Map<number, string>> {
-  if (cacheFotos) return cacheFotos
+export function obterFotosColaboradores(idsRelevantes: number[]): Promise<Map<number, string>> {
+  const idsUnicos = Array.from(new Set(idsRelevantes.filter((id) => Number.isFinite(id) && id > 0))).sort(
+    (a, b) => a - b,
+  )
+  if (idsUnicos.length === 0) return Promise.resolve(new Map())
 
-  const doStorage = lerCachePersistido<Record<string, string>>(CHAVE_CACHE_FOTOS)
+  const chave = idsUnicos.join(',')
+  if (cacheFotos && cacheFotosChaveIds === chave) return cacheFotos
+
+  const chaveStorage = `${CHAVE_CACHE_FOTOS}:${chave}`
+  const doStorage = lerCachePersistido<Record<string, string>>(chaveStorage)
   if (doStorage) {
+    cacheFotosChaveIds = chave
     cacheFotos = Promise.resolve(
       new Map(Object.entries(doStorage).map(([id, url]) => [Number(id), url])),
     )
@@ -79,9 +100,12 @@ export function obterFotosColaboradores(): Promise<Map<number, string>> {
   // nunca chegaria a rodar, porque o erro escapa antes do `.then` ser
   // registrado. O `try` dentro da IIFE `async` é o que converte esse throw
   // síncrono numa rejeição de fato capturável.
+  cacheFotosChaveIds = chave
   cacheFotos = (async () => {
     try {
-      const usuarios = await listarTodasPaginas<UsuarioBitrixApi>('user.get')
+      const usuarios = await listarTodasPaginas<UsuarioBitrixApi>('user.get', {
+        FILTER: { ID: idsUnicos },
+      })
       const mapa = new Map<number, string>()
       usuarios.forEach((u) => {
         const id = Number(u.ID)
@@ -89,7 +113,7 @@ export function obterFotosColaboradores(): Promise<Map<number, string>> {
       })
       // Só persiste no SUCESSO: uma falha passageira (rede, rate limit) não
       // pode travar 12h de "sem foto nenhuma" para todo mundo.
-      salvarCachePersistido(CHAVE_CACHE_FOTOS, Object.fromEntries(mapa))
+      salvarCachePersistido(chaveStorage, Object.fromEntries(mapa))
       return mapa
     } catch {
       return new Map<number, string>()

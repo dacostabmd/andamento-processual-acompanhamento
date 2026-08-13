@@ -1,4 +1,4 @@
-import { EQUIPES_ATENDIMENTO, type EquipeAtendimento } from '../types/domain'
+import { EQUIPES_ATENDIMENTO, type EquipeAtendimento, type Tarefa } from '../types/domain'
 
 /**
  * Quem é, e quem NÃO é, uma pessoa nos dados de tarefa.
@@ -79,5 +79,28 @@ export function ehCaioMarques(nome: string | null | undefined): boolean {
   if (!nome) return false
   const alvo = normalizar(nome)
   return alvo.includes('caio marques') || alvo.includes('caio')
+}
+
+/**
+ * IDs de usuário do Bitrix que aparecem em algum papel de pessoa nas tarefas
+ * informadas (fechador, responsável, atendimento, gestor de cada um). É o
+ * conjunto que os avatares de colaborador precisam resolver — usado para
+ * restringir `user.get` a essas pessoas em vez de paginar o portal inteiro
+ * (ver `obterFotosColaboradores` em colaboradoresBitrix.ts).
+ */
+export function idsColaboradoresDasTarefas(tarefas: Tarefa[]): number[] {
+  const ids = new Set<number>()
+  tarefas.forEach((t) => {
+    ;[
+      t.fechadoPorId,
+      t.responsavelId,
+      t.responsavelAtendimentoId,
+      t.gestorFechadorId,
+      t.gestorAtendimentoId,
+    ].forEach((id) => {
+      if (id !== null) ids.add(id)
+    })
+  })
+  return Array.from(ids)
 }
 
