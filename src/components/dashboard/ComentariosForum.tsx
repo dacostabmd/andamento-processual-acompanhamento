@@ -211,12 +211,23 @@ export function ComentariosForum({ colaborador }: ComentariosForumProps) {
 
   async function aoExcluir(id: string) {
     if (!solicitante) return
+    // Remoção otimista imediata na UI
+    setComentarios((prev) =>
+      prev
+        .filter((c) => c.id !== id)
+        .map((c) => ({
+          ...c,
+          respostas: c.respostas.filter((r) => r.id !== id),
+        })),
+    )
     try {
       await excluirComentarioApi(id, solicitante)
       const itens = await buscarComentariosDoDia(diaSyncId)
       setComentarios(agruparEmArvore(itens))
     } catch {
       setErro('Não foi possível excluir. Tente novamente.')
+      const itens = await buscarComentariosDoDia(diaSyncId)
+      setComentarios(agruparEmArvore(itens))
     }
   }
 
@@ -231,12 +242,19 @@ export function ComentariosForum({ colaborador }: ComentariosForumProps) {
       <Group gap={4}>
         <Tooltip label="Editar">
           <ActionIcon variant="subtle" color="gray" size="sm" onClick={() => iniciarEdicao(item)}>
-            ✏️
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+            </svg>
           </ActionIcon>
         </Tooltip>
         <Tooltip label="Excluir">
           <ActionIcon variant="subtle" color="red" size="sm" onClick={() => aoExcluir(item.id)}>
-            🗑️
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 6h18" />
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              <line x1="10" y1="11" x2="10" y2="17" />
+              <line x1="14" y1="11" x2="14" y2="17" />
+            </svg>
           </ActionIcon>
         </Tooltip>
       </Group>
@@ -377,8 +395,13 @@ export function ComentariosForum({ colaborador }: ComentariosForumProps) {
                           onClick={() =>
                             setIdRespostaAtiva(idRespostaAtiva === item.id ? null : item.id)
                           }
+                          leftSection={
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                            </svg>
+                          }
                         >
-                          💬 Responder ({item.respostas.length})
+                          Responder ({item.respostas.length})
                         </Button>
                       </Group>
 
