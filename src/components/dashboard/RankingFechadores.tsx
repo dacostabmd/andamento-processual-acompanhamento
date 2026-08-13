@@ -1,5 +1,6 @@
 import { Badge, Group, Progress, Text, TextInput, Tooltip, UnstyledButton } from '@mantine/core'
 import { useMemo, useState } from 'react'
+import { useFotosColaboradores } from '../../hooks/useFotosColaboradores'
 import type { RankingFechadores as DadosRanking, RankingFechador, Tarefa } from '../../types/domain'
 import { tarefasDaPessoa } from '../../utils/tarefasMetrics'
 import { UserAvatar } from '../UserAvatar'
@@ -69,6 +70,7 @@ interface Props {
  */
 export function RankingFechadores({ dados, tarefas, onSelecionarColaborador }: Props) {
   const [busca, setBusca] = useState('')
+  const fotos = useFotosColaboradores()
   const { ordem, setOrdem, alternar } = useOrdenacaoTabela<Coluna>({
     chave: 'total',
     direcao: 'desc',
@@ -238,6 +240,7 @@ export function RankingFechadores({ dados, tarefas, onSelecionarColaborador }: P
                     liderTotal={liderTotal}
                     ordenadoPorVolume={ordem.chave === 'total' && ordem.direcao === 'desc'}
                     tarefas={tarefas}
+                    fotoUrl={fotos.get(linha.fechadoPorId)}
                     onSelecionarColaborador={onSelecionarColaborador}
                   />
                 ))}
@@ -256,6 +259,7 @@ function LinhaFechador({
   liderTotal,
   ordenadoPorVolume,
   tarefas,
+  fotoUrl,
   onSelecionarColaborador,
 }: {
   linha: RankingFechador
@@ -263,6 +267,7 @@ function LinhaFechador({
   liderTotal: number
   ordenadoPorVolume: boolean
   tarefas: Tarefa[]
+  fotoUrl: string | undefined
   onSelecionarColaborador: (colaborador: ColaboradorSelecionado) => void
 }) {
   // Base da pontualidade exclui os sem prazo: dividir por `total` puniria quem
@@ -288,7 +293,7 @@ function LinhaFechador({
           }
         >
           <Group gap="xs" wrap="nowrap" align="center">
-            <UserAvatar nome={linha.nome} size={28} />
+            <UserAvatar nome={linha.nome} fotoUrl={fotoUrl} size={28} />
             <Text
               size="sm"
               fw={posicao <= 3 && ordenadoPorVolume ? 700 : 400}

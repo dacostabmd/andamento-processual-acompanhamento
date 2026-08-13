@@ -100,7 +100,7 @@ export function MetricaTarefasModal({ metrica, aoFechar }: MetricaTarefasModalPr
       >
         {metrica && (
           <Stack gap="md">
-            <Text size="xs" c="dimmed" mt={-8}>
+            <Text size="xs" c="dimmed">
               {metrica.subtitulo ??
                 `${metrica.tarefas.length} tarefa(s) no recorte de filtros atual`}
             </Text>

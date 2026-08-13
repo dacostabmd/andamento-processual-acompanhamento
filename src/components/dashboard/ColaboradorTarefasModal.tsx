@@ -10,6 +10,7 @@ import {
   UnstyledButton,
 } from '@mantine/core'
 import { useMemo, useState } from 'react'
+import { useFotosColaboradores } from '../../hooks/useFotosColaboradores'
 import {
   montarCaminhoPerfilBitrix,
   montarCaminhoTarefaBitrix,
@@ -99,23 +100,28 @@ export function ColaboradorTarefasModal({ colaborador, aoFechar }: ColaboradorTa
   // separados (aberta x concluída) que faziam parecer haver uma contradição.
   const totalAtrasadas = (contagem?.atrasadas ?? 0) + (pontualidade?.comAtraso ?? 0)
 
-  // ID da pessoa para o link de perfil — resolvido pelo mesmo campo que o
-  // papel indica (fechado por x responsável pelo atendimento), a partir de
-  // qualquer card do pacote (o critério de agrupamento garante que todos têm
-  // o mesmo ID nesse campo).
-  const perfilBitrix = useMemo(() => {
+  // ID da pessoa — resolvido pelo mesmo campo que o papel indica (fechado por
+  // x responsável pelo atendimento), a partir de qualquer card do pacote (o
+  // critério de agrupamento garante que todos têm o mesmo ID nesse campo).
+  // Serve tanto ao link de perfil quanto à foto real do avatar.
+  const pessoaId = useMemo(() => {
     if (!colaborador) return null
     const primeiraTarefa = colaborador.cards[0]
     if (!primeiraTarefa) return null
-    const pessoaId =
-      colaborador.papel === 'Fechado por'
-        ? primeiraTarefa.fechadoPorId
-        : primeiraTarefa.responsavelAtendimentoId
+    return colaborador.papel === 'Fechado por'
+      ? primeiraTarefa.fechadoPorId
+      : primeiraTarefa.responsavelAtendimentoId
+  }, [colaborador])
+
+  const fotos = useFotosColaboradores()
+  const fotoUrl = pessoaId ? fotos.get(pessoaId) : undefined
+
+  const perfilBitrix = useMemo(() => {
     const url = montarUrlPerfilBitrix(pessoaId)
     const caminho = montarCaminhoPerfilBitrix(pessoaId)
     if (!url || !caminho) return null
     return { url, caminho }
-  }, [colaborador])
+  }, [pessoaId])
 
   // Padrão: mais críticas primeiro — ajuda a achar o que precisa de atenção sem
   // rolar tudo. As outras colunas ficam a um clique no cabeçalho.
@@ -167,9 +173,9 @@ export function ColaboradorTarefasModal({ colaborador, aoFechar }: ColaboradorTa
       >
         {colaborador && contagem && (
           <Stack gap="md">
-            <div>
-              <div className="flex items-center gap-2" style={{ marginTop: 4 }}>
-                <UserAvatar nome={colaborador.nome} size={36} />
+            <Stack gap={8}>
+              <div className="flex items-center gap-2">
+                <UserAvatar nome={colaborador.nome} fotoUrl={fotoUrl} size={36} />
                 <Text fw={700} size="lg">
                   {colaborador.nome}
                 </Text>
@@ -202,7 +208,6 @@ export function ColaboradorTarefasModal({ colaborador, aoFechar }: ColaboradorTa
                 )}
               </div>
               <Badge
-                mt={4}
                 size="sm"
                 variant="light"
                 color={colaborador.equipe === 'indefinido' ? 'gray' : undefined}
@@ -217,10 +222,10 @@ export function ColaboradorTarefasModal({ colaborador, aoFechar }: ColaboradorTa
               >
                 {colaborador.equipe}
               </Badge>
-              <Text size="xs" c="dimmed" mt={4}>
+              <Text size="xs" c="dimmed">
                 {colaborador.papel} · {colaborador.cards.length} tarefa(s) no recorte de filtros atual
               </Text>
-            </div>
+            </Stack>
 
             <SimpleGrid cols={4}>
               <div>

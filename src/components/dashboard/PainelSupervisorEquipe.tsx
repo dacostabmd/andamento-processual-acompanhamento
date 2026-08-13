@@ -1,5 +1,7 @@
 import { Badge, Card, Group, Modal, SimpleGrid, Stack, Text, Title } from '@mantine/core'
 import { useMemo, useState } from 'react'
+import { useFotosColaboradores } from '../../hooks/useFotosColaboradores'
+import { useSupervisorIdPorEquipe } from '../../hooks/useSupervisorIdPorEquipe'
 import type {
   EquipeAtendimento,
   MetricasPorEquipe,
@@ -27,13 +29,6 @@ interface PainelSupervisorEquipeProps {
   onSelecionarColaborador: (colaborador: ColaboradorSelecionado) => void
 }
 
-const FOTO_POR_EQUIPE: Partial<Record<EquipeAtendimento, string>> = {
-  'Simone Freitas': '/supervisores/simone.svg',
-  'Cinthia Filgueiras': '/supervisores/cinthia.svg',
-  'Quézia Karen': '/supervisores/quezia.svg',
-  'Lorena Pontes': '/supervisores/lorena.svg',
-}
-
 /**
  * Painel de gestão de UMA equipe só, aberto pelos ícones de
  * `SupervisorAcessoBotoes`. Reaproveita os dados já carregados por
@@ -55,6 +50,10 @@ export function PainelSupervisorEquipe({
   if (equipe !== null && equipe !== equipeExibida) {
     setEquipeExibida(equipe)
   }
+  const fotos = useFotosColaboradores()
+  const supervisorIds = useSupervisorIdPorEquipe()
+  const supervisoraId = equipeExibida ? supervisorIds[equipeExibida] : undefined
+  const fotoSupervisora = supervisoraId ? fotos.get(supervisoraId) : undefined
   const [metricaSelecionada, setMetricaSelecionada] = useState<MetricaSelecionada | null>(null)
 
   const pacotesDaEquipe = useMemo(
@@ -114,11 +113,7 @@ export function PainelSupervisorEquipe({
         title={
           equipeExibida && (
             <Group gap="sm" wrap="nowrap" align="center">
-              <UserAvatar
-                nome={equipeExibida}
-                fotoUrl={FOTO_POR_EQUIPE[equipeExibida]}
-                size={40}
-              />
+              <UserAvatar nome={equipeExibida} fotoUrl={fotoSupervisora} size={40} />
               <Title order={3} className={classes.titulo}>
                 Painel da equipe — {equipeExibida}
               </Title>

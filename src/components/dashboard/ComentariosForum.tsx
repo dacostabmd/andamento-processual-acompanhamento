@@ -10,6 +10,7 @@ import {
   Title,
 } from '@mantine/core'
 import { useEffect, useState } from 'react'
+import { EstadoVazio } from '../EstadoVazio'
 import { UserAvatar } from '../UserAvatar'
 
 export interface RespostaForum {
@@ -30,31 +31,13 @@ export interface ComentarioForum {
 
 const STORAGE_KEY = 'dashboard_andamento_forum_comentarios_v1'
 
-const COMENTARIOS_INICIAIS: ComentarioForum[] = [
-  {
-    id: 'c1',
-    dataIso: new Date().toISOString().substring(0, 10),
-    autorNome: 'Caio Marques',
-    criadoEm: new Date(Date.now() - 3600 * 1000 * 2).toISOString(),
-    texto: 'Excelente resultado de entregas na equipe da Cinthia hoje! Vamos manter o acompanhamento das tarefas que vencem nesta sexta-feira.',
-    respostas: [
-      {
-        id: 'r1',
-        autorNome: 'Cinthia Filgueiras',
-        criadoEm: new Date(Date.now() - 3600 * 1000).toISOString(),
-        texto: 'Perfeito, Caio! Já orientei o time a priorizar os cards em andamento para fechar a semana sem atrasos.',
-      },
-    ],
-  },
-]
-
 export function ComentariosForum() {
   const [comentarios, setComentarios] = useState<ComentarioForum[]>(() => {
     try {
       const salvo = localStorage.getItem(STORAGE_KEY)
-      return salvo ? JSON.parse(salvo) : COMENTARIOS_INICIAIS
+      return salvo ? JSON.parse(salvo) : []
     } catch {
-      return COMENTARIOS_INICIAIS
+      return []
     }
   })
 
@@ -164,6 +147,12 @@ export function ComentariosForum() {
         </Paper>
 
         {/* Lista de Comentários / Threads */}
+        {comentarios.length === 0 ? (
+          <EstadoVazio
+            titulo="Nenhum comentário ainda"
+            descricao="Seja o primeiro a registrar uma nota ou orientação sobre o dia."
+          />
+        ) : (
         <Stack gap="md" mt="sm">
           {comentarios.map((item) => (
             <Paper key={item.id} p="md" radius="md" withBorder>
@@ -257,6 +246,7 @@ export function ComentariosForum() {
             </Paper>
           ))}
         </Stack>
+        )}
       </Stack>
     </Card>
   )

@@ -1,4 +1,6 @@
 import { ActionIcon, Avatar } from '@mantine/core'
+import { useFotosColaboradores } from '../../hooks/useFotosColaboradores'
+import { useSupervisorIdPorEquipe } from '../../hooks/useSupervisorIdPorEquipe'
 import { EQUIPES_ATENDIMENTO, type EquipeAtendimento } from '../../types/domain'
 import { ehCaioMarques } from '../../utils/pessoas'
 import { COR_POR_EQUIPE } from './tarefaApresentacao'
@@ -12,12 +14,14 @@ interface SupervisorAcessoBotoesProps {
   onAbrirEquipe: (equipe: EquipeAtendimento) => void
 }
 
-/** Mapeamento da foto/avatar das 4 supervisoras de equipes. */
-const FOTO_POR_EQUIPE: Partial<Record<EquipeAtendimento, string>> = {
-  'Simone Freitas': '/supervisores/simone.svg',
-  'Cinthia Filgueiras': '/supervisores/cinthia.svg',
-  'Quézia Karen': '/supervisores/quezia.svg',
-  'Lorena Pontes': '/supervisores/lorena.svg',
+/** Foto da supervisora de uma equipe, ou undefined se não resolvida (cai no fallback de iniciais). */
+function fotoDaEquipe(
+  equipe: EquipeAtendimento,
+  supervisorIds: Partial<Record<EquipeAtendimento, number>>,
+  fotos: Map<number, string>,
+): string | undefined {
+  const id = supervisorIds[equipe]
+  return id ? fotos.get(id) : undefined
 }
 
 /** Iniciais (até 2 letras) para diferenciar os ícones das 4 equipes de cabeceira. */
@@ -46,6 +50,8 @@ export function SupervisorAcessoBotoes({
   onAbrirEquipe,
 }: SupervisorAcessoBotoesProps) {
   const eCaioMarques = ehCaioMarques(nomeUsuario)
+  const fotos = useFotosColaboradores()
+  const supervisorIds = useSupervisorIdPorEquipe()
 
   const equipesVisiveis: EquipeAtendimento[] =
     import.meta.env.DEV || eCaioMarques
@@ -77,7 +83,7 @@ export function SupervisorAcessoBotoes({
           title={`Painel da equipe — ${equipe}`}
         >
           <Avatar
-            src={FOTO_POR_EQUIPE[equipe]}
+            src={fotoDaEquipe(equipe, supervisorIds, fotos)}
             alt={equipe}
             radius="xl"
             size="100%"
