@@ -586,11 +586,6 @@ export function ConfiguracoesCadastroPanel({
                               </Tooltip>
                             )}
                           </Group>
-                          {pessoa.atualizadoPorNome && (
-                            <Text size="xs" c="dimmed">
-                              editado por {pessoa.atualizadoPorNome}
-                            </Text>
-                          )}
                         </Table.Td>
                         <Table.Td>
                           <BadgeEquipe equipe={pessoa.equipe} />
