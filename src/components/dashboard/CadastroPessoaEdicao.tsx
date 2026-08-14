@@ -420,11 +420,7 @@ function descreverModo(
   atual: RascunhoVinculo,
   temFonteBitrix: boolean,
 ): string {
-  if (atual.modo === 'definir') {
-    return campo === 'departamento_estado'
-      ? 'Atribuído aqui — não existe no Bitrix'
-      : 'Definido à mão — vence o Bitrix'
-  }
+  if (atual.modo === 'definir') return 'Definido à mão — vence o Bitrix'
   if (atual.modo === 'desassociar') return 'Desassociado — o Bitrix não volta a valer'
   if (!temFonteBitrix) {
     if (campo === 'estado_uf') return 'Sem UF definida'
