@@ -240,6 +240,7 @@ export function DashboardPage() {
       <SupervisorAcessoBotoes
         equipeDoUsuario={equipeDoUsuario}
         nomeUsuario={colaborador?.nome}
+        idUsuario={colaborador?.id}
         onAbrirEquipe={setEquipeSupervisorAberta}
       />
       {conteudo}

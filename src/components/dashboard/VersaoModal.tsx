@@ -10,7 +10,7 @@ const CHAVE_LOCALSTORAGE_VERSAO = 'dap_ultima_versao_visto'
  * de changelogs mostram o mesmo número — antes eram três strings soltas, que
  * saíam de sincronia a cada release.
  */
-export const VERSAO_ATUAL = '1.0.1'
+export const VERSAO_ATUAL = '1.0.2'
 
 interface VersaoModalProps {
   abertoManual?: boolean
@@ -74,35 +74,42 @@ export function VersaoModal({ abertoManual, onCloseManual }: VersaoModalProps) {
               <div className={classes.featureItem}>
                 <div className={classes.featureIcon}>
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <line x1="4" y1="21" x2="4" y2="14" />
-                    <line x1="4" y1="10" x2="4" y2="3" />
-                    <line x1="12" y1="21" x2="12" y2="12" />
-                    <line x1="12" y1="8" x2="12" y2="3" />
-                    <line x1="20" y1="21" x2="20" y2="16" />
-                    <line x1="20" y1="12" x2="20" y2="3" />
-                    <line x1="1" y1="14" x2="7" y2="14" />
-                    <line x1="9" y1="8" x2="15" y2="8" />
-                    <line x1="17" y1="16" x2="23" y2="16" />
+                    <circle cx="9" cy="7" r="4" />
+                    <path d="M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2" />
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                    <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
                   </svg>
                 </div>
                 <div className={classes.featureText}>
-                  <h4>Segmentação por Grupos de Tarefas</h4>
-                  <p>Novo seletor no topo da página escolhe quais grupos de tarefas entram na análise (substitui a antiga alternância "Por atendimento" / "Por equipe executora"). Nomes reais dos grupos, com o Acompanhamento Mensal marcado por padrão.</p>
+                  <h4>Painel de Supervisor por Equipe</h4>
+                  <p>Ícones no canto superior esquerdo abrem o painel completo de cada equipe (Quézia, Simone, Lorena e Cinthia), com avatares reais do Bitrix, resumo calculista e fórum de comentários diário. Acesso liberado para as supervisoras e para os superusuários.</p>
                 </div>
               </div>
 
               <div className={classes.featureItem}>
                 <div className={classes.featureIcon}>
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <rect x="3" y="4" width="18" height="16" rx="2" />
-                    <line x1="7" y1="9" x2="17" y2="9" />
-                    <line x1="7" y1="13" x2="14" y2="13" />
-                    <path d="M15 17l1.5 1.5L20 15" />
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                   </svg>
                 </div>
                 <div className={classes.featureText}>
-                  <h4>Detalhe de Tarefas por Colaborador</h4>
-                  <p>Clique no nome de qualquer pessoa (no ranking ou nos gráficos) para abrir o detalhamento completo das tarefas dela, com busca, link de perfil e acesso direto a cada tarefa no Bitrix.</p>
+                  <h4>Fórum de Comentários por Dia de Sincronização</h4>
+                  <p>Comentários e respostas agora ficam salvos no worker (não mais só no navegador), organizados por dia de sync, com edição/exclusão para o autor e para quem modera a equipe.</p>
+                </div>
+              </div>
+
+              <div className={classes.featureItem}>
+                <div className={classes.featureIcon}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="3" y="3" width="7" height="7" rx="1" />
+                    <rect x="14" y="3" width="7" height="7" rx="1" />
+                    <rect x="3" y="14" width="7" height="7" rx="1" />
+                    <rect x="14" y="14" width="7" height="7" rx="1" />
+                  </svg>
+                </div>
+                <div className={classes.featureText}>
+                  <h4>Navegação Lateral entre Seções</h4>
+                  <p>Nova barra de navegação lateral leva direto para cada seção do dashboard (ranking, inteligência, IA), com destaque dourado na seção visível.</p>
                 </div>
               </div>
 
@@ -114,8 +121,8 @@ export function VersaoModal({ abertoManual, onCloseManual }: VersaoModalProps) {
                   </svg>
                 </div>
                 <div className={classes.featureText}>
-                  <h4>Correções de Precisão nos Números</h4>
-                  <p>Equipe de cada pessoa não muda mais dependendo do filtro ativo, ranking "Fechado por" agora sempre bate com o detalhe da pessoa, supervisor é inferido pela equipe quando o Bitrix não tem o campo cadastrado, e tarefas concluídas com atraso ficam sinalizadas na lista.</p>
+                  <h4>Avatares Reais e Correções Visuais</h4>
+                  <p>Avatares dos colaboradores agora puxam a foto real do Bitrix (com fallback de iniciais quando não há foto cadastrada), exclusão de comentário passou a ser otimista na interface, e ajustes de padding e z-index em telas menores.</p>
                 </div>
               </div>
 

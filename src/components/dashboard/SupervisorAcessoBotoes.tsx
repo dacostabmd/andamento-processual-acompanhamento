@@ -12,6 +12,8 @@ interface SupervisorAcessoBotoesProps {
   equipeDoUsuario: EquipeAtendimento | null
   /** Nome do colaborador logado no Bitrix (para liberação de superusuário Caio Marques). */
   nomeUsuario?: string | null
+  /** ID Bitrix do colaborador logado (para liberação de superusuário por ID). */
+  idUsuario?: number | null
   onAbrirEquipe: (equipe: EquipeAtendimento) => void
 }
 
@@ -42,15 +44,17 @@ function iniciaisDaEquipe(equipe: EquipeAtendimento): string {
  * Em produção mostra UM ícone só (com a foto da supervisora), quando o nome do
  * usuário logado no Bitrix bate com uma das 4 supervisoras.
  *
- * Caio Marques (superusuário) e o ambiente DEV (`import.meta.env.DEV`) veem as
- * 4 supervisoras sempre.
+ * Superusuários (Caio Marques, Handerson e Hellen Gomes — ver
+ * IDS_SUPERUSUARIOS em pessoas.ts) e o ambiente DEV (`import.meta.env.DEV`)
+ * veem as 4 supervisoras sempre.
  */
 export function SupervisorAcessoBotoes({
   equipeDoUsuario,
   nomeUsuario,
+  idUsuario,
   onAbrirEquipe,
 }: SupervisorAcessoBotoesProps) {
-  const eCaioMarques = ehCaioMarques(nomeUsuario)
+  const eCaioMarques = ehCaioMarques(nomeUsuario, idUsuario)
   const supervisorIds = useSupervisorIdPorEquipe()
   const idsColaboradores = useMemo(() => Object.values(supervisorIds), [supervisorIds])
   const fotos = useFotosColaboradores(idsColaboradores)

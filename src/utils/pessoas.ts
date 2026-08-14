@@ -74,8 +74,24 @@ export function equipeSupervisionadaPeloNome(
   return EQUIPES_ATENDIMENTO.find((equipe) => normalizar(equipe) === alvo) ?? null
 }
 
-/** `true` se o usuário for o administrador Caio Marques (acesso total às equipes). */
-export function ehCaioMarques(nome: string | null | undefined): boolean {
+/**
+ * IDs de usuário Bitrix com acesso de superusuário (veem as 4 equipes, igual
+ * ao Caio Marques): Handerson (9129) e Hellen Gomes (26471), liberados a
+ * pedido do usuário em 2026-08-14.
+ */
+const IDS_SUPERUSUARIOS = new Set([9129, 26471])
+
+/**
+ * `true` se o usuário for o administrador Caio Marques ou um dos IDs em
+ * IDS_SUPERUSUARIOS (acesso total às 4 equipes). Reconhecimento por ID é
+ * preferido por ser estável a variações de nome/acento; nome fica como
+ * fallback para o próprio Caio Marques (sem ID cadastrado aqui).
+ */
+export function ehCaioMarques(
+  nome: string | null | undefined,
+  id?: number | null,
+): boolean {
+  if (id != null && IDS_SUPERUSUARIOS.has(id)) return true
   if (!nome) return false
   const alvo = normalizar(nome)
   return alvo.includes('caio marques') || alvo.includes('caio')

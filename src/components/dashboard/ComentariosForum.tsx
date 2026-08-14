@@ -122,7 +122,9 @@ export function ComentariosForum({ colaborador }: ComentariosForumProps) {
   // (Caio Marques) pode editar/excluir comentário de qualquer pessoa —
   // decisão do usuário: moderação não é restrita à própria equipe.
   const souModerador = useMemo(
-    () => equipeSupervisionadaPeloNome(colaborador?.nome) !== null || ehCaioMarques(colaborador?.nome),
+    () =>
+      equipeSupervisionadaPeloNome(colaborador?.nome) !== null ||
+      ehCaioMarques(colaborador?.nome, colaborador?.id),
     [colaborador],
   )
 
