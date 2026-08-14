@@ -71,8 +71,6 @@ export function FiltrosPainel({
   const [estadosDisponiveis, setEstadosDisponiveis] = useState<string[]>([])
   const [ripples, setRipples] = useState<Ripple[]>([])
 
-
-
   const handleLimparFiltros = (e: React.MouseEvent<HTMLButtonElement>) => {
     const rect = e.currentTarget.getBoundingClientRect()
     const x = e.clientX - rect.left
@@ -130,7 +128,6 @@ export function FiltrosPainel({
       cancelado = true
     }
   }, [projetosPermitidos, gruposSelecionados])
-
 
   return (
     <div>
@@ -252,7 +249,13 @@ export function FiltrosPainel({
         </Grid.Col>
       </Grid>
 
-      <Group justify="space-between" align="center" mt="md" wrap="wrap" className={classes.rodapeFiltros}>
+      <Group
+        justify="space-between"
+        align="center"
+        mt="md"
+        wrap="wrap"
+        className={classes.rodapeFiltros}
+      >
         <Group gap="xl" wrap="wrap">
           <Checkbox
             classNames={{ input: classes.checkboxInput, label: classes.checkboxLabel }}
@@ -345,7 +348,6 @@ export function FiltrosPainel({
           </Group>
         </Group>
 
-
         <button
           type="button"
           className={classes.btnLimparRipple}
@@ -353,11 +355,7 @@ export function FiltrosPainel({
           title="Limpar todos os filtros"
         >
           {ripples.map((r) => (
-            <span
-              key={r.id}
-              className={classes.rippleEffect}
-              style={{ left: r.x, top: r.y }}
-            />
+            <span key={r.id} className={classes.rippleEffect} style={{ left: r.x, top: r.y }} />
           ))}
           <svg
             width="16"
@@ -379,4 +377,3 @@ export function FiltrosPainel({
     </div>
   )
 }
-

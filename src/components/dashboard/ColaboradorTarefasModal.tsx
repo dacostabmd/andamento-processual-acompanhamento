@@ -31,7 +31,13 @@ import { UserAvatar } from '../UserAvatar'
 import { CabecalhoOrdenavel } from './CabecalhoOrdenavel'
 import { compararData, compararNumero, compararTexto, useOrdenacaoTabela } from './ordenacao'
 import { TarefaDetalheModal } from './TarefaDetalheModal'
-import { COR_POR_EQUIPE, COR_POR_SITUACAO, corDoStatus, formatarData, formatarDataHora } from './tarefaApresentacao'
+import {
+  COR_POR_EQUIPE,
+  COR_POR_SITUACAO,
+  corDoStatus,
+  formatarData,
+  formatarDataHora,
+} from './tarefaApresentacao'
 
 export interface ColaboradorSelecionado {
   nome: string
@@ -70,11 +76,7 @@ export function pesoSituacao(t: Tarefa, agora: Date): number {
 }
 
 function normalizarBusca(texto: string): string {
-  return texto
-    .trim()
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
+  return texto.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
 }
 
 export function ColaboradorTarefasModal({ colaborador, aoFechar }: ColaboradorTarefasModalProps) {
@@ -224,7 +226,8 @@ export function ColaboradorTarefasModal({ colaborador, aoFechar }: ColaboradorTa
                 {colaborador.equipe}
               </Badge>
               <Text size="xs" c="dimmed">
-                {colaborador.papel} · {colaborador.cards.length} tarefa(s) no recorte de filtros atual
+                {colaborador.papel} · {colaborador.cards.length} tarefa(s) no recorte de filtros
+                atual
               </Text>
             </Stack>
 
@@ -341,10 +344,18 @@ export function ColaboradorTarefasModal({ colaborador, aoFechar }: ColaboradorTa
                             tarefa.responsavelId,
                           )
                           return (
-                            <tr key={tarefa.id} style={{ borderBottom: '1px solid var(--superficie-borda)' }}>
+                            <tr
+                              key={tarefa.id}
+                              style={{ borderBottom: '1px solid var(--superficie-borda)' }}
+                            >
                               <td className="px-2 py-2">
                                 <UnstyledButton onClick={() => setTarefaDetalhe(tarefa)}>
-                                  <Text size="sm" lineClamp={1} className="item-clicavel-hover" style={{ cursor: 'pointer' }}>
+                                  <Text
+                                    size="sm"
+                                    lineClamp={1}
+                                    className="item-clicavel-hover"
+                                    style={{ cursor: 'pointer' }}
+                                  >
                                     {tarefa.titulo}
                                   </Text>
                                 </UnstyledButton>
@@ -352,7 +363,11 @@ export function ColaboradorTarefasModal({ colaborador, aoFechar }: ColaboradorTa
                               <td className="px-2 py-2">
                                 <Badge
                                   size="sm"
-                                  color={tarefaFoiConcluidaComAtraso(tarefa) ? 'orange' : corDoStatus(tarefa)}
+                                  color={
+                                    tarefaFoiConcluidaComAtraso(tarefa)
+                                      ? 'orange'
+                                      : corDoStatus(tarefa)
+                                  }
                                   variant="light"
                                 >
                                   {tarefaFoiConcluidaComAtraso(tarefa)

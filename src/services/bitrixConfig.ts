@@ -8,9 +8,7 @@
  * DEPARTAMENTO_ID_POR_EQUIPE em types/domain.ts), não de grupo de projeto;
  * confirmado direto no Bitrix que eles têm 0 tarefas como GROUP_ID.
  */
-export const GRUPOS_MONITORADOS: number[] = (
-  import.meta.env.VITE_BITRIX_GRUPOS_ALVO ?? '86,92,94'
-)
+export const GRUPOS_MONITORADOS: number[] = (import.meta.env.VITE_BITRIX_GRUPOS_ALVO ?? '86,92,94')
   .split(',')
   .map((valor) => Number(valor.trim()))
   .filter((valor) => Number.isFinite(valor))

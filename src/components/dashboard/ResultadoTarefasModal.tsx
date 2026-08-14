@@ -10,11 +10,7 @@ import { COR_POR_EQUIPE, formatarDataHora } from './tarefaApresentacao'
 type ColunaResultado = 'id' | 'titulo' | 'fechadoPor' | 'equipe' | 'finalizado'
 
 function normalizarBusca(texto: string): string {
-  return texto
-    .trim()
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
+  return texto.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
 }
 
 /** Cor da equipe só quando o valor bate com uma das 4 equipes conhecidas — o
@@ -144,8 +140,18 @@ export function ResultadoTarefasModal({ tarefas, aoFechar }: Props) {
               </colgroup>
               <thead className="sticky top-0 z-10" style={{ backgroundColor: 'var(--superficie)' }}>
                 <tr style={{ borderBottom: '1px solid var(--superficie-borda)' }}>
-                  <CabecalhoOrdenavel chave="id" rotulo="Tarefa" ordem={ordem} aoOrdenar={alternar} />
-                  <CabecalhoOrdenavel chave="titulo" rotulo="Título" ordem={ordem} aoOrdenar={alternar} />
+                  <CabecalhoOrdenavel
+                    chave="id"
+                    rotulo="Tarefa"
+                    ordem={ordem}
+                    aoOrdenar={alternar}
+                  />
+                  <CabecalhoOrdenavel
+                    chave="titulo"
+                    rotulo="Título"
+                    ordem={ordem}
+                    aoOrdenar={alternar}
+                  />
                   {temFechadoPor && (
                     <CabecalhoOrdenavel
                       chave="fechadoPor"
@@ -155,7 +161,12 @@ export function ResultadoTarefasModal({ tarefas, aoFechar }: Props) {
                     />
                   )}
                   {temEquipe && (
-                    <CabecalhoOrdenavel chave="equipe" rotulo="Equipe" ordem={ordem} aoOrdenar={alternar} />
+                    <CabecalhoOrdenavel
+                      chave="equipe"
+                      rotulo="Equipe"
+                      ordem={ordem}
+                      aoOrdenar={alternar}
+                    />
                   )}
                   {temFinalizado && (
                     <CabecalhoOrdenavel
@@ -179,7 +190,10 @@ export function ResultadoTarefasModal({ tarefas, aoFechar }: Props) {
                             href={t.link}
                             target="_blank"
                             rel="noopener noreferrer"
-                            style={{ color: 'var(--mantine-color-blue-4)', textDecoration: 'underline' }}
+                            style={{
+                              color: 'var(--mantine-color-blue-4)',
+                              textDecoration: 'underline',
+                            }}
                           >
                             {t.id}
                           </a>
@@ -206,7 +220,11 @@ export function ResultadoTarefasModal({ tarefas, aoFechar }: Props) {
                               size="sm"
                               variant="light"
                               color={corEquipe ? undefined : 'gray'}
-                              style={corEquipe ? { backgroundColor: `${corEquipe}22`, color: corEquipe } : undefined}
+                              style={
+                                corEquipe
+                                  ? { backgroundColor: `${corEquipe}22`, color: corEquipe }
+                                  : undefined
+                              }
                             >
                               {t.equipe}
                             </Badge>
@@ -217,7 +235,9 @@ export function ResultadoTarefasModal({ tarefas, aoFechar }: Props) {
                       )}
                       {temFinalizado && (
                         <td className="px-2 py-2">
-                          <Text size="xs">{t.finalizadoEm ? formatarDataHora(t.finalizadoEm) : '—'}</Text>
+                          <Text size="xs">
+                            {t.finalizadoEm ? formatarDataHora(t.finalizadoEm) : '—'}
+                          </Text>
                         </td>
                       )}
                     </tr>

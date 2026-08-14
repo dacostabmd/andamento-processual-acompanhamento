@@ -124,7 +124,9 @@ export async function obterAuditoriaCadastro(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ limite, ...identidade(solicitante) }),
   })
-  return lerOuLancar<{ historico: HistoricoCadastro[]; limite: number; truncado: boolean }>(resposta)
+  return lerOuLancar<{ historico: HistoricoCadastro[]; limite: number; truncado: boolean }>(
+    resposta,
+  )
 }
 
 export interface ResultadoEdicao {
@@ -161,7 +163,9 @@ export async function salvarVinculosPessoa(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ usuarioNome, vinculos, ...identidade(solicitante) }),
   })
-  const corpo = await lerOuLancar<{ reaplicacao: ResultadoEdicao; portal?: ResultadoPortal }>(resposta)
+  const corpo = await lerOuLancar<{ reaplicacao: ResultadoEdicao; portal?: ResultadoPortal }>(
+    resposta,
+  )
   return { ...corpo.reaplicacao, portal: corpo.portal ?? null }
 }
 

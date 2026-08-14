@@ -6,10 +6,7 @@ import {
   lerSnapshotDebug,
   type ChamadaCapturada,
 } from '../../services/debugBitrix'
-import {
-  assinarSnapshotDebug,
-  lerSnapshotMetadataDebug,
-} from '../../services/debugSnapshot'
+import { assinarSnapshotDebug, lerSnapshotMetadataDebug } from '../../services/debugSnapshot'
 import { apiUrlMascarada } from '../../services/bitrixRest'
 import { fonteAtiva, type FonteBitrix } from '../../services/bitrixTransport'
 import classes from './DebugBitrixPanel.module.css'
@@ -39,7 +36,11 @@ function formatarRelativo(iso: string): string {
 }
 
 function SecaoSnapshot() {
-  const metadata = useSyncExternalStore(assinarSnapshotDebug, lerSnapshotMetadataDebug, lerSnapshotMetadataDebug)
+  const metadata = useSyncExternalStore(
+    assinarSnapshotDebug,
+    lerSnapshotMetadataDebug,
+    lerSnapshotMetadataDebug,
+  )
 
   return (
     <div className={classes.chamada}>
@@ -48,8 +49,7 @@ function SecaoSnapshot() {
       </Text>
       {!metadata ? (
         <Text className={classes.vazio}>
-          Nenhum snapshot lido ainda nesta sessão. Ele é buscado ao carregar os
-          dados do dashboard.
+          Nenhum snapshot lido ainda nesta sessão. Ele é buscado ao carregar os dados do dashboard.
         </Text>
       ) : (
         <>
@@ -157,9 +157,7 @@ export function DebugBitrixPanel() {
 
             <div className={classes.rotulo}>Chamadas ao vivo (grupos, departamentos, usuário)</div>
             {snapshot.chamadas.length === 0 ? (
-              <Text className={classes.vazio}>
-                Nenhuma request capturada ainda.
-              </Text>
+              <Text className={classes.vazio}>Nenhuma request capturada ainda.</Text>
             ) : (
               snapshot.chamadas.map((chamada) => <Chamada key={chamada.id} chamada={chamada} />)
             )}

@@ -32,13 +32,7 @@ export type TipoMetrica =
   | 'desconhecida'
 
 export type TipoEntidade =
-  | 'equipe'
-  | 'pessoa'
-  | 'setor'
-  | 'uf'
-  | 'projeto'
-  | 'prioridade'
-  | 'nenhuma'
+  'equipe' | 'pessoa' | 'setor' | 'uf' | 'projeto' | 'prioridade' | 'nenhuma'
 
 export interface Entidade {
   tipo: TipoEntidade

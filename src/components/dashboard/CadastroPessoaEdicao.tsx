@@ -24,12 +24,46 @@ import classes from './ConfiguracoesCadastroPanel.module.css'
 
 /** As 27 UFs do Brasil, para os seletores de Estado/UF e Departamento de Estado. */
 const UFS = [
-  'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG',
-  'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO',
+  'AC',
+  'AL',
+  'AP',
+  'AM',
+  'BA',
+  'CE',
+  'DF',
+  'ES',
+  'GO',
+  'MA',
+  'MT',
+  'MS',
+  'MG',
+  'PA',
+  'PB',
+  'PR',
+  'PE',
+  'PI',
+  'RJ',
+  'RN',
+  'RS',
+  'RO',
+  'RR',
+  'SC',
+  'SP',
+  'SE',
+  'TO',
 ] as const
 
 const GRUPO_ANDAMENTO = 'Equipes de Andamento'
 const GRUPO_OUTROS = 'Outros departamentos'
+
+/**
+ * Campos exibidos no modal de edição. Gerente, diretor e Estado (UF) ficam de
+ * fora por serem redundantes com outros vínculos já editáveis aqui — continuam
+ * existindo no modelo/worker, só não são editáveis por esta interface.
+ */
+const CAMPOS_EXIBIDOS_NO_MODAL: CampoCadastroPessoa[] = CAMPOS_CADASTRO_PESSOA.filter(
+  (campo) => campo !== 'gerente' && campo !== 'diretor' && campo !== 'estado_uf',
+)
 
 /** Agrupa opções em "Equipes de Andamento" e "Outros". */
 function agrupar<T extends { andamento: boolean }>(
@@ -71,7 +105,9 @@ export function CadastroPessoaEdicao({
   onSalvar,
 }: CadastroPessoaEdicaoProps) {
   const [exibida, setExibida] = useState<PessoaCadastro | null>(pessoa)
-  const [rascunho, setRascunho] = useState<Rascunho | null>(pessoa ? rascunhoDaPessoa(pessoa) : null)
+  const [rascunho, setRascunho] = useState<Rascunho | null>(
+    pessoa ? rascunhoDaPessoa(pessoa) : null,
+  )
 
   if (pessoa !== null && pessoa !== exibida) {
     setExibida(pessoa)
@@ -99,11 +135,15 @@ export function CadastroPessoaEdicao({
     const depsSemEstado = opcoes.departamentos.filter((d) => d.estadoUf === null)
 
     const principais = depsSemEstado
-      .filter((d) => equipesPrincipais.some((eq) => d.nome.toLowerCase().includes(eq.toLowerCase())))
+      .filter((d) =>
+        equipesPrincipais.some((eq) => d.nome.toLowerCase().includes(eq.toLowerCase())),
+      )
       .map((d) => ({ value: String(d.id), label: d.nome }))
 
     const outros = depsSemEstado
-      .filter((d) => !equipesPrincipais.some((eq) => d.nome.toLowerCase().includes(eq.toLowerCase())))
+      .filter(
+        (d) => !equipesPrincipais.some((eq) => d.nome.toLowerCase().includes(eq.toLowerCase())),
+      )
       .map((d) => ({ value: String(d.id), label: d.nome }))
 
     const grupos: Array<{ group: string; items: Array<{ value: string; label: string }> }> = []
@@ -128,10 +168,7 @@ export function CadastroPessoaEdicao({
     })
   }, [opcoes.departamentosEstado])
 
-  const ufsOptions = useMemo(
-    () => UFS.map((uf) => ({ value: uf, label: uf })),
-    [],
-  )
+  const ufsOptions = useMemo(() => UFS.map((uf) => ({ value: uf, label: uf })), [])
 
   function trocarModo(campo: CampoCadastroPessoa, modo: ModoVinculo) {
     setRascunho((atual) => {
@@ -139,7 +176,9 @@ export function CadastroPessoaEdicao({
       const original = exibida ? rascunhoDoVinculo(vinculoDaPessoa(exibida, campo)) : null
       if (modo === 'herdar') {
         const doBitrix =
-          original && original.modo === 'herdar' ? original : { modo: 'herdar' as const, id: null, nome: null }
+          original && original.modo === 'herdar'
+            ? original
+            : { modo: 'herdar' as const, id: null, nome: null }
         return { ...atual, [campo]: { ...doBitrix, modo: 'herdar' } }
       }
       const vazio: RascunhoVinculo = { modo, id: null, nome: null, ids: [] }
@@ -214,7 +253,7 @@ export function CadastroPessoaEdicao({
               : `Sem cards no recorte atual · equipe atual: ${exibida.equipe}`}
           </Text>
 
-          {CAMPOS_CADASTRO_PESSOA.map((campo) => {
+          {CAMPOS_EXIBIDOS_NO_MODAL.map((campo) => {
             const atual = rascunho[campo]
             const temFonteBitrix = CAMPOS_COM_FONTE_BITRIX.includes(campo)
             const original = rascunhoDoVinculo(vinculoDaPessoa(exibida, campo))
@@ -233,7 +272,10 @@ export function CadastroPessoaEdicao({
                 ? []
                 : campo === 'estado_uf'
                   ? atual.nome
-                    ? atual.nome.split(',').map((s) => s.trim()).filter(Boolean)
+                    ? atual.nome
+                        .split(',')
+                        .map((s) => s.trim())
+                        .filter(Boolean)
                     : []
                   : (atual.ids ?? (atual.id !== null ? [atual.id] : [])).map(String)
 
@@ -405,18 +447,24 @@ function classeDoModo(modo: ModoVinculo): string {
 }
 
 function garantirOpcoes(
-  dados: Array<{ group: string; items: Array<{ value: string; label: string }> }> | Array<{ value: string; label: string }>,
+  dados:
+    | Array<{ group: string; items: Array<{ value: string; label: string }> }>
+    | Array<{ value: string; label: string }>,
   valorArray: string[],
   opcoes: OpcoesCadastro,
   campo: CampoCadastroPessoa,
 ) {
   const existentes = new Set<string>()
   if (Array.isArray(dados) && dados.length > 0 && 'items' in dados[0]) {
-    ;(dados as Array<{ group: string; items: Array<{ value: string; label: string }> }>).forEach((g) => {
-      g.items.forEach((item) => existentes.add(item.value))
-    })
+    ;(dados as Array<{ group: string; items: Array<{ value: string; label: string }> }>).forEach(
+      (g) => {
+        g.items.forEach((item) => existentes.add(item.value))
+      },
+    )
   } else {
-    ;(dados as Array<{ value: string; label: string }>).forEach((item) => existentes.add(item.value))
+    ;(dados as Array<{ value: string; label: string }>).forEach((item) =>
+      existentes.add(item.value),
+    )
   }
 
   const faltantes = valorArray.filter((v) => !existentes.has(v))
@@ -429,7 +477,9 @@ function garantirOpcoes(
   })
 
   if (Array.isArray(dados) && dados.length > 0 && 'items' in dados[0]) {
-    const copia = [...(dados as Array<{ group: string; items: Array<{ value: string; label: string }> }>)]
+    const copia = [
+      ...(dados as Array<{ group: string; items: Array<{ value: string; label: string }> }>),
+    ]
     if (copia.length > 0) {
       copia[0] = { group: copia[0].group, items: [...novos, ...copia[0].items] }
     }
@@ -438,4 +488,3 @@ function garantirOpcoes(
 
   return [...novos, ...(dados as Array<{ value: string; label: string }>)]
 }
-

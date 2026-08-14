@@ -43,7 +43,11 @@ export async function resolverAcesso(
   // havia nenhuma verificação de acesso em nenhuma camada.
   if (import.meta.env.DEV || modoMockDevAtivo()) {
     return {
-      colaborador: { id: idBitrix || 0, nome: nome || 'Painel de Inteligência (Modo Mock)', ativo: true },
+      colaborador: {
+        id: idBitrix || 0,
+        nome: nome || 'Painel de Inteligência (Modo Mock)',
+        ativo: true,
+      },
       projetosPermitidos: projetosMonitoradosMock(),
     }
   }
@@ -116,8 +120,10 @@ async function gruposMonitoradosViaWebhook(): Promise<Projeto[]> {
 
     return GRUPOS_MONITORADOS.map((id) => ({ id, nome: nomePorId.get(id) ?? `Grupo ${id}` }))
   } catch (err) {
-    console.warn('Busca de grupos no Bitrix via navegador ignorada (CORS/rede), utilizando grupos monitorados nativos:', err)
+    console.warn(
+      'Busca de grupos no Bitrix via navegador ignorada (CORS/rede), utilizando grupos monitorados nativos:',
+      err,
+    )
     return GRUPOS_MONITORADOS.map((id) => ({ id, nome: `Grupo ${id}` }))
   }
 }
-

@@ -83,10 +83,18 @@ describe('tarefaFoiConcluidaComAtraso', () => {
 
   it('false quando concluída mas sem prazo ou sem data de finalização', () => {
     expect(
-      tarefaFoiConcluidaComAtraso({ status: 5, prazoFinal: null, finalizadoEm: '2024-01-11T12:00:00Z' } as Tarefa),
+      tarefaFoiConcluidaComAtraso({
+        status: 5,
+        prazoFinal: null,
+        finalizadoEm: '2024-01-11T12:00:00Z',
+      } as Tarefa),
     ).toBe(false)
     expect(
-      tarefaFoiConcluidaComAtraso({ status: 5, prazoFinal: '2024-01-10T12:00:00Z', finalizadoEm: null } as Tarefa),
+      tarefaFoiConcluidaComAtraso({
+        status: 5,
+        prazoFinal: '2024-01-10T12:00:00Z',
+        finalizadoEm: null,
+      } as Tarefa),
     ).toBe(false)
   })
 })
@@ -104,9 +112,9 @@ describe('calcularMetricas', () => {
   it('calcula as métricas de andamento e risco corretamente', () => {
     const tarefas: Partial<Tarefa>[] = [
       // 1. Em Andamento (No prazo, > 3 dias)
-      { status: 3, prazoFinal: '2024-01-15T12:00:00Z' }, 
+      { status: 3, prazoFinal: '2024-01-15T12:00:00Z' },
       // 2. Vence em breve (No prazo, <= 3 dias)
-      { status: 3, prazoFinal: '2024-01-12T12:00:00Z' }, 
+      { status: 3, prazoFinal: '2024-01-12T12:00:00Z' },
       // 3. Vence em breve (Status 4)
       { status: 4, prazoFinal: '2024-01-11T12:00:00Z' },
       // 4. Atrasada (Vencida, status 3)
@@ -118,7 +126,7 @@ describe('calcularMetricas', () => {
       // 7. Concluída (no prazo)
       { status: 5, prazoFinal: '2024-01-15T12:00:00Z' },
       // 8. Adiada (Status 6)
-      { status: 6, prazoFinal: '2024-01-08T12:00:00Z' }
+      { status: 6, prazoFinal: '2024-01-08T12:00:00Z' },
     ]
 
     const metricas = calcularMetricas(tarefas as Tarefa[])
@@ -313,7 +321,11 @@ describe('empacotarPorAtendimento — divergência entre as visões', () => {
       equipeAtendimento: 'Lorena Pontes',
     } as unknown as Tarefa
 
-    const comIndefinidoNaFrente = empacotarPorAtendimento([cardIndefinido, cardLorena1, cardLorena2])
+    const comIndefinidoNaFrente = empacotarPorAtendimento([
+      cardIndefinido,
+      cardLorena1,
+      cardLorena2,
+    ])
     const semOIndefinido = empacotarPorAtendimento([cardLorena1, cardLorena2])
 
     expect(comIndefinidoNaFrente[0].equipe).toBe('Lorena Pontes')
@@ -322,8 +334,20 @@ describe('empacotarPorAtendimento — divergência entre as visões', () => {
 
   it('só cai em indefinido quando TODOS os cards da pessoa são indefinido', () => {
     const cards = [
-      { id: 1, status: 5, responsavelAtendimentoId: 42, responsavelAtendimentoNome: 'Fulano', equipeAtendimento: 'indefinido' },
-      { id: 2, status: 5, responsavelAtendimentoId: 42, responsavelAtendimentoNome: 'Fulano', equipeAtendimento: 'indefinido' },
+      {
+        id: 1,
+        status: 5,
+        responsavelAtendimentoId: 42,
+        responsavelAtendimentoNome: 'Fulano',
+        equipeAtendimento: 'indefinido',
+      },
+      {
+        id: 2,
+        status: 5,
+        responsavelAtendimentoId: 42,
+        responsavelAtendimentoNome: 'Fulano',
+        equipeAtendimento: 'indefinido',
+      },
     ] as unknown as Tarefa[]
     const [pacote] = empacotarPorAtendimento(cards)
     expect(pacote.equipe).toBe('indefinido')

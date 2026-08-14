@@ -63,7 +63,9 @@ describe('calcularAlteracoes', () => {
 
   it('desassociar manda o par nulo, que o worker grava como decisão explícita', () => {
     const p = pessoa()
-    const r = comMudanca(p, { departamento: { modo: 'desassociar', id: null, nome: null, ids: [] } })
+    const r = comMudanca(p, {
+      departamento: { modo: 'desassociar', id: null, nome: null, ids: [] },
+    })
     expect(calcularAlteracoes(p, r)).toEqual({
       // Departamento é campo de LISTA: a lista vazia é o que diz ao worker
       // "desassociada de todos", e é ela que vai ao portal em UF_DEPARTMENT.
@@ -101,7 +103,12 @@ describe('calcularAlteracoes', () => {
   it('acumula vários campos numa única requisição', () => {
     const p = pessoa({ diretor: editado('Cinthia Filgueiras', 118684) })
     const r = comMudanca(p, {
-      departamento: { modo: 'definir', id: 1252, nome: 'Andamento Simone Freitas', ids: [1070, 1252] },
+      departamento: {
+        modo: 'definir',
+        id: 1252,
+        nome: 'Andamento Simone Freitas',
+        ids: [1070, 1252],
+      },
       supervisor: { modo: 'desassociar', id: null, nome: null },
       diretor: { modo: 'herdar', id: null, nome: null },
       estado_uf: { modo: 'definir', id: null, nome: 'MG' },
@@ -182,7 +189,9 @@ describe('departamento como lista (UF_DEPARTMENT é array)', () => {
     // ordem canônica. Comparar por id enxergaria "nada mudou" e engoliria a
     // remoção de dois departamentos.
     const p = pessoa({ departamento: multiplo([149, 1070, 1252]) })
-    const r = comMudanca(p, { departamento: { modo: 'definir', id: 1252, nome: 'Dep 1252', ids: [1252] } })
+    const r = comMudanca(p, {
+      departamento: { modo: 'definir', id: 1252, nome: 'Dep 1252', ids: [1252] },
+    })
     expect(calcularAlteracoes(p, r).definir.departamento).toEqual({
       id: 1252,
       nome: 'Dep 1252',
@@ -197,7 +206,9 @@ describe('departamento como lista (UF_DEPARTMENT é array)', () => {
     const p = pessoa({
       departamento: { ...multiplo([149, 1252]), origem: 'cadastro' },
     })
-    const r = comMudanca(p, { departamento: { modo: 'definir', id: 1252, nome: 'Dep 1252', ids: [1252, 149] } })
+    const r = comMudanca(p, {
+      departamento: { modo: 'definir', id: 1252, nome: 'Dep 1252', ids: [1252, 149] },
+    })
     expect(calcularAlteracoes(p, r).definir.departamento).toBeUndefined()
   })
 

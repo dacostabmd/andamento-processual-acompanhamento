@@ -54,12 +54,22 @@ export const theme = createTheme({
       defaultProps: {
         padding: 'lg',
       },
+      styles: {
+        header: {
+          marginBottom: '12px',
+        },
+      },
     },
     // Mesma razão para os dois vizinhos do Modal, que herdam o mesmo padrão de 16px
     // e aparecem nos mesmos fluxos.
     Drawer: {
       defaultProps: {
         padding: 'lg',
+      },
+      styles: {
+        header: {
+          marginBottom: '12px',
+        },
       },
     },
   },

@@ -59,7 +59,10 @@ export async function editarComentarioApi(
   return dados.comentario
 }
 
-export async function excluirComentarioApi(id: string, solicitante: SolicitanteAcao): Promise<void> {
+export async function excluirComentarioApi(
+  id: string,
+  solicitante: SolicitanteAcao,
+): Promise<void> {
   try {
     const resposta = await fetchSyncApi(`/comentarios/${encodeURIComponent(id)}`, {
       method: 'DELETE',
@@ -77,7 +80,11 @@ export async function excluirComentarioApi(id: string, solicitante: SolicitanteA
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(solicitante),
     })
-    if (!respostaFallback.ok && respostaFallback.status !== 204 && respostaFallback.status !== 404) {
+    if (
+      !respostaFallback.ok &&
+      respostaFallback.status !== 204 &&
+      respostaFallback.status !== 404
+    ) {
       throw new Error(`Erro ao excluir comentário (HTTP ${respostaFallback.status}).`)
     }
   } catch (err: any) {

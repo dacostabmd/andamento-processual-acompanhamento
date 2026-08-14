@@ -7,11 +7,7 @@
  * A api_url vem de VITE_BITRIX_API_URL e já contém o token — ver a nota de
  * segurança em .env.example / vite-env.d.ts.
  */
-import {
-  finalizarChamada,
-  registrarChamada,
-  registrarPagina,
-} from './debugBitrix'
+import { finalizarChamada, registrarChamada, registrarPagina } from './debugBitrix'
 
 const MAX_TENTATIVAS_RATE_LIMIT = 5
 const TAMANHO_PAGINA_BITRIX = 50

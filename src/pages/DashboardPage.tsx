@@ -4,7 +4,10 @@ import { EstadoVazio } from '../components/EstadoVazio'
 import { ThemeToggle } from '../components/ThemeToggle'
 import { AiAssistantChat } from '../components/dashboard/AiAssistantChat'
 import { AvisoSincronizacao } from '../components/dashboard/AvisoSincronizacao'
-import { ColaboradorTarefasModal, type ColaboradorSelecionado } from '../components/dashboard/ColaboradorTarefasModal'
+import {
+  ColaboradorTarefasModal,
+  type ColaboradorSelecionado,
+} from '../components/dashboard/ColaboradorTarefasModal'
 import { ComentariosForum } from '../components/dashboard/ComentariosForum'
 import { AuditoriaCadastroBotao } from '../components/dashboard/AuditoriaCadastroBotao'
 import { AuditoriaCadastroPanel } from '../components/dashboard/AuditoriaCadastroPanel'

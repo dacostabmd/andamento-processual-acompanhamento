@@ -25,7 +25,16 @@ ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip)
  * qualquer pessoa/equipe/setor que a pergunta trouxe, não necessariamente as
  * mesmas entidades que aquelas cores identificam nos outros gráficos.
  */
-const PALETA = ['#2f6fb0', '#158a6f', '#c96a12', '#a44fc0', '#c0395a', '#b8791a', '#6b8f3f', '#3f7fa6']
+const PALETA = [
+  '#2f6fb0',
+  '#158a6f',
+  '#c96a12',
+  '#a44fc0',
+  '#c0395a',
+  '#b8791a',
+  '#6b8f3f',
+  '#3f7fa6',
+]
 
 function coresChrome(scheme: 'light' | 'dark') {
   return scheme === 'dark'
@@ -99,7 +108,8 @@ export function GraficoResposta({ dados, onCategoriaClick }: Props) {
         legend: { display: false },
         tooltip: {
           callbacks: {
-            label: (ctx) => ` ${ctx.formattedValue}${dados.rotuloValor ? ` ${dados.rotuloValor}` : ''}`,
+            label: (ctx) =>
+              ` ${ctx.formattedValue}${dados.rotuloValor ? ` ${dados.rotuloValor}` : ''}`,
           },
         },
       },

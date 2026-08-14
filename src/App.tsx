@@ -7,7 +7,11 @@ import { InstallationPage } from './pages/InstallationPage'
 function App() {
   useEffect(() => {
     // Se o Bitrix chamar a URL /install sem a tralha (#/install), ajusta a hash
-    if (typeof window !== 'undefined' && window.location.pathname.endsWith('/install') && !window.location.hash.includes('/install')) {
+    if (
+      typeof window !== 'undefined' &&
+      window.location.pathname.endsWith('/install') &&
+      !window.location.hash.includes('/install')
+    ) {
       window.location.hash = '#/install'
     }
 

@@ -72,18 +72,15 @@ function montarStats(metricas: MetricasTarefas) {
   ]
 }
 
-export function MetricasCards({
-  titulo,
-  metricas,
-  metricasPorEquipe,
-}: MetricasCardsProps) {
+export function MetricasCards({ titulo, metricas, metricasPorEquipe }: MetricasCardsProps) {
   const [grupoAtivo, setGrupoAtivo] = useState(0)
   const [direcao, setDirecao] = useState(1)
 
   const totalGrupos = 1 + metricasPorEquipe.length
   const grupo = Math.min(grupoAtivo, totalGrupos - 1)
 
-  const tituloGrupo = grupo === 0 ? titulo : `Métricas — Equipe ${metricasPorEquipe[grupo - 1].equipe}`
+  const tituloGrupo =
+    grupo === 0 ? titulo : `Métricas — Equipe ${metricasPorEquipe[grupo - 1].equipe}`
   const metricasDoGrupo = grupo === 0 ? metricas : metricasPorEquipe[grupo - 1].metricas
   const stats = metricasDoGrupo ? montarStats(metricasDoGrupo) : []
 

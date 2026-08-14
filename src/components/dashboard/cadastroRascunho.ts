@@ -172,7 +172,8 @@ export function calcularAlteracoes(
       }
     } else if (atual.modo === 'desassociar') {
       if (antes.modo !== 'desassociar') {
-        definir[campo] = campo === 'departamento' ? { id: null, nome: null, ids: [] } : { id: null, nome: null }
+        definir[campo] =
+          campo === 'departamento' ? { id: null, nome: null, ids: [] } : { id: null, nome: null }
       }
     } else if (antes.modo !== 'herdar') {
       reverter.push(campo)

@@ -87,10 +87,7 @@ const IDS_SUPERUSUARIOS = new Set([9129, 26471])
  * preferido por ser estável a variações de nome/acento; nome fica como
  * fallback para o próprio Caio Marques (sem ID cadastrado aqui).
  */
-export function ehCaioMarques(
-  nome: string | null | undefined,
-  id?: number | null,
-): boolean {
+export function ehCaioMarques(nome: string | null | undefined, id?: number | null): boolean {
   if (id != null && IDS_SUPERUSUARIOS.has(id)) return true
   if (!nome) return false
   const alvo = normalizar(nome)
@@ -132,10 +129,7 @@ const IDS_GESTAO_CADASTRO = new Set([
  */
 const ID_AUDITORIA = 178968
 
-export function podeAuditarCadastro(
-  nome: string | null | undefined,
-  id?: number | null,
-): boolean {
+export function podeAuditarCadastro(nome: string | null | undefined, id?: number | null): boolean {
   if (id != null) return id === ID_AUDITORIA
   if (!nome) return false
   // Sem ID, exige o nome completo: 'caio' sozinho casaria com outros colaboradores
@@ -186,4 +180,3 @@ export function idsColaboradoresDasTarefas(tarefas: Tarefa[]): number[] {
   })
   return Array.from(ids)
 }
-

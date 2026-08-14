@@ -105,3 +105,26 @@ body {
   text-decoration: underline;
 }
 
+/* Garantia de respiro (ao menos 5px, utilizando 12px) abaixo do header em TODOS os modais */
+.mantine-Modal-header,
+.mantine-Drawer-header {
+  margin-bottom: 12px !important;
+}
+
+/* Remoção de bordas externas dos campos de input (transparência) */
+.mantine-Input-input,
+.mantine-TextInput-input,
+.mantine-Select-input,
+.mantine-MultiSelect-input {
+  border-color: transparent !important;
+}
+
+.mantine-Input-input:focus,
+.mantine-Input-input:focus-within,
+.mantine-Input-input[data-expanded],
+.mantine-TextInput-input:focus,
+.mantine-Select-input:focus,
+.mantine-MultiSelect-input:focus,
+.mantine-MultiSelect-input[data-expanded] {
+  border-color: var(--mantine-color-dourado-4) !important;
+}

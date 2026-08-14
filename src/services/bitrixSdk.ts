@@ -1,11 +1,7 @@
 import type { Bitrix24Result } from '../types/bitrix'
 import { webhookDisponivel } from './bitrixRest'
 import { modoMockDevAtivo } from './modoMockDev'
-import {
-  finalizarChamada,
-  registrarChamada,
-  registrarPagina,
-} from './debugBitrix'
+import { finalizarChamada, registrarChamada, registrarPagina } from './debugBitrix'
 
 export interface UsuarioBitrixAtual {
   idBitrix: number

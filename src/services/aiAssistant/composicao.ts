@@ -185,9 +185,10 @@ export function comporContagemPorEquipe(cards: Tarefa[], intencao: Intencao): st
   ).length
 
   return (
-    [`**Tarefas por equipe** (Cinthia Filgueiras, Simone Freitas, Quézia Karen, Lorena Pontes):`, ...linhas].join(
-      '\n',
-    ) +
+    [
+      `**Tarefas por equipe** (Cinthia Filgueiras, Simone Freitas, Quézia Karen, Lorena Pontes):`,
+      ...linhas,
+    ].join('\n') +
     (semEquipe > 0
       ? `\n\n${semEquipe} tarefa(s) não têm responsável nem fechador identificáveis em nenhuma das 4 equipes.`
       : '') +
@@ -212,10 +213,15 @@ function ehTaxa(metrica: TipoMetrica): boolean {
 }
 
 export function comporRanking(cards: Tarefa[], intencao: Intencao, agora: Date): RespostaComposta {
-  const dimensao = (intencao.entidade.tipo === 'nenhuma' ? 'equipe' : intencao.entidade.tipo) as TipoDimensaoGrupo
+  const dimensao = (
+    intencao.entidade.tipo === 'nenhuma' ? 'equipe' : intencao.entidade.tipo
+  ) as TipoDimensaoGrupo
   const querPior = /\bpior\b|\bmenos\b|\bmenor\b/.test(intencao.textoNormalizado)
   const ordem = querPior ? 'asc' : 'desc'
-  const metrica = intencao.metrica === 'desconhecida' || intencao.metrica === 'resumo' ? 'total' : intencao.metrica
+  const metrica =
+    intencao.metrica === 'desconhecida' || intencao.metrica === 'resumo'
+      ? 'total'
+      : intencao.metrica
 
   const itens = ranquear(cards, dimensao, metrica, intencao.periodo, agora, ordem).filter(
     (i) => i.chave && i.chave !== 'Não informado',
@@ -287,11 +293,18 @@ function valorParaComparacao(
     const modo = intencao.metrica === 'taxaAtrasoTotal' ? 'total' : 'ativas'
     return taxaAtraso(slice, modo, agora).percentual
   }
-  const m = intencao.metrica === 'desconhecida' || intencao.metrica === 'resumo' ? 'total' : intencao.metrica
+  const m =
+    intencao.metrica === 'desconhecida' || intencao.metrica === 'resumo'
+      ? 'total'
+      : intencao.metrica
   return contar(slice, m, agora)
 }
 
-export function comporComparacao(cards: Tarefa[], intencao: Intencao, agora: Date): RespostaComposta {
+export function comporComparacao(
+  cards: Tarefa[],
+  intencao: Intencao,
+  agora: Date,
+): RespostaComposta {
   const a = intencao.entidade
   const b = intencao.entidadeSecundaria
   if (!b || b.valorCanonico === null || a.valorCanonico === null) {

@@ -59,10 +59,7 @@ export function reiniciarCapturaBitrix(): void {
 }
 
 /** Registra uma chamada de listagem e devolve seu id para anexar páginas depois. */
-export function registrarChamada(
-  method: string,
-  params: Record<string, unknown>,
-): number {
+export function registrarChamada(method: string, params: Record<string, unknown>): number {
   if (!ATIVO) return -1
   const id = proximoId++
   chamadas = [...chamadas, { id, method, params, total: null, paginas: [], concluidaEm: null }]

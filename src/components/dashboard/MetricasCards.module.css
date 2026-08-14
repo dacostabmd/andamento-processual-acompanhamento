@@ -10,7 +10,10 @@
   overflow: hidden;
   border: 1px solid var(--superficie-borda);
   box-shadow: 0 4px 16px var(--sombra-contraste);
-  transition: background-color 0.25s ease, color 0.25s ease, box-shadow 0.25s ease,
+  transition:
+    background-color 0.25s ease,
+    color 0.25s ease,
+    box-shadow 0.25s ease,
     border-color 0.25s ease;
 }
 
@@ -42,7 +45,10 @@
   line-height: 1;
   border-radius: var(--mantine-radius-default);
   background-color: var(--superficie);
-  transition: color 0.25s ease, background-color 0.25s ease, border-color 0.25s ease;
+  transition:
+    color 0.25s ease,
+    background-color 0.25s ease,
+    border-color 0.25s ease;
 }
 
 .navControl:hover {
@@ -69,7 +75,10 @@
   width: 2rem;
   border-radius: 50%;
   background-color: var(--superficie);
-  transition: color 0.25s ease, background-color 0.25s ease, border-color 0.25s ease;
+  transition:
+    color 0.25s ease,
+    background-color 0.25s ease,
+    border-color 0.25s ease;
 }
 
 .syncControl:hover {

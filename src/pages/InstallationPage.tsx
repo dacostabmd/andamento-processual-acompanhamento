@@ -14,13 +14,15 @@ export function InstallationPage() {
           // Fallback: aguarda até 3s pelo BX24
           let tentativas = 0
           while ((typeof window.BX24 === 'undefined' || !window.BX24) && tentativas < 30) {
-            await new Promise(r => setTimeout(r, 100))
+            await new Promise((r) => setTimeout(r, 100))
             tentativas++
           }
         }
 
         if (typeof window.BX24 === 'undefined' || !window.BX24) {
-          throw new Error('BX24 SDK não carregado. Verifique se o app está rodando dentro do Bitrix24.')
+          throw new Error(
+            'BX24 SDK não carregado. Verifique se o app está rodando dentro do Bitrix24.',
+          )
         }
 
         // Chama a API do Bitrix24 para finalizar instalação
@@ -40,7 +42,7 @@ export function InstallationPage() {
         setMessage(
           err instanceof Error
             ? `❌ Erro: ${err.message}`
-            : '❌ Erro ao finalizar instalação. Tente novamente.'
+            : '❌ Erro ao finalizar instalação. Tente novamente.',
         )
 
         // Permite tentar novamente após 5s

@@ -210,9 +210,7 @@ export function Plasma({
         const isForward = Math.floor(timeValue / pingpongDuration) % 2 === 0
         const u = segmentTime / pingpongDuration
         const smooth = u * u * (3 - 2 * u)
-        const pingpongTime = isForward
-          ? smooth * pingpongDuration
-          : (1 - smooth) * pingpongDuration
+        const pingpongTime = isForward ? smooth * pingpongDuration : (1 - smooth) * pingpongDuration
         program.uniforms.uDirection.value = 1.0
         program.uniforms.iTime.value = pingpongTime
       } else {

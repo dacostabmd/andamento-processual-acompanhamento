@@ -38,9 +38,7 @@ export async function fetchSyncApi(caminho: string, init: RequestInit = {}): Pro
   const base = baseSyncApi()
   if (!base) throw new Error('VITE_SYNC_API_URL não configurada.')
 
-  const headers = headersSyncApi(
-    (init.headers as Record<string, string> | undefined) ?? {},
-  )
+  const headers = headersSyncApi((init.headers as Record<string, string> | undefined) ?? {})
   return fetch(`${base}${caminho}`, { ...init, headers })
 }
 

@@ -98,11 +98,7 @@ type ColunaOrdenacaoCadastro =
   | 'totalCards'
 
 function normalizar(texto: string): string {
-  return texto
-    .trim()
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
+  return texto.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
 }
 
 function hexToRgb(hex: string): string {
@@ -134,7 +130,10 @@ function BadgeEquipe({ equipe }: { equipe: EquipeAtendimento }) {
 }
 
 /** Valores distintos de um vínculo entre as pessoas carregadas, para os seletores de filtro. */
-function valoresDistintos(pessoas: PessoaCadastro[], extrair: (p: PessoaCadastro) => VinculoEfetivo) {
+function valoresDistintos(
+  pessoas: PessoaCadastro[],
+  extrair: (p: PessoaCadastro) => VinculoEfetivo,
+) {
   const valores = new Set<string>()
   pessoas.forEach((p) => {
     const nome = extrair(p).nome
@@ -190,8 +189,14 @@ export function ConfiguracoesCadastroPanel({
     void verificarPermissaoCadastro(colaborador).then((p) => setPodeEditar(p.podeEditar))
   }, [aberto, carregar, colaborador])
 
-  const departamentosFiltro = useMemo(() => valoresDistintos(pessoas, (p) => p.departamento), [pessoas])
-  const supervisoresFiltro = useMemo(() => valoresDistintos(pessoas, (p) => p.supervisor), [pessoas])
+  const departamentosFiltro = useMemo(
+    () => valoresDistintos(pessoas, (p) => p.departamento),
+    [pessoas],
+  )
+  const supervisoresFiltro = useMemo(
+    () => valoresDistintos(pessoas, (p) => p.supervisor),
+    [pessoas],
+  )
   const ufsFiltro = useMemo(() => valoresDistintos(pessoas, (p) => p.estadoUf), [pessoas])
 
   const filtradas = useMemo(() => {
@@ -262,7 +267,7 @@ export function ConfiguracoesCadastroPanel({
       }
 
       const portalRecusou = portal?.situacao === 'sem_permissao' || portal?.situacao === 'falhou'
-      const pendencia = aviso ?? (portalRecusou ? portal?.mensagem ?? null : null)
+      const pendencia = aviso ?? (portalRecusou ? (portal?.mensagem ?? null) : null)
 
       notifications.show({
         color: pendencia ? 'yellow' : 'teal',
@@ -361,10 +366,10 @@ export function ConfiguracoesCadastroPanel({
           <Stack gap="lg">
             <Text size="sm" c="dimmed">
               Departamento, supervisor e Estado/UF são as dimensões pelas quais as métricas de cada
-              equipe são cortadas. As duas primeiras vêm do Bitrix24 (o supervisor está preenchido em
-              cerca de 61% das pessoas); gerente, diretor, departamento de estado e Estado/UF de
-              atuação não têm valor legível no portal e só existem aqui. O que você define nesta tela
-              vence o Bitrix nas métricas, e não altera a ficha de ninguém no portal. Clique em
+              equipe são cortadas. As duas primeiras vêm do Bitrix24 (o supervisor está preenchido
+              em cerca de 61% das pessoas); gerente, diretor, departamento de estado e Estado/UF de
+              atuação não têm valor legível no portal e só existem aqui. O que você define nesta
+              tela vence o Bitrix nas métricas, e não altera a ficha de ninguém no portal. Clique em
               qualquer linha para editar.
             </Text>
 
@@ -437,10 +442,15 @@ export function ConfiguracoesCadastroPanel({
             <Group justify="space-between" align="center" wrap="wrap">
               <Group gap="lg" wrap="wrap">
                 <Checkbox
-                  classNames={{ input: classesInput.checkboxInput, label: classesInput.checkboxLabel }}
+                  classNames={{
+                    input: classesInput.checkboxInput,
+                    label: classesInput.checkboxLabel,
+                  }}
                   label="Apenas quem tem vínculo editado"
                   checked={filtros.somenteEditados}
-                  onChange={(e) => setFiltros({ ...filtros, somenteEditados: e.currentTarget.checked })}
+                  onChange={(e) =>
+                    setFiltros({ ...filtros, somenteEditados: e.currentTarget.checked })
+                  }
                 />
                 <Tooltip
                   label="Por padrão a lista traz quem está no Andamento Processual, quem aparece nas tarefas e quem já tem vínculo editado. Marque para carregar o portal inteiro."
@@ -449,7 +459,10 @@ export function ConfiguracoesCadastroPanel({
                   withArrow
                 >
                   <Checkbox
-                    classNames={{ input: classesInput.checkboxInput, label: classesInput.checkboxLabel }}
+                    classNames={{
+                      input: classesInput.checkboxInput,
+                      label: classesInput.checkboxLabel,
+                    }}
                     label="Todos os usuários do portal"
                     checked={todosOsUsuarios}
                     disabled={carregando}
@@ -480,7 +493,12 @@ export function ConfiguracoesCadastroPanel({
                   w={280}
                   withArrow
                 >
-                  <Button variant="default" size="xs" onClick={() => void carregar(true)} loading={carregando}>
+                  <Button
+                    variant="default"
+                    size="xs"
+                    onClick={() => void carregar(true)}
+                    loading={carregando}
+                  >
                     Atualizar do Bitrix
                   </Button>
                 </Tooltip>
@@ -491,7 +509,12 @@ export function ConfiguracoesCadastroPanel({
                     w={280}
                     withArrow
                   >
-                    <Button variant="default" size="xs" onClick={() => void aoReaplicar()} loading={reaplicando}>
+                    <Button
+                      variant="default"
+                      size="xs"
+                      onClick={() => void aoReaplicar()}
+                      loading={reaplicando}
+                    >
                       Reaplicar em todas as tarefas
                     </Button>
                   </Tooltip>
@@ -591,7 +614,9 @@ export function ConfiguracoesCadastroPanel({
                           <CelulaVinculo vinculo={pessoa.estadoUf} />
                         </Table.Td>
                         <Table.Td ta="right">
-                          <Text size="sm" fw={500}>{pessoa.totalCards}</Text>
+                          <Text size="sm" fw={500}>
+                            {pessoa.totalCards}
+                          </Text>
                         </Table.Td>
                         <Table.Td ta="right">
                           <ActionIcon
@@ -661,8 +686,7 @@ function CelulaVinculo({ vinculo }: { vinculo: VinculoEfetivo }) {
 
   const extras = (vinculo.itens?.length ?? 0) - 1
   const sufixo = extras > 0 ? ` +${extras}` : ''
-  const titulo =
-    extras > 0 ? vinculo.itens!.map((i) => i.nome).join(', ') : null
+  const titulo = extras > 0 ? vinculo.itens!.map((i) => i.nome).join(', ') : null
 
   if (vinculo.origem === 'cadastro') {
     return (

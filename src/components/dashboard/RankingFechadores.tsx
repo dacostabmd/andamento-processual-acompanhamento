@@ -8,12 +8,7 @@ import { UserAvatar } from '../UserAvatar'
 import { EstadoVazio } from '../EstadoVazio'
 import { CabecalhoOrdenavel } from './CabecalhoOrdenavel'
 import type { ColaboradorSelecionado } from './ColaboradorTarefasModal'
-import {
-  compararNumero,
-  compararTexto,
-  useOrdenacaoTabela,
-  type DirecaoOrdem,
-} from './ordenacao'
+import { compararNumero, compararTexto, useOrdenacaoTabela, type DirecaoOrdem } from './ordenacao'
 import { PilulaDeslizante, type OpcaoPilula } from './PilulaDeslizante'
 import { COR_POR_EQUIPE } from './tarefaApresentacao'
 
@@ -79,11 +74,7 @@ export function RankingFechadores({ dados, tarefas, onSelecionarColaborador }: P
   })
 
   const linhas = useMemo(() => {
-    const termo = busca
-      .trim()
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[̀-ͯ]/g, '')
+    const termo = busca.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
 
     const filtradas = termo
       ? dados.linhas.filter((l) =>
@@ -137,13 +128,13 @@ export function RankingFechadores({ dados, tarefas, onSelecionarColaborador }: P
           as concluídas têm fechador. */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
         <Text size="sm" fw={600}>
-          {dados.totalFechado.toLocaleString('pt-BR')} tarefas fechadas por{' '}
-          {dados.linhas.length} pessoa(s)
+          {dados.totalFechado.toLocaleString('pt-BR')} tarefas fechadas por {dados.linhas.length}{' '}
+          pessoa(s)
         </Text>
         {dados.naoConcluidas > 0 && (
           <Text size="xs" c="dimmed">
-            {dados.naoConcluidas.toLocaleString('pt-BR')} tarefa(s) ainda não concluída(s) não entram
-            neste ranking
+            {dados.naoConcluidas.toLocaleString('pt-BR')} tarefa(s) ainda não concluída(s) não
+            entram neste ranking
           </Text>
         )}
         {dados.pessoasSemSupervisor > 0 && (
@@ -342,7 +333,10 @@ function LinhaFechador({
         ) : (
           // Ausência é falta de cadastro no Bitrix, não ausência de chefia — o
           // rótulo diz isso, em vez de deixar a célula vazia.
-          <Tooltip label="O departamento desta pessoa não tem supervisor definido no Bitrix" withArrow>
+          <Tooltip
+            label="O departamento desta pessoa não tem supervisor definido no Bitrix"
+            withArrow
+          >
             <Text size="xs" c="dimmed">
               não cadastrado
             </Text>

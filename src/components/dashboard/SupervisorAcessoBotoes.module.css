@@ -14,7 +14,10 @@
   font-weight: 700;
   font-size: 11px;
   box-shadow: 0 2px 8px var(--sombra-contraste);
-  transition: transform 0.12s ease, box-shadow 0.2s ease, filter 0.15s ease;
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.2s ease,
+    filter 0.15s ease;
 }
 
 .botao:hover {

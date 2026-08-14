@@ -333,7 +333,10 @@ export function obterEquipePorNomeDepartamento(nome: string | null | undefined):
     return EQUIPE_POR_NOME_DEPARTAMENTO[limpo]
   }
 
-  const norm = limpo.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  const norm = limpo
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
   if (norm.includes('lorena pontes')) return 'Lorena Pontes'
   if (norm.includes('cinthia filgueiras')) return 'Cinthia Filgueiras'
   if (norm.includes('simone freitas')) return 'Simone Freitas'

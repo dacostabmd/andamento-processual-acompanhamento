@@ -1,4 +1,15 @@
-import { ActionIcon, Button, Card, Group, Paper, Stack, Text, Textarea, Title, Tooltip } from '@mantine/core'
+import {
+  ActionIcon,
+  Button,
+  Card,
+  Group,
+  Paper,
+  Stack,
+  Text,
+  Textarea,
+  Title,
+  Tooltip,
+} from '@mantine/core'
 import { useEffect, useMemo, useState } from 'react'
 import { useFotosColaboradores } from '../../hooks/useFotosColaboradores'
 import { useSnapshotInfo } from '../../hooks/useSnapshotInfo'
@@ -244,14 +255,32 @@ export function ComentariosForum({ colaborador }: ComentariosForumProps) {
       <Group gap={4}>
         <Tooltip label="Editar">
           <ActionIcon variant="subtle" color="gray" size="sm" onClick={() => iniciarEdicao(item)}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
               <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
             </svg>
           </ActionIcon>
         </Tooltip>
         <Tooltip label="Excluir">
           <ActionIcon variant="subtle" color="red" size="sm" onClick={() => aoExcluir(item.id)}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
               <path d="M3 6h18" />
               <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
               <line x1="10" y1="11" x2="10" y2="17" />
@@ -277,7 +306,12 @@ export function ComentariosForum({ colaborador }: ComentariosForumProps) {
           <Button size="xs" variant="default" onClick={() => setIdEdicaoAtiva(null)}>
             Cancelar
           </Button>
-          <Button size="xs" color="blue" onClick={() => aoConfirmarEdicao(id)} disabled={!textoEdicaoInput.trim()}>
+          <Button
+            size="xs"
+            color="blue"
+            onClick={() => aoConfirmarEdicao(id)}
+            disabled={!textoEdicaoInput.trim()}
+          >
             Salvar
           </Button>
         </Group>
@@ -290,13 +324,20 @@ export function ComentariosForum({ colaborador }: ComentariosForumProps) {
     : []
 
   return (
-    <Card padding="lg" radius="md" withBorder style={{ backgroundColor: 'var(--superficie)' }} mt="xl">
+    <Card
+      padding="lg"
+      radius="md"
+      withBorder
+      style={{ backgroundColor: 'var(--superficie)' }}
+      mt="xl"
+    >
       <Stack gap="md">
         <Group justify="space-between" align="center">
           <div>
             <Title order={3}>Fórum de Acompanhamento Diário</Title>
             <Text size="xs" c="dimmed">
-              Espaço de discussão estilo fórum para registrar notas, orientações e observações diárias entre os gestores e equipes.
+              Espaço de discussão estilo fórum para registrar notas, orientações e observações
+              diárias entre os gestores e equipes.
             </Text>
           </div>
         </Group>
@@ -308,7 +349,12 @@ export function ComentariosForum({ colaborador }: ComentariosForumProps) {
         )}
 
         {/* Formulário de Novo Comentário */}
-        <Paper p="sm" radius="md" withBorder style={{ backgroundColor: 'rgba(255, 255, 255, 0.02)' }}>
+        <Paper
+          p="sm"
+          radius="md"
+          withBorder
+          style={{ backgroundColor: 'rgba(255, 255, 255, 0.02)' }}
+        >
           <Stack gap="xs">
             <Group gap="xs">
               <UserAvatar
@@ -398,7 +444,16 @@ export function ComentariosForum({ colaborador }: ComentariosForumProps) {
                             setIdRespostaAtiva(idRespostaAtiva === item.id ? null : item.id)
                           }
                           leftSection={
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <svg
+                              width="14"
+                              height="14"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
                               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                             </svg>
                           }
@@ -413,7 +468,10 @@ export function ComentariosForum({ colaborador }: ComentariosForumProps) {
                           gap="xs"
                           ml="lg"
                           mt="xs"
-                          style={{ borderLeft: '2px solid var(--superficie-borda)', paddingLeft: 12 }}
+                          style={{
+                            borderLeft: '2px solid var(--superficie-borda)',
+                            paddingLeft: 12,
+                          }}
                         >
                           {item.respostas.map((resp) => (
                             <Paper
@@ -468,7 +526,11 @@ export function ComentariosForum({ colaborador }: ComentariosForumProps) {
                               size="xs"
                             />
                             <Group justify="flex-end">
-                              <Button size="xs" variant="default" onClick={() => setIdRespostaAtiva(null)}>
+                              <Button
+                                size="xs"
+                                variant="default"
+                                onClick={() => setIdRespostaAtiva(null)}
+                              >
                                 Cancelar
                               </Button>
                               <Button

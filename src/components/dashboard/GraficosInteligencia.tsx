@@ -219,36 +219,48 @@ export function GraficosInteligencia({
   )
 
   const ehApenasConcluidas = useMemo(() => {
-    return dados.totalCards > 0 && dados.porEquipe.every((e) => e.contagem.total === e.contagem.concluidas)
+    return (
+      dados.totalCards > 0 &&
+      dados.porEquipe.every((e) => e.contagem.total === e.contagem.concluidas)
+    )
   }, [dados])
 
-  const empilhado = useMemo<ChartData<'bar'>>(
-    () => {
-      const situacoesExibidas: Array<{ chave: keyof typeof COR_POR_SITUACAO | 'concluidasNoPrazo' | 'concluidasComAtraso'; label: string; cor: string }> = ehApenasConcluidas
-        ? [
-            { chave: 'concluidasNoPrazo', label: 'Concluídas no prazo', cor: COR_POR_SITUACAO.noPrazo },
-            { chave: 'concluidasComAtraso', label: 'Concluídas com atraso', cor: COR_POR_SITUACAO.atrasadas },
-          ]
-        : SITUACOES.map((s) => ({ ...s, cor: COR_POR_SITUACAO[s.chave] }))
+  const empilhado = useMemo<ChartData<'bar'>>(() => {
+    const situacoesExibidas: Array<{
+      chave: keyof typeof COR_POR_SITUACAO | 'concluidasNoPrazo' | 'concluidasComAtraso'
+      label: string
+      cor: string
+    }> = ehApenasConcluidas
+      ? [
+          {
+            chave: 'concluidasNoPrazo',
+            label: 'Concluídas no prazo',
+            cor: COR_POR_SITUACAO.noPrazo,
+          },
+          {
+            chave: 'concluidasComAtraso',
+            label: 'Concluídas com atraso',
+            cor: COR_POR_SITUACAO.atrasadas,
+          },
+        ]
+      : SITUACOES.map((s) => ({ ...s, cor: COR_POR_SITUACAO[s.chave] }))
 
-      return {
-        labels: equipes.map(rotuloEquipe),
-        datasets: situacoesExibidas.map((s) => ({
-          label: s.label,
-          data: equipes.map(
-            (equipe) => dados.porEquipe.find((e) => e.equipe === equipe)?.contagem[s.chave] ?? 0,
-          ),
-          backgroundColor: s.cor,
-          borderColor: cores.gap,
-          borderWidth: { top: 2, right: 0, bottom: 0, left: 0 },
-          borderRadius: 4,
-          borderSkipped: false,
-          stack: 'situacao',
-        })),
-      }
-    },
-    [dados, equipes, cores, ehApenasConcluidas],
-  )
+    return {
+      labels: equipes.map(rotuloEquipe),
+      datasets: situacoesExibidas.map((s) => ({
+        label: s.label,
+        data: equipes.map(
+          (equipe) => dados.porEquipe.find((e) => e.equipe === equipe)?.contagem[s.chave] ?? 0,
+        ),
+        backgroundColor: s.cor,
+        borderColor: cores.gap,
+        borderWidth: { top: 2, right: 0, bottom: 0, left: 0 },
+        borderRadius: 4,
+        borderSkipped: false,
+        stack: 'situacao',
+      })),
+    }
+  }, [dados, equipes, cores, ehApenasConcluidas])
 
   const distribuicao = useMemo<ChartData<'doughnut'>>(
     () => ({

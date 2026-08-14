@@ -149,7 +149,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: opacity 0.2s, background-color 0.2s;
+  transition:
+    opacity 0.2s,
+    background-color 0.2s;
 }
 
 .closeButton:hover {
@@ -175,8 +177,6 @@
 .messagesAreaExpandido {
   max-height: 530px;
 }
-
-
 
 .mensagemBubble {
   display: flex;
@@ -219,7 +219,9 @@
   padding: 6px 12px;
   border-radius: 999px;
   cursor: pointer;
-  transition: background-color 0.15s ease, border-color 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
 }
 
 :global([data-mantine-color-scheme='dark']) .verResultadoButton {
@@ -289,7 +291,6 @@
   padding-top: 4px;
 }
 
-
 .sendControls {
   display: flex;
   align-items: center;
@@ -313,7 +314,10 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: transform 0.15s, background-color 0.2s, box-shadow 0.2s;
+  transition:
+    transform 0.15s,
+    background-color 0.2s,
+    box-shadow 0.2s;
 }
 
 .sendButton:hover:not(:disabled) {

@@ -89,14 +89,12 @@ export function PainelSupervisorEquipe({
       (t) => t.status === 5 && !tarefaFoiConcluidaComAtraso(t),
     ).length
 
-    const taxaPontualidade =
-      totalConcluidas > 0 ? (concluidasNoPrazo / totalConcluidas) * 100 : 100
+    const taxaPontualidade = totalConcluidas > 0 ? (concluidasNoPrazo / totalConcluidas) * 100 : 100
 
     const mediaConclusoesMembro =
       totalMembros > 0 ? (totalConcluidas / totalMembros).toFixed(1) : '0'
 
-    const cargaMediaPendente =
-      totalMembros > 0 ? (totalAtivas / totalMembros).toFixed(1) : '0'
+    const cargaMediaPendente = totalMembros > 0 ? (totalAtivas / totalMembros).toFixed(1) : '0'
 
     const mvp = rankingDaEquipe.linhas.length > 0 ? rankingDaEquipe.linhas[0] : null
 
@@ -245,4 +243,3 @@ export function PainelSupervisorEquipe({
     </>
   )
 }
-

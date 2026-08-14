@@ -25,11 +25,7 @@ import {
   MSG_FORA_DOMINIO,
   MSG_SOMENTE_LEITURA,
 } from './aiAssistant/composicao'
-import {
-  extrairIntencao,
-  mesclarComContexto,
-  type Intencao,
-} from './aiAssistant/intencao'
+import { extrairIntencao, mesclarComContexto, type Intencao } from './aiAssistant/intencao'
 
 export interface MensagemChat {
   id: string
@@ -224,7 +220,8 @@ export function construirPromptContextual(contexto: ContextoDashboard): string {
 
     resumoColaboradoresAtendimento = pacotesComPessoa
       .map((p) => {
-        const departamentos = p.cards.find((c) => c.fechadoPorDepartamentos.length > 0)
+        const departamentos = p.cards
+          .find((c) => c.fechadoPorDepartamentos.length > 0)
           ?.fechadoPorDepartamentos.join(', ')
         const deptoInfo = departamentos ? ` | Departamentos: ${departamentos}` : ''
         return `- Colaborador(a) "${p.responsavelAtendimentoNome}": Equipe "${p.equipe}" (${p.cards.length} tarefas)${deptoInfo}`
@@ -284,7 +281,9 @@ export function construirPromptContextual(contexto: ContextoDashboard): string {
     resumoFechadores = Array.from(fechadoresMap.entries())
       .sort((a, b) => b[1].count - a[1].count)
       .map(([nome, info]) => {
-        const pert = info.ehDaEquipe ? 'Pertence a equipe de atendimento' : 'FORA das 4 equipes de atendimento'
+        const pert = info.ehDaEquipe
+          ? 'Pertence a equipe de atendimento'
+          : 'FORA das 4 equipes de atendimento'
         const deptosStr = info.deptos.length > 0 ? ` | Deptos: ${info.deptos.join(', ')}` : ''
         return `- Colaborador(a) "${nome}": ${info.count} tarefas fechadas | Status: ${pert}${deptosStr}`
       })
@@ -418,21 +417,23 @@ export async function enviarMensagemAssistente(
         // "worker offline" e caía calado no fallback local, que responde com
         // números diferentes — o usuário não tinha como saber que mudou de motor.
         motivoFalhaWorker = `${descreverErroHttp(respostaWorker.status, baseSyncApi() ?? '')} (HTTP ${respostaWorker.status})`
-        console.warn(
-          `[IA] Worker respondeu HTTP ${respostaWorker.status}; usando fallback local.`,
-        )
+        console.warn(`[IA] Worker respondeu HTTP ${respostaWorker.status}; usando fallback local.`)
       }
     } catch (err) {
       // Rede, CORS, timeout de proxy e abort caem todos aqui — e são justamente
       // os que não deixam status HTTP para trás.
       motivoFalhaWorker = `não foi possível alcançar o servidor de análise (${err instanceof Error ? err.message : 'erro de rede'})`
-      console.warn('Falha ao consultar endpoint Text-to-SQL do Worker, tentando fallback de cliente:', err)
+      console.warn(
+        'Falha ao consultar endpoint Text-to-SQL do Worker, tentando fallback de cliente:',
+        err,
+      )
     }
   }
 
   // 2. Chamada direta de cliente se VITE_LLM_API_KEY estiver presente
   const apiKey = import.meta.env.VITE_LLM_API_KEY?.trim()
-  const apiUrl = import.meta.env.VITE_LLM_API_URL?.trim() || 'https://api.openai.com/v1/chat/completions'
+  const apiUrl =
+    import.meta.env.VITE_LLM_API_URL?.trim() || 'https://api.openai.com/v1/chat/completions'
 
   if (apiKey) {
     try {

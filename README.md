@@ -35,17 +35,17 @@ Outros comandos: `npm run build` (typecheck + build), `npm run lint`,
 
 ## Configuração
 
-| Variável | Descrição | Padrão |
-| --- | --- | --- |
-| `VITE_BITRIX_GRUPOS_ALVO` | IDs dos grupos (projetos) do Bitrix24 monitorados, separados por vírgula. Aplicada em tempo de build. | `86,92,94` |
-| `VITE_SYNC_API_URL` | URL do microsserviço de sincronização (worker-sync-dashboard-andamento-processual). Sem token embutido. | — |
+| Variável                  | Descrição                                                                                               | Padrão     |
+| ------------------------- | ------------------------------------------------------------------------------------------------------- | ---------- |
+| `VITE_BITRIX_GRUPOS_ALVO` | IDs dos grupos (projetos) do Bitrix24 monitorados, separados por vírgula. Aplicada em tempo de build.   | `86,92,94` |
+| `VITE_SYNC_API_URL`       | URL do microsserviço de sincronização (worker-sync-dashboard-andamento-processual). Sem token embutido. | —          |
 
 ## Deploy na Vercel
 
 1. Importe o repositório na Vercel (preset **Vite** é detectado sozinho).
-2. Em *Settings → Environment Variables*, defina `VITE_BITRIX_GRUPOS_ALVO` com
+2. Em _Settings → Environment Variables_, defina `VITE_BITRIX_GRUPOS_ALVO` com
    os IDs reais dos grupos monitorados.
-3. Em *Settings → Deployment Protection*, desative a proteção do ambiente de
+3. Em _Settings → Deployment Protection_, desative a proteção do ambiente de
    produção — o Bitrix precisa acessar o app sem login da Vercel (e a função
    `api/index.js` refaz o fetch do próprio deploy).
 4. Faça o deploy e guarde a URL de produção (ex.: `https://seu-app.vercel.app/`).

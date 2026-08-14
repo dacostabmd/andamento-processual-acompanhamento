@@ -6,7 +6,9 @@
   min-height: 100dvh;
   background-color: var(--mantine-color-body);
   color: var(--mantine-color-text);
-  transition: background-color 0.25s ease, color 0.25s ease;
+  transition:
+    background-color 0.25s ease,
+    color 0.25s ease;
 }
 
 /* Conteúdo centralizado em 70% da largura (15% de margem de cada lado). */
@@ -44,4 +46,3 @@
     background-position: -200% 0;
   }
 }
-

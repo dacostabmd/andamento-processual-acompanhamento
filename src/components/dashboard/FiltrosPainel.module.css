@@ -3,7 +3,7 @@
    JUNTOS na alternância normal/invertido. */
 .input {
   background-color: var(--superficie);
-  border-color: var(--superficie-borda);
+  border-color: transparent;
   color: var(--mantine-color-text);
   transition:
     background-color 0.25s ease,
@@ -138,4 +138,3 @@
     opacity: 0;
   }
 }
-

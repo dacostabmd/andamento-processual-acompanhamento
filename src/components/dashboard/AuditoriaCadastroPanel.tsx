@@ -15,11 +15,7 @@ import {
 } from '@mantine/core'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { obterAuditoriaCadastro } from '../../services/cadastroPessoasApi'
-import {
-  ROTULO_CAMPO_CADASTRO,
-  type Colaborador,
-  type HistoricoCadastro,
-} from '../../types/domain'
+import { ROTULO_CAMPO_CADASTRO, type Colaborador, type HistoricoCadastro } from '../../types/domain'
 import { EstadoVazio } from '../EstadoVazio'
 import classesInput from './FiltrosPainel.module.css'
 import classes from './AuditoriaCadastroPanel.module.css'
@@ -98,7 +94,8 @@ export function AuditoriaCadastroPanel({
   }, [aberto, carregar])
 
   const autores = useMemo(
-    () => [...new Set(historico.map((h) => h.autorNome))].sort((a, b) => a.localeCompare(b, 'pt-BR')),
+    () =>
+      [...new Set(historico.map((h) => h.autorNome))].sort((a, b) => a.localeCompare(b, 'pt-BR')),
     [historico],
   )
 
@@ -184,7 +181,12 @@ export function AuditoriaCadastroPanel({
             >
               Limpar filtros
             </Button>
-            <Button variant="default" size="xs" onClick={() => void carregar()} loading={carregando}>
+            <Button
+              variant="default"
+              size="xs"
+              onClick={() => void carregar()}
+              loading={carregando}
+            >
               Atualizar
             </Button>
             <Text size="sm" c="dimmed">

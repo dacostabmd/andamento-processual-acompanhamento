@@ -21,9 +21,13 @@ export function useFotosColaboradores(idsRelevantes: number[]): Map<number, stri
   // Chave estável para o array de dependência do efeito: sem isso, um novo
   // array com o MESMO conteúdo (comum quando o chamador faz `.map()` a cada
   // render) dispararia o efeito de novo a cada render.
-  const chave = useMemo(() => Array.from(new Set(idsRelevantes)).sort((a, b) => a - b).join(','), [
-    idsRelevantes,
-  ])
+  const chave = useMemo(
+    () =>
+      Array.from(new Set(idsRelevantes))
+        .sort((a, b) => a - b)
+        .join(','),
+    [idsRelevantes],
+  )
 
   useEffect(() => {
     let cancelado = false

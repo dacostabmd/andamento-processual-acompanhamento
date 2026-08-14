@@ -241,7 +241,10 @@ export function ranquear(
     itens.push({ chave, valor })
   }
 
-  itens.sort((a, b) => (ordem === 'desc' ? b.valor - a.valor : a.valor - b.valor) || a.chave.localeCompare(b.chave))
+  itens.sort(
+    (a, b) =>
+      (ordem === 'desc' ? b.valor - a.valor : a.valor - b.valor) || a.chave.localeCompare(b.chave),
+  )
   return itens
 }
 

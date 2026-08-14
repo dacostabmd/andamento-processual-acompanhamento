@@ -85,7 +85,11 @@ function tarefa(op: OpcoesTarefa = {}): Tarefa {
   }
 }
 
-function pacote(equipe: EquipeAtendimento, cards: Tarefa[], responsavel = 'Fulano'): PacoteAtendimento {
+function pacote(
+  equipe: EquipeAtendimento,
+  cards: Tarefa[],
+  responsavel = 'Fulano',
+): PacoteAtendimento {
   return {
     responsavelAtendimentoId: 1,
     responsavelAtendimentoNome: responsavel,
@@ -145,7 +149,12 @@ function contextoRico() {
     // ativas / atrasadas / risco / concluídas com finalizadoEm em janelas variadas
     tarefa({ equipe: 'Cinthia Filgueiras', status: 3, prazoFinal: PRAZO_FUTURO, estadoUf: 'SP' }),
     tarefa({ equipe: 'Cinthia Filgueiras', status: 3, prazoFinal: PRAZO_PASSADO, estadoUf: 'SP' }), // atrasada
-    tarefa({ equipe: 'Cinthia Filgueiras', status: 3, prazoFinal: PRAZO_EM_2_DIAS, estadoUf: 'RJ' }), // risco
+    tarefa({
+      equipe: 'Cinthia Filgueiras',
+      status: 3,
+      prazoFinal: PRAZO_EM_2_DIAS,
+      estadoUf: 'RJ',
+    }), // risco
     tarefa({ equipe: 'Cinthia Filgueiras', status: 4, prazoFinal: PRAZO_FUTURO, estadoUf: 'SP' }), // aguardando controle
     tarefa({
       equipe: 'Cinthia Filgueiras',
@@ -358,7 +367,10 @@ describe('aiAssistantService', () => {
 
     it('fuzzy: "Cintia Filgueira" (typo) -> Cinthia Filgueiras', () => {
       const cards = contextoRico().pacotes.flatMap((p) => p.cards)
-      const { entidade } = resolverEntidade('produtividade da equipe da cintia filgueira', catalogos(cards))
+      const { entidade } = resolverEntidade(
+        'produtividade da equipe da cintia filgueira',
+        catalogos(cards),
+      )
       expect(entidade.tipo).toBe('equipe')
       expect(entidade.valorCanonico).toBe('Cinthia Filgueiras')
     })
@@ -391,7 +403,10 @@ describe('aiAssistantService', () => {
 
     it('UF por nome do estado: "Rio de Janeiro" -> RJ', () => {
       const cards = contextoRico().pacotes.flatMap((p) => p.cards)
-      const { entidade } = resolverEntidade('tarefas do rio de janeiro concluidas', catalogos(cards))
+      const { entidade } = resolverEntidade(
+        'tarefas do rio de janeiro concluidas',
+        catalogos(cards),
+      )
       expect(entidade.tipo).toBe('uf')
       expect(entidade.valorCanonico).toBe('RJ')
     })
@@ -408,7 +423,9 @@ describe('aiAssistantService', () => {
     })
 
     it('agrupamento: "qual equipe teve melhor rendimento" -> ranking', () => {
-      expect(extrairAgrupamento('qual equipe teve melhor rendimento na ultima semana')).toBe('ranking')
+      expect(extrairAgrupamento('qual equipe teve melhor rendimento na ultima semana')).toBe(
+        'ranking',
+      )
     })
 
     it('agrupamento: "compara ... entre X e Y" -> comparacao', () => {
@@ -510,10 +527,16 @@ describe('aiAssistantService', () => {
       ]
       const contexto = {
         metricas: METRICAS_STUB,
-        pacotes: [pacote('Cinthia Filgueiras', cards.slice(0, 2), 'Ana Souza'), pacote('Simone Freitas', [cards[2]], 'Bruno Lima')],
+        pacotes: [
+          pacote('Cinthia Filgueiras', cards.slice(0, 2), 'Ana Souza'),
+          pacote('Simone Freitas', [cards[2]], 'Bruno Lima'),
+        ],
         filtros: FILTROS,
       }
-      const r = gerarRespostaSimuladaInteligente('quantas tarefas cada equipe fechou', contexto).texto
+      const r = gerarRespostaSimuladaInteligente(
+        'quantas tarefas cada equipe fechou',
+        contexto,
+      ).texto
       expect(r).toContain('Cinthia Filgueiras')
       expect(r).toMatch(/fechou \*\*1\*\*/)
       expect(r).toContain('Simone Freitas')

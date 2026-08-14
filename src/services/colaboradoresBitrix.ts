@@ -46,7 +46,10 @@ function lerCachePersistido<T>(chave: string): T | null {
 /** Nunca lança: cache é otimização, não requisito — quota excedida ou localStorage indisponível segue sem ele. */
 function salvarCachePersistido<T>(chave: string, dados: T): void {
   try {
-    localStorage.setItem(chave, JSON.stringify({ salvoEm: Date.now(), dados } satisfies CachePersistido<T>))
+    localStorage.setItem(
+      chave,
+      JSON.stringify({ salvoEm: Date.now(), dados } satisfies CachePersistido<T>),
+    )
   } catch {
     // Ignorado de propósito — ver comentário da função.
   }
@@ -81,9 +84,9 @@ let cacheFotosChaveIds = ''
  * `UserAvatar`, não quebram a tela.
  */
 export function obterFotosColaboradores(idsRelevantes: number[]): Promise<Map<number, string>> {
-  const idsUnicos = Array.from(new Set(idsRelevantes.filter((id) => Number.isFinite(id) && id > 0))).sort(
-    (a, b) => a - b,
-  )
+  const idsUnicos = Array.from(
+    new Set(idsRelevantes.filter((id) => Number.isFinite(id) && id > 0)),
+  ).sort((a, b) => a - b)
   if (idsUnicos.length === 0) return Promise.resolve(new Map())
 
   const chave = idsUnicos.join(',')
@@ -158,9 +161,8 @@ let cacheSupervisorIdPorEquipe: Promise<Partial<Record<EquipeAtendimento, number
 export function obterSupervisorIdPorEquipe(): Promise<Partial<Record<EquipeAtendimento, number>>> {
   if (cacheSupervisorIdPorEquipe) return cacheSupervisorIdPorEquipe
 
-  const doStorage = lerCachePersistido<Partial<Record<EquipeAtendimento, number>>>(
-    CHAVE_CACHE_SUPERVISOR_ID,
-  )
+  const doStorage =
+    lerCachePersistido<Partial<Record<EquipeAtendimento, number>>>(CHAVE_CACHE_SUPERVISOR_ID)
   if (doStorage) {
     cacheSupervisorIdPorEquipe = Promise.resolve(doStorage)
     return cacheSupervisorIdPorEquipe
@@ -186,7 +188,9 @@ export function obterSupervisorIdPorEquipe(): Promise<Partial<Record<EquipeAtend
       Object.entries(DEPARTAMENTO_ID_POR_EQUIPE).forEach(([equipe, departamentoId]) => {
         const head = headPorDepartamentoId.get(departamentoId)
         const fallback =
-          SUPERVISOR_ID_POR_EQUIPE_FALLBACK[equipe as keyof typeof SUPERVISOR_ID_POR_EQUIPE_FALLBACK]
+          SUPERVISOR_ID_POR_EQUIPE_FALLBACK[
+            equipe as keyof typeof SUPERVISOR_ID_POR_EQUIPE_FALLBACK
+          ]
         if (head !== undefined) resultado[equipe as EquipeAtendimento] = head
         else if (fallback !== undefined) resultado[equipe as EquipeAtendimento] = fallback
       })
