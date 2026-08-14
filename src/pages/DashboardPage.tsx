@@ -6,6 +6,8 @@ import { AiAssistantChat } from '../components/dashboard/AiAssistantChat'
 import { AvisoSincronizacao } from '../components/dashboard/AvisoSincronizacao'
 import { ColaboradorTarefasModal, type ColaboradorSelecionado } from '../components/dashboard/ColaboradorTarefasModal'
 import { ComentariosForum } from '../components/dashboard/ComentariosForum'
+import { ConfiguracoesCadastroBotao } from '../components/dashboard/ConfiguracoesCadastroBotao'
+import { ConfiguracoesCadastroPanel } from '../components/dashboard/ConfiguracoesCadastroPanel'
 import { DebugBitrixPanel } from '../components/dashboard/DebugBitrixPanel'
 import { FiltrosPainel } from '../components/dashboard/FiltrosPainel'
 import { GraficosInteligencia } from '../components/dashboard/GraficosInteligencia'
@@ -66,6 +68,11 @@ export function DashboardPage() {
     null,
   )
   const [metricaSelecionada, setMetricaSelecionada] = useState<MetricaSelecionada | null>(null)
+  const [configuracoesAbertas, setConfiguracoesAbertas] = useState(false)
+  // Incrementado quando o cadastro de pessoas muda: reexecuta o efeito de carga
+  // para os números refletirem os vínculos novos sem depender de F5. O cache do
+  // snapshot já foi descartado pelo painel de configurações.
+  const [recargaCadastro, setRecargaCadastro] = useState(0)
   // Reconhece o usuário logado no Bitrix como uma das 4 supervisoras pelo
   // nome (ver equipeSupervisionadaPeloNome) — null para qualquer outro usuário.
   const equipeDoUsuario = useMemo(
@@ -109,7 +116,7 @@ export function DashboardPage() {
     return () => {
       cancelado = true
     }
-  }, [estado, filtros, projetosPermitidos, gruposSelecionados])
+  }, [estado, filtros, projetosPermitidos, gruposSelecionados, recargaCadastro])
 
   function aoMudarFiltros(novosFiltros: FiltrosDashboard) {
     setFiltros(novosFiltros)
@@ -243,6 +250,11 @@ export function DashboardPage() {
         idUsuario={colaborador?.id}
         onAbrirEquipe={setEquipeSupervisorAberta}
       />
+      <ConfiguracoesCadastroBotao
+        nomeUsuario={colaborador?.nome}
+        idUsuario={colaborador?.id}
+        onAbrir={() => setConfiguracoesAbertas(true)}
+      />
       {conteudo}
       {estado === 'ok' && !erroDados && (
         <NavegacaoSecoesDashboard
@@ -272,6 +284,12 @@ export function DashboardPage() {
         metricasPorEquipe={metricasPorEquipe}
         onFechar={() => setEquipeSupervisorAberta(null)}
         onSelecionarColaborador={setColaboradorSelecionado}
+      />
+      <ConfiguracoesCadastroPanel
+        aberto={configuracoesAbertas}
+        colaborador={colaborador}
+        onFechar={() => setConfiguracoesAbertas(false)}
+        onCadastroAlterado={() => setRecargaCadastro((n) => n + 1)}
       />
       <AiAssistantChat metricas={metricas} pacotes={pacotes} filtros={filtros} />
       <DebugBitrixPanel />

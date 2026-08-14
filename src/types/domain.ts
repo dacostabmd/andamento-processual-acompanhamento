@@ -96,6 +96,120 @@ export interface Tarefa {
   setorAtendimento: string | null
   gestorAtendimentoId: number | null
   gestorAtendimentoNome: string | null
+
+  /**
+   * UF de ATUAÇÃO da pessoa em cada papel, vinda do cadastro editado na tela de
+   * configurações — não do card. `estadoUf` acima continua sendo o estado do
+   * PROCESSO. As duas ficam separadas de propósito: preencher uma com a outra
+   * inventaria dado que ninguém informou. Cobertura baixa por natureza (só quem
+   * foi cadastrado à mão).
+   */
+  ufFechador: string | null
+  ufAtendimento: string | null
+}
+
+// ─── Cadastro de pessoas (tela de configurações) ───────────────────────────
+
+/**
+ * Os seis vínculos que a tela de configurações associa/desassocia. Espelha
+ * CAMPOS_CADASTRO em worker-nodejs-andamento/src/types.ts — o worker recusa
+ * qualquer campo fora desta lista, então divergir aqui produz um 400. A ORDEM é a
+ * de exibição no modal: o departamento de estado vem logo depois do de equipe,
+ * porque é o segundo departamento da pessoa.
+ */
+export const CAMPOS_CADASTRO_PESSOA = [
+  'departamento',
+  'departamento_estado',
+  'supervisor',
+  'gerente',
+  'diretor',
+  'estado_uf',
+] as const
+
+export type CampoCadastroPessoa = (typeof CAMPOS_CADASTRO_PESSOA)[number]
+
+export const ROTULO_CAMPO_CADASTRO: Record<CampoCadastroPessoa, string> = {
+  departamento: 'Departamento (equipe)',
+  departamento_estado: 'Departamento (estado)',
+  supervisor: 'Supervisor',
+  gerente: 'Gerente',
+  diretor: 'Diretor',
+  estado_uf: 'Estado (UF)',
+}
+
+/**
+ * Um vínculo com a PROCEDÊNCIA do valor. A origem é o que impede a tela de
+ * mentir por omissão: um supervisor exibido sem ela é indistinguível entre "o
+ * Bitrix diz isso" e "alguém digitou isso", e as duas situações pedem ações
+ * opostas de quem edita — corrigir o portal num caso, revisar a digitação no
+ * outro.
+ */
+export interface VinculoEfetivo {
+  id: number | null
+  nome: string | null
+  origem: 'bitrix' | 'cadastro' | 'desassociado' | 'ausente'
+}
+
+/** Uma linha da tabela da tela de configurações. */
+export interface PessoaCadastro {
+  usuarioId: number
+  nome: string
+  equipe: EquipeAtendimento
+  departamento: VinculoEfetivo
+  /** Segundo departamento: "Andamento - <UF>". Existe só no worker, nunca no Bitrix. */
+  departamentoEstado: VinculoEfetivo
+  supervisor: VinculoEfetivo
+  gerente: VinculoEfetivo
+  diretor: VinculoEfetivo
+  estadoUf: VinculoEfetivo
+  /** Cards em que a pessoa aparece como fechadora ou responsável pelo atendimento. */
+  totalCards: number
+  /** Está em algum departamento de Andamento Processual, pelo cadastro do portal. */
+  noAndamento: boolean
+  /**
+   * Exclusão LÓGICA: saiu do portal (o Bitrix deixou de listá-la) mas continua no
+   * diretório do worker, porque segue sendo a fechadora de tarefas antigas.
+   */
+  desligado: boolean
+  desligadoEm: string | null
+  atualizadoEm: string | null
+  atualizadoPorNome: string | null
+}
+
+/** Opções que o worker oferece aos seletores — mesmas fontes que ele aceita gravar. */
+export interface OpcoesCadastro {
+  /**
+   * Departamentos do portal, cada um marcado com `andamento`. A tela agrupa por
+   * essa marca em vez de o worker filtrar: um DIRETOR está acima do Andamento no
+   * organograma, e cortar tudo fora do escopo o tornaria impossível de escolher.
+   */
+  departamentos: Array<{
+    id: number
+    nome: string
+    andamento: boolean
+    equipe: string | null
+    estadoUf: string | null
+  }>
+  /**
+   * Todos os usuários conhecidos, incluindo desligados. É a lista dos seletores de
+   * supervisor, gerente e diretor: essas pessoas normalmente NÃO fecham cards,
+   * então a população da tabela (quem aparece nas tarefas) deixaria justamente
+   * elas de fora.
+   */
+  usuarios: Array<{ id: number; nome: string; andamento: boolean; desligado: boolean }>
+  equipes: string[]
+  /** Os 27 departamentos "Andamento - <UF>", locais ao worker. */
+  departamentosEstado: Array<{ id: number; nome: string; uf: string }>
+}
+
+/** Uma linha do histórico de alterações de uma pessoa. */
+export interface HistoricoCadastro {
+  id: number
+  campo: CampoCadastroPessoa
+  valorAnterior: string | null
+  valorNovo: string | null
+  autorNome: string
+  criadoEm: string
 }
 
 /**
@@ -171,9 +285,37 @@ export const NOMES_DEPARTAMENTO_EQUIPES = [
  */
 export const EQUIPE_POR_NOME_DEPARTAMENTO: Record<string, EquipeAtendimento> = {
   'Andamento Cinthia Filgueiras': 'Cinthia Filgueiras',
+  'Cinthia Filgueiras': 'Cinthia Filgueiras',
   'Andamento Simone Freitas': 'Simone Freitas',
+  'Simone Freitas': 'Simone Freitas',
   'Andamento Quézia Karen': 'Quézia Karen',
+  'Quézia Karen': 'Quézia Karen',
+  'Quezia Karen': 'Quézia Karen',
   'Andamento Lorena Pontes': 'Lorena Pontes',
+  'Lorena Pontes': 'Lorena Pontes',
+  'LORENA PONTES COMERCIAL': 'Lorena Pontes',
+  'Lorena Pontes Comercial': 'Lorena Pontes',
+  'Andamento Lorena Pontes Comercial': 'Lorena Pontes',
+}
+
+/**
+ * Mapeia o nome de um departamento para sua respectiva EquipeAtendimento.
+ * Realiza busca direta por chave exata e fallback por busca normalizada (sem acentos e em caixa baixa).
+ */
+export function obterEquipePorNomeDepartamento(nome: string | null | undefined): EquipeAtendimento {
+  if (!nome) return 'indefinido'
+  const limpo = nome.trim()
+  if (EQUIPE_POR_NOME_DEPARTAMENTO[limpo]) {
+    return EQUIPE_POR_NOME_DEPARTAMENTO[limpo]
+  }
+
+  const norm = limpo.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  if (norm.includes('lorena pontes')) return 'Lorena Pontes'
+  if (norm.includes('cinthia filgueiras')) return 'Cinthia Filgueiras'
+  if (norm.includes('simone freitas')) return 'Simone Freitas'
+  if (norm.includes('quezia karen')) return 'Quézia Karen'
+
+  return 'indefinido'
 }
 
 /**
@@ -214,6 +356,8 @@ export interface ContagemSituacao {
   atrasadas: number
   concluidas: number
   adiadas: number
+  concluidasComAtraso: number
+  concluidasNoPrazo: number
 }
 
 /** Métricas de uma equipe para os gráficos de inteligência. */
@@ -371,6 +515,8 @@ export interface FiltrosDashboard {
   ocultarForaDasEquipes: boolean
   /** Modo de cálculo da taxa de atraso: 'ativas' (divisão pelas pendentes) ou 'total' (divisão pelo volume total). */
   modoTaxaAtraso: 'ativas' | 'total'
+  /** Quando true, TODAS as métricas consideram apenas tarefas concluídas. Quando false, consideram tarefas gerais (backlog + concluídas). */
+  apenasConcluidas: boolean
 }
 
 /**
@@ -401,6 +547,7 @@ export function filtrosVazios(_agora?: Date): FiltrosDashboard {
     ocultarIndefinidos: true,
     ocultarForaDasEquipes: false,
     modoTaxaAtraso: 'total',
+    apenasConcluidas: false,
   }
 }
 

@@ -11,6 +11,38 @@ interface MetricasCardsProps {
 }
 
 function montarStats(metricas: MetricasTarefas) {
+  const ehApenasConcluidas = metricas.total > 0 && metricas.concluidas === metricas.total
+
+  if (ehApenasConcluidas) {
+    return [
+      {
+        label: 'No Prazo',
+        valor: String(metricas.emAndamento),
+        descricao: 'Concluídas estritamente no prazo',
+      },
+      {
+        label: 'Risco de Atraso',
+        valor: '0',
+        descricao: 'N/A (Apenas Concluídas)',
+      },
+      {
+        label: 'Com Atraso',
+        valor: String(metricas.atrasadas),
+        descricao: 'Concluídas entregues após o prazo',
+      },
+      {
+        label: 'Taxa de Atraso',
+        valor: `${metricas.taxaAtraso.toFixed(1)}%`,
+        descricao: `${metricas.atrasadas} de ${metricas.baseTaxaAtraso} entrega(s) concluída(s) com atraso`,
+      },
+      {
+        label: 'Concluídas',
+        valor: String(metricas.concluidas),
+        descricao: 'Total de entregas concluídas',
+      },
+    ]
+  }
+
   return [
     {
       label: 'Em Andamento',
@@ -30,10 +62,6 @@ function montarStats(metricas: MetricasTarefas) {
     {
       label: 'Taxa de Atraso',
       valor: `${metricas.taxaAtraso.toFixed(1)}%`,
-      // Mostra o denominador junto: uma taxa de 100% sobre 1 tarefa é bem
-      // diferente de 100% sobre 500 — sem o "de quantas", a primeira parece
-      // um erro de cálculo em vez de uma base pequena. Frase neutra porque a
-      // base muda conforme o modo (fila ativa ou volume total).
       descricao: `${metricas.atrasadas} de ${metricas.baseTaxaAtraso} tarefa(s) consideradas`,
     },
     {

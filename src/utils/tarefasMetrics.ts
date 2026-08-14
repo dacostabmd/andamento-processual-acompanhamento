@@ -1,6 +1,6 @@
 import {
-  EQUIPE_POR_NOME_DEPARTAMENTO,
   EQUIPES_ATENDIMENTO,
+  obterEquipePorNomeDepartamento,
   STATUS_CONCLUIDO,
   type VisaoDashboard,
   type ContagemSituacao,
@@ -21,6 +21,7 @@ import {
   type VolumePorUf,
   type VolumeResponsavel,
 } from '../types/domain'
+import { equipeSupervisionadaPeloNome } from './pessoas'
 
 export function tarefaEstaAtrasada(tarefa: Tarefa, agora: Date): boolean {
   return (
@@ -60,10 +61,32 @@ export function tarefaFoiConcluidaComAtraso(tarefa: Tarefa): boolean {
 export function calcularMetricas(
   tarefas: Tarefa[],
   modoTaxaAtraso: 'ativas' | 'total' = 'ativas',
+  apenasConcluidasMode?: boolean,
 ): MetricasTarefas {
   const total = tarefas.length
   const concluidas = tarefas.filter(tarefaEstaConcluida).length
   const agora = new Date()
+
+  const ehModoConcluidas = apenasConcluidasMode || (total > 0 && concluidas === total)
+
+  if (ehModoConcluidas) {
+    const concluidasComAtraso = tarefas.filter(tarefaFoiConcluidaComAtraso).length
+    const concluidasNoPrazo = total - concluidasComAtraso
+    const taxaAtraso = total === 0 ? 0 : (concluidasComAtraso / total) * 100
+
+    return {
+      total,
+      concluidas: total,
+      atrasadas: concluidasComAtraso,
+      eficiencia: 100,
+      vencemEmBreve: 0,
+      aguardandoRevisao: 0,
+      emAndamento: concluidasNoPrazo,
+      taxaAtraso,
+      baseTaxaAtraso: total,
+    }
+  }
+
   const atrasadas = tarefas.filter((t) => tarefaEstaAtrasada(t, agora)).length
   const eficiencia = total === 0 ? 0 : (concluidas / total) * 100
 
@@ -102,6 +125,8 @@ export function aplicarFiltros(tarefas: Tarefa[], filtros: FiltrosDashboard): Ta
   const dataFimLimite = filtros.dataFim ? new Date(`${filtros.dataFim}T23:59:59.999`) : null
 
   return tarefas.filter((tarefa) => {
+    if (filtros.apenasConcluidas && !tarefaEstaConcluida(tarefa)) return false
+
     const prazo = tarefa.prazoFinal ? new Date(tarefa.prazoFinal) : null
     const finalizado = tarefa.finalizadoEm ? new Date(tarefa.finalizadoEm) : null
 
@@ -167,13 +192,18 @@ const ORDEM_EQUIPES: EquipeAtendimento[] = [...EQUIPES_ATENDIMENTO, 'indefinido'
  * equipes somam exatamente o total de cards — contá-lo nas duas inflaria a soma.
  */
 export function equipeExecutoraDaTarefa(tarefa: Tarefa): EquipeAtendimento {
+  if (tarefa.fechadoPorNome) {
+    const equipeLider = equipeSupervisionadaPeloNome(tarefa.fechadoPorNome)
+    if (equipeLider) return equipeLider
+  }
+
   if (tarefa.equipeFechador && tarefa.equipeFechador !== 'indefinido') {
     return tarefa.equipeFechador
   }
 
   const equipes = tarefa.fechadoPorDepartamentos
-    .map((nome) => EQUIPE_POR_NOME_DEPARTAMENTO[nome.trim()])
-    .filter((e): e is EquipeAtendimento => e !== undefined)
+    .map((nome) => obterEquipePorNomeDepartamento(nome))
+    .filter((e): e is EquipeAtendimento => e !== 'indefinido')
 
   if (equipes.length === 0) return 'indefinido'
 
@@ -266,16 +296,34 @@ export function empacotarPorAtendimento(
 }
 
 function contagemVazia(): ContagemSituacao {
-  return { total: 0, noPrazo: 0, atrasadas: 0, concluidas: 0, adiadas: 0 }
+  return {
+    total: 0,
+    noPrazo: 0,
+    atrasadas: 0,
+    concluidas: 0,
+    adiadas: 0,
+    concluidasComAtraso: 0,
+    concluidasNoPrazo: 0,
+  }
 }
 
 /** Classifica um card em uma única situação de prazo (excludentes). */
 function acumularSituacao(acc: ContagemSituacao, tarefa: Tarefa, agora: Date): void {
   acc.total += 1
-  if (tarefaEstaConcluida(tarefa)) acc.concluidas += 1
-  else if (tarefa.status === 6) acc.adiadas += 1
-  else if (tarefaEstaAtrasada(tarefa, agora)) acc.atrasadas += 1
-  else acc.noPrazo += 1
+  if (tarefaEstaConcluida(tarefa)) {
+    acc.concluidas += 1
+    if (tarefaFoiConcluidaComAtraso(tarefa)) {
+      acc.concluidasComAtraso += 1
+    } else {
+      acc.concluidasNoPrazo += 1
+    }
+  } else if (tarefa.status === 6) {
+    acc.adiadas += 1
+  } else if (tarefaEstaAtrasada(tarefa, agora)) {
+    acc.atrasadas += 1
+  } else {
+    acc.noPrazo += 1
+  }
 }
 
 /** Breakdown por situação de um conjunto qualquer de cards — mesma classificação usada nos gráficos de inteligência. */

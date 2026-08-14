@@ -98,6 +98,48 @@ export function ehCaioMarques(
 }
 
 /**
+ * Quem pode abrir a tela de configurações e editar o cadastro de pessoas:
+ * Caio Marques, Handerson, Hellen, e as 4 supervisoras (Lorena Pontes, Simone
+ * Freitas, Quézia Karen, Cinthia Filgueiras).
+ *
+ * Esta lista serve APENAS para decidir se o ícone de engrenagem aparece. A
+ * permissão de verdade é conferida no worker (IDS_GESTAO_CADASTRO /
+ * NOMES_GESTAO_CADASTRO em config.ts, aplicada por `exigirGestaoCadastro`):
+ * esconder o botão impede o clique acidental, não a requisição. O worker também
+ * responde `POST /pessoas/permissao`, que é o que a tela usa para não oferecer
+ * edição a quem levaria 403 ao salvar.
+ *
+ * Por ID quando conhecido, por nome como retaguarda — mesma estratégia de
+ * `ehCaioMarques`, e pelo mesmo motivo: nem todos os IDs estão confirmados.
+ */
+const IDS_GESTAO_CADASTRO = new Set([
+  9129, // Handerson
+  26471, // Hellen Gomes
+  1205, // Quézia Karen
+  999, // Lorena Pontes
+])
+
+const NOMES_GESTAO_CADASTRO = [
+  'caio marques',
+  'handerson',
+  'hellen',
+  'lorena pontes',
+  'simone freitas',
+  'quezia karen',
+  'cinthia filgueiras',
+]
+
+export function podeGerenciarCadastro(
+  nome: string | null | undefined,
+  id?: number | null,
+): boolean {
+  if (id != null && IDS_GESTAO_CADASTRO.has(id)) return true
+  if (!nome) return false
+  const alvo = normalizar(nome)
+  return NOMES_GESTAO_CADASTRO.some((permitido) => alvo === permitido || alvo.includes(permitido))
+}
+
+/**
  * IDs de usuário do Bitrix que aparecem em algum papel de pessoa nas tarefas
  * informadas (fechador, responsável, atendimento, gestor de cada um). É o
  * conjunto que os avatares de colaborador precisam resolver — usado para

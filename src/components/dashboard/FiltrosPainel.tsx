@@ -273,6 +273,41 @@ export function FiltrosPainel({
           <Group gap="xs" align="center">
             <Checkbox
               classNames={{ input: classes.checkboxInput, label: classes.checkboxLabel }}
+              label="Filtrar apenas concluídas"
+              checked={filtros.apenasConcluidas}
+              onChange={(evento) =>
+                onChange({ ...filtros, apenasConcluidas: evento.currentTarget.checked })
+              }
+            />
+            <Tooltip
+              label="Quando marcado: TODAS as métricas consideram apenas tarefas concluídas. Quando desmarcado (padrão): considera tarefas gerais (backlog ativo + concluídas dos últimos 10 dias)."
+              multiline
+              w={280}
+              withArrow
+            >
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '18px',
+                  height: '18px',
+                  borderRadius: '50%',
+                  backgroundColor: 'var(--superficie-borda, rgba(255, 255, 255, 0.12))',
+                  color: 'var(--mantine-color-dourado-4, #cba556)',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                }}
+              >
+                ?
+              </span>
+            </Tooltip>
+          </Group>
+          <Group gap="xs" align="center">
+            <Checkbox
+              classNames={{ input: classes.checkboxInput, label: classes.checkboxLabel }}
               label="Taxa de Atraso sobre Fila Ativa"
               checked={filtros.modoTaxaAtraso === 'ativas'}
               onChange={(evento) =>

@@ -198,13 +198,24 @@ function carregarTarefasPermitidas(
   return cachePromise
 }
 
+/**
+ * Descarta o cache em memória sem já recarregar. Existe para a tela de
+ * configurações: ao salvar um vínculo, o worker reescreve setor, supervisor, UF e
+ * equipe das tarefas daquela pessoa, então o snapshot que está em memória passou
+ * a mentir — mas quem recarrega é o efeito do DashboardPage, com os filtros e
+ * grupos ativos, que este módulo não conhece daqui.
+ */
+export function descartarCacheTarefas(): void {
+  cacheChave = null
+  cachePromise = null
+}
+
 /** Descarta o cache em memória, forçando nova leitura do snapshot mais recente. */
 export async function sincronizarComBitrix(
   projetosPermitidos: Projeto[],
   gruposSelecionados: number[],
 ): Promise<void> {
-  cacheChave = null
-  cachePromise = null
+  descartarCacheTarefas()
   await carregarTarefasPermitidas(projetosPermitidos, gruposSelecionados)
 }
 

@@ -164,6 +164,21 @@ describe('calcularMetricas', () => {
     expect(metricas.baseTaxaAtraso).toBe(3)
     expect(metricas.taxaAtraso).toBeCloseTo((1 / 3) * 100)
   })
+
+  it('calcula métricas corretamente no modo apenasConcluidas (considerando atrasadas como concluídas entregues com atraso)', () => {
+    const tarefas = [
+      { status: 5, prazoFinal: '2024-01-10T12:00:00Z', finalizadoEm: '2024-01-09T12:00:00Z' }, // no prazo
+      { status: 5, prazoFinal: '2024-01-10T12:00:00Z', finalizadoEm: '2024-01-12T12:00:00Z' }, // com atraso
+      { status: 5, prazoFinal: '2024-01-10T12:00:00Z', finalizadoEm: '2024-01-08T12:00:00Z' }, // no prazo
+    ] as Tarefa[]
+
+    const metricas = calcularMetricas(tarefas, 'ativas', true)
+    expect(metricas.total).toBe(3)
+    expect(metricas.concluidas).toBe(3)
+    expect(metricas.emAndamento).toBe(2) // 2 no prazo
+    expect(metricas.atrasadas).toBe(1) // 1 entregue com atraso
+    expect(metricas.taxaAtraso).toBeCloseTo((1 / 3) * 100)
+  })
 })
 
 describe('equipeExecutoraDaTarefa', () => {

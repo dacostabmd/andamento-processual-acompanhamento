@@ -1,0 +1,75 @@
+/* Mais largo que os 70% do painel de supervisor: a tabela tem 10 colunas e, a
+   70%, "Andamento Cinthia Filgueiras" e nomes completos quebram em duas linhas
+   em quase toda linha. */
+.conteudo {
+  width: 92%;
+  margin-inline: auto;
+  padding-block: var(--mantine-spacing-lg);
+}
+
+.titulo {
+  color: var(--mantine-color-text);
+}
+
+/* A tabela rola dentro do próprio contêiner. Sem isto, 10 colunas empurram a
+   largura do <body> e o painel inteiro passa a rolar na horizontal. */
+.rolagemTabela {
+  overflow-x: auto;
+  border: 1px solid var(--superficie-borda);
+  border-radius: var(--mantine-radius-md);
+  background-color: var(--superficie);
+}
+
+.tabela {
+  min-width: 1220px;
+}
+
+.tabela thead th {
+  white-space: nowrap;
+  background-color: var(--superficie);
+  color: var(--mantine-color-text);
+}
+
+/* A linha inteira abre a edição, então ela precisa parecer clicável — sem o
+   cursor, o único alvo aparente continuaria sendo o lápis da última coluna. */
+.linha {
+  cursor: pointer;
+}
+
+.linha:hover {
+  background-color: var(--superficie-borda);
+}
+
+.celulaPessoa {
+  min-width: 220px;
+}
+
+/* Valor herdado do Bitrix: presente, mas não é uma decisão de ninguém aqui —
+   fica um degrau abaixo do valor definido à mão, que é o que a tela existe para
+   destacar. */
+.valorHerdado {
+  color: var(--mantine-color-text);
+  opacity: 0.8;
+}
+
+.valorEditado {
+  color: var(--mantine-color-dourado-4);
+  font-weight: 600;
+}
+
+/* Desassociado é diferente de vazio: alguém decidiu que não há vínculo. O
+   tracejado é o que distingue os dois a distância, sem depender de ler o rótulo. */
+.valorDesassociado {
+  color: var(--mantine-color-text);
+  opacity: 0.55;
+  border-bottom: 1px dashed currentColor;
+}
+
+.valorAusente {
+  color: var(--mantine-color-text);
+  opacity: 0.35;
+}
+
+.campoEdicao + .campoEdicao {
+  margin-top: var(--mantine-spacing-md);
+}

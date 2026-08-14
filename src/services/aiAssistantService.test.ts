@@ -78,6 +78,10 @@ function tarefa(op: OpcoesTarefa = {}): Tarefa {
     setorAtendimento: null,
     gestorAtendimentoId: null,
     gestorAtendimentoNome: null,
+    // UF de atuação da pessoa (cadastro manual), distinta de estadoUf acima, que
+    // é o estado do processo. Null aqui: nenhum caso deste arquivo depende dela.
+    ufFechador: null,
+    ufAtendimento: null,
   }
 }
 
@@ -104,6 +108,7 @@ const FILTROS: FiltrosDashboard = {
   ocultarIndefinidos: false,
   ocultarForaDasEquipes: false,
   modoTaxaAtraso: 'ativas',
+  apenasConcluidas: false,
 }
 
 const METRICAS_STUB: MetricasTarefas = {
