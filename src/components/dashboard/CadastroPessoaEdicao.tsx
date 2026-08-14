@@ -319,7 +319,7 @@ export function CadastroPessoaEdicao({
                 <MultiSelect
                   radius="lg"
                   classNames={{
-                    input: classesInput.input,
+                    input: classes.inputModal,
                     section: classesInput.secao,
                     dropdown: classesInput.dropdown,
                     option: classesInput.option,

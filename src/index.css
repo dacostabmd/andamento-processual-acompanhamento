@@ -111,20 +111,20 @@ body {
   margin-bottom: 12px !important;
 }
 
-/* Remoção de bordas externas dos campos de input (transparência) */
-.mantine-Input-input,
-.mantine-TextInput-input,
-.mantine-Select-input,
-.mantine-MultiSelect-input {
+/* Remoção de bordas externas APENAS nos campos de input dentro de modais (transparência) */
+.mantine-Modal-content .mantine-Input-input,
+.mantine-Modal-content .mantine-TextInput-input,
+.mantine-Modal-content .mantine-Select-input,
+.mantine-Modal-content .mantine-MultiSelect-input {
   border-color: transparent !important;
 }
 
-.mantine-Input-input:focus,
-.mantine-Input-input:focus-within,
-.mantine-Input-input[data-expanded],
-.mantine-TextInput-input:focus,
-.mantine-Select-input:focus,
-.mantine-MultiSelect-input:focus,
-.mantine-MultiSelect-input[data-expanded] {
+.mantine-Modal-content .mantine-Input-input:focus,
+.mantine-Modal-content .mantine-Input-input:focus-within,
+.mantine-Modal-content .mantine-Input-input[data-expanded],
+.mantine-Modal-content .mantine-TextInput-input:focus,
+.mantine-Modal-content .mantine-Select-input:focus,
+.mantine-Modal-content .mantine-MultiSelect-input:focus,
+.mantine-Modal-content .mantine-MultiSelect-input[data-expanded] {
   border-color: var(--mantine-color-dourado-4) !important;
 }

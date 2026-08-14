@@ -74,7 +74,28 @@
   padding: 14px 16px;
   border-radius: var(--mantine-radius-md);
   background-color: var(--superficie, rgba(255, 255, 255, 0.02));
-  border: 1px solid transparent;
+  border: 1px solid var(--superficie-borda, rgba(255, 255, 255, 0.08));
+}
+
+.inputModal {
+  background-color: var(--superficie);
+  border-color: transparent !important;
+  color: var(--mantine-color-text);
+  transition:
+    background-color 0.25s ease,
+    border-color 120ms ease,
+    color 0.25s ease;
+}
+
+.inputModal:hover {
+  filter: brightness(1.05);
+}
+
+.inputModal:focus,
+.inputModal:focus-within,
+.inputModal[data-expanded] {
+  border-color: var(--mantine-color-dourado-4) !important;
+  filter: brightness(1.05);
 }
 
 .labelCampo {
