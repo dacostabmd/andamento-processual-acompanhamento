@@ -219,7 +219,7 @@ export function CadastroPessoaEdicao({
             const temFonteBitrix = CAMPOS_COM_FONTE_BITRIX.includes(campo)
             const original = rascunhoDoVinculo(vinculoDaPessoa(exibida, campo))
 
-            const dados =
+            const dadosBase =
               campo === 'departamento'
                 ? departamentosEquipeOptions
                 : campo === 'departamento_estado'
@@ -236,6 +236,8 @@ export function CadastroPessoaEdicao({
                     ? atual.nome.split(',').map((s) => s.trim()).filter(Boolean)
                     : []
                   : (atual.ids ?? (atual.id !== null ? [atual.id] : [])).map(String)
+
+            const dados = garantirOpcoes(dadosBase, valorArray, opcoes, campo)
 
             return (
               <div key={campo} className={classes.campoEdicao}>
@@ -286,8 +288,8 @@ export function CadastroPessoaEdicao({
                   disabled={!podeEditar || salvando}
                   searchable
                   clearable
-                  hidePickedOptions
-                  nothingFoundMessage="Nada encontrado"
+                  comboboxProps={{ zIndex: 400, withinPortal: true }}
+                  nothingFoundMessage="Nenhuma opção encontrada"
                   onChange={(escolhidos) => {
                     if (campo === 'estado_uf') {
                       definirValoresString(campo, escolhidos)
@@ -400,5 +402,40 @@ function classeDoModo(modo: ModoVinculo): string {
   if (modo === 'definir') return classes.valorEditado
   if (modo === 'desassociar') return classes.valorDesassociado
   return classes.valorHerdado
+}
+
+function garantirOpcoes(
+  dados: Array<{ group: string; items: Array<{ value: string; label: string }> }> | Array<{ value: string; label: string }>,
+  valorArray: string[],
+  opcoes: OpcoesCadastro,
+  campo: CampoCadastroPessoa,
+) {
+  const existentes = new Set<string>()
+  if (Array.isArray(dados) && dados.length > 0 && 'items' in dados[0]) {
+    ;(dados as Array<{ group: string; items: Array<{ value: string; label: string }> }>).forEach((g) => {
+      g.items.forEach((item) => existentes.add(item.value))
+    })
+  } else {
+    ;(dados as Array<{ value: string; label: string }>).forEach((item) => existentes.add(item.value))
+  }
+
+  const faltantes = valorArray.filter((v) => !existentes.has(v))
+  if (faltantes.length === 0) return dados
+
+  const novos = faltantes.map((val) => {
+    const id = Number(val)
+    const label = !Number.isNaN(id) ? obterRotuloOpcao(opcoes, campo, id) : val
+    return { value: val, label }
+  })
+
+  if (Array.isArray(dados) && dados.length > 0 && 'items' in dados[0]) {
+    const copia = [...(dados as Array<{ group: string; items: Array<{ value: string; label: string }> }>)]
+    if (copia.length > 0) {
+      copia[0] = { group: copia[0].group, items: [...novos, ...copia[0].items] }
+    }
+    return copia
+  }
+
+  return [...novos, ...(dados as Array<{ value: string; label: string }>)]
 }
 
