@@ -6,6 +6,8 @@ import { AiAssistantChat } from '../components/dashboard/AiAssistantChat'
 import { AvisoSincronizacao } from '../components/dashboard/AvisoSincronizacao'
 import { ColaboradorTarefasModal, type ColaboradorSelecionado } from '../components/dashboard/ColaboradorTarefasModal'
 import { ComentariosForum } from '../components/dashboard/ComentariosForum'
+import { AuditoriaCadastroBotao } from '../components/dashboard/AuditoriaCadastroBotao'
+import { AuditoriaCadastroPanel } from '../components/dashboard/AuditoriaCadastroPanel'
 import { ConfiguracoesCadastroBotao } from '../components/dashboard/ConfiguracoesCadastroBotao'
 import { ConfiguracoesCadastroPanel } from '../components/dashboard/ConfiguracoesCadastroPanel'
 import { DebugBitrixPanel } from '../components/dashboard/DebugBitrixPanel'
@@ -69,6 +71,7 @@ export function DashboardPage() {
   )
   const [metricaSelecionada, setMetricaSelecionada] = useState<MetricaSelecionada | null>(null)
   const [configuracoesAbertas, setConfiguracoesAbertas] = useState(false)
+  const [auditoriaAberta, setAuditoriaAberta] = useState(false)
   // Incrementado quando o cadastro de pessoas muda: reexecuta o efeito de carga
   // para os números refletirem os vínculos novos sem depender de F5. O cache do
   // snapshot já foi descartado pelo painel de configurações.
@@ -255,6 +258,11 @@ export function DashboardPage() {
         idUsuario={colaborador?.id}
         onAbrir={() => setConfiguracoesAbertas(true)}
       />
+      <AuditoriaCadastroBotao
+        nomeUsuario={colaborador?.nome}
+        idUsuario={colaborador?.id}
+        onAbrir={() => setAuditoriaAberta(true)}
+      />
       {conteudo}
       {estado === 'ok' && !erroDados && (
         <NavegacaoSecoesDashboard
@@ -290,6 +298,11 @@ export function DashboardPage() {
         colaborador={colaborador}
         onFechar={() => setConfiguracoesAbertas(false)}
         onCadastroAlterado={() => setRecargaCadastro((n) => n + 1)}
+      />
+      <AuditoriaCadastroPanel
+        aberto={auditoriaAberta}
+        colaborador={colaborador}
+        onFechar={() => setAuditoriaAberta(false)}
       />
       <AiAssistantChat metricas={metricas} pacotes={pacotes} filtros={filtros} />
       <DebugBitrixPanel />

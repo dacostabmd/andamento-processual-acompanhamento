@@ -4,6 +4,7 @@ import type {
   HistoricoCadastro,
   OpcoesCadastro,
   PessoaCadastro,
+  ResultadoPortal,
 } from '../types/domain'
 import { descreverErroHttp, baseSyncApi, fetchSyncApi } from './syncApi'
 
@@ -31,6 +32,8 @@ interface RespostaPessoas {
 export interface VinculoParaSalvar {
   id: number | null
   nome: string | null
+  /** Só em `departamento`: a lista completa. Lista vazia desassocia de todos. */
+  ids?: number[]
 }
 
 function identidade(solicitante: Colaborador | null) {
@@ -80,22 +83,48 @@ export async function listarPessoasCadastro(
   return lerOuLancar<RespostaPessoas>(resposta)
 }
 
-/** `true` se o worker aceita edições deste usuário — a MESMA lista que ele aplica ao salvar. */
-export async function verificarPermissaoCadastro(solicitante: Colaborador | null): Promise<boolean> {
+export interface PermissoesCadastro {
+  podeEditar: boolean
+  /** Ver o log completo de alterações. Lista mais restrita que a de edição. */
+  podeAuditar: boolean
+}
+
+/** O que o worker aceita deste usuário — as MESMAS listas que ele aplica nas rotas. */
+export async function verificarPermissaoCadastro(
+  solicitante: Colaborador | null,
+): Promise<PermissoesCadastro> {
   try {
     const resposta = await fetchSyncApi('/pessoas/permissao', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(identidade(solicitante)),
     })
-    if (!resposta.ok) return false
-    const corpo = (await resposta.json()) as { podeEditar?: boolean }
-    return corpo.podeEditar === true
+    if (!resposta.ok) return { podeEditar: false, podeAuditar: false }
+    const corpo = (await resposta.json()) as { podeEditar?: boolean; podeAuditar?: boolean }
+    return { podeEditar: corpo.podeEditar === true, podeAuditar: corpo.podeAuditar === true }
   } catch {
     // Worker fora do ar não deve travar a tela em "sem permissão" nem liberar
     // edição: quem decide de fato é o próprio worker no PUT, que devolverá 403.
-    return false
+    return { podeEditar: false, podeAuditar: false }
   }
+}
+
+/**
+ * Log completo de alterações do cadastro, de todas as pessoas.
+ *
+ * `truncado` diz se a lista bateu no teto. É dito em vez de a lista ser cortada em
+ * silêncio: uma auditoria que parece completa e não é vale menos que nenhuma.
+ */
+export async function obterAuditoriaCadastro(
+  solicitante: Colaborador | null,
+  limite = 500,
+): Promise<{ historico: HistoricoCadastro[]; limite: number; truncado: boolean }> {
+  const resposta = await fetchSyncApi('/pessoas/auditoria', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ limite, ...identidade(solicitante) }),
+  })
+  return lerOuLancar<{ historico: HistoricoCadastro[]; limite: number; truncado: boolean }>(resposta)
 }
 
 export interface ResultadoEdicao {
@@ -109,6 +138,11 @@ export interface ResultadoEdicao {
    * que está gravado.
    */
   aviso?: string | null
+  /**
+   * Resultado da escrita no portal Bitrix24. `undefined` em respostas que não
+   * mexeram em departamento (reversão de supervisor, por exemplo).
+   */
+  portal?: ResultadoPortal | null
 }
 
 /**
@@ -127,8 +161,8 @@ export async function salvarVinculosPessoa(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ usuarioNome, vinculos, ...identidade(solicitante) }),
   })
-  const corpo = await lerOuLancar<{ reaplicacao: ResultadoEdicao }>(resposta)
-  return corpo.reaplicacao
+  const corpo = await lerOuLancar<{ reaplicacao: ResultadoEdicao; portal?: ResultadoPortal }>(resposta)
+  return { ...corpo.reaplicacao, portal: corpo.portal ?? null }
 }
 
 /**

@@ -63,9 +63,11 @@ describe('calcularAlteracoes', () => {
 
   it('desassociar manda o par nulo, que o worker grava como decisão explícita', () => {
     const p = pessoa()
-    const r = comMudanca(p, { departamento: { modo: 'desassociar', id: null, nome: null } })
+    const r = comMudanca(p, { departamento: { modo: 'desassociar', id: null, nome: null, ids: [] } })
     expect(calcularAlteracoes(p, r)).toEqual({
-      definir: { departamento: { id: null, nome: null } },
+      // Departamento é campo de LISTA: a lista vazia é o que diz ao worker
+      // "desassociada de todos", e é ela que vai ao portal em UF_DEPARTMENT.
+      definir: { departamento: { id: null, nome: null, ids: [] } },
       reverter: [],
     })
   })
@@ -99,14 +101,14 @@ describe('calcularAlteracoes', () => {
   it('acumula vários campos numa única requisição', () => {
     const p = pessoa({ diretor: editado('Cinthia Filgueiras', 118684) })
     const r = comMudanca(p, {
-      departamento: { modo: 'definir', id: 1252, nome: 'Andamento Simone Freitas' },
+      departamento: { modo: 'definir', id: 1252, nome: 'Andamento Simone Freitas', ids: [1070, 1252] },
       supervisor: { modo: 'desassociar', id: null, nome: null },
       diretor: { modo: 'herdar', id: null, nome: null },
       estado_uf: { modo: 'definir', id: null, nome: 'MG' },
     })
     expect(calcularAlteracoes(p, r)).toEqual({
       definir: {
-        departamento: { id: 1252, nome: 'Andamento Simone Freitas' },
+        departamento: { id: 1070, nome: 'Andamento Simone Freitas', ids: [1070, 1252] },
         supervisor: { id: null, nome: null },
         estado_uf: { id: null, nome: 'MG' },
       },
@@ -156,6 +158,56 @@ describe('departamento de estado', () => {
   it('rascunhoDaPessoa lê o vínculo do campo departamentoEstado', () => {
     const r = rascunhoDaPessoa(pessoa({ departamentoEstado: editado('Andamento - MG', -9012) }))
     expect(r.departamento_estado).toEqual({ modo: 'definir', id: -9012, nome: 'Andamento - MG' })
+  })
+})
+
+describe('departamento como lista (UF_DEPARTMENT é array)', () => {
+  const multiplo = (ids: number[]): VinculoEfetivo => ({
+    id: ids[0] ?? null,
+    nome: ids.length ? `Dep ${ids[0]}` : null,
+    origem: 'bitrix',
+    itens: ids.map((id) => ({ id, nome: `Dep ${id}` })),
+  })
+
+  it('o rascunho vem com TODOS os departamentos, não só o principal', () => {
+    // É o patchValue do MultiSelect: com um id só, salvar apagaria os outros
+    // departamentos da pessoa — agora inclusive na ficha do portal.
+    const r = rascunhoDaPessoa(pessoa({ departamento: multiplo([149, 1070, 1252]) }))
+    expect(r.departamento.ids).toEqual([149, 1070, 1252])
+    expect(r.departamento.modo).toBe('herdar')
+  })
+
+  it('remover um departamento é uma alteração, mesmo mantendo o principal', () => {
+    // [149, 1070, 1252] → [1252] tem o mesmo conjunto de "principal" possível pela
+    // ordem canônica. Comparar por id enxergaria "nada mudou" e engoliria a
+    // remoção de dois departamentos.
+    const p = pessoa({ departamento: multiplo([149, 1070, 1252]) })
+    const r = comMudanca(p, { departamento: { modo: 'definir', id: 1252, nome: 'Dep 1252', ids: [1252] } })
+    expect(calcularAlteracoes(p, r).definir.departamento).toEqual({
+      id: 1252,
+      nome: 'Dep 1252',
+      ids: [1252],
+    })
+  })
+
+  it('a mesma lista em outra ordem NÃO é alteração', () => {
+    // O MultiSelect devolve na ordem de clique. Sem comparar por conjunto, reabrir
+    // e fechar o modal geraria linha de log falsa e uma reaplicação sobre milhares
+    // de tarefas.
+    const p = pessoa({
+      departamento: { ...multiplo([149, 1252]), origem: 'cadastro' },
+    })
+    const r = comMudanca(p, { departamento: { modo: 'definir', id: 1252, nome: 'Dep 1252', ids: [1252, 149] } })
+    expect(calcularAlteracoes(p, r).definir.departamento).toBeUndefined()
+  })
+
+  it('vínculo antigo sem a lista continua valendo pelo id único', () => {
+    // Cadastro gravado antes de o campo ser múltiplo. Tratar `ids` ausente como
+    // lista vazia faria o salvamento desassociar a pessoa de tudo.
+    const p = pessoa({ departamento: editado('Andamento Cinthia Filgueiras', 1250) })
+    const r = rascunhoDaPessoa(p)
+    expect(r.departamento.ids).toBeUndefined()
+    expect(calcularAlteracoes(p, r).definir.departamento).toBeUndefined()
   })
 })
 

@@ -113,11 +113,36 @@ export function ehCaioMarques(
  * `ehCaioMarques`, e pelo mesmo motivo: nem todos os IDs estão confirmados.
  */
 const IDS_GESTAO_CADASTRO = new Set([
+  178968, // Caio Marques (lido de user.current contra o portal em 2026-08-14)
   9129, // Handerson
   26471, // Hellen Gomes
   1205, // Quézia Karen
   999, // Lorena Pontes
 ])
+
+/**
+ * Quem pode ABRIR o log de auditoria: só Caio Marques (ID 178968), por pedido do
+ * usuário.
+ *
+ * Lista separada da de gestão de propósito, e mais restrita: o log registra quem
+ * mexeu no quê, e quem é auditado não é a mesma população de quem audita. Como no
+ * caso da engrenagem, isto decide apenas se o ícone aparece — a permissão de
+ * verdade está em IDS_AUDITORIA_CADASTRO no worker, aplicada por `exigirAuditoria`,
+ * e a tela reconfere via `POST /pessoas/permissao`.
+ */
+const ID_AUDITORIA = 178968
+
+export function podeAuditarCadastro(
+  nome: string | null | undefined,
+  id?: number | null,
+): boolean {
+  if (id != null) return id === ID_AUDITORIA
+  if (!nome) return false
+  // Sem ID, exige o nome completo: 'caio' sozinho casaria com outros colaboradores
+  // (há um Caio Araujo nos dados), e o log de auditoria é justamente o que não
+  // deve abrir por semelhança de nome.
+  return normalizar(nome).includes('caio marques')
+}
 
 const NOMES_GESTAO_CADASTRO = [
   'caio marques',

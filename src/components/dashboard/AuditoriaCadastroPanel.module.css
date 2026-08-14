@@ -1,0 +1,53 @@
+/* Mesma largura e respiro do painel de cadastro: os dois são full-screen e abrem
+   do mesmo canto, então divergir na medida faria um parecer outro componente. */
+.conteudo {
+  width: 92%;
+  margin-inline: auto;
+  padding-block: var(--mantine-spacing-lg);
+}
+
+.titulo {
+  color: var(--mantine-color-text);
+}
+
+/* A tabela rola dentro do próprio contêiner. Sem isto as 6 colunas empurram a
+   largura do <body> e o painel inteiro passa a rolar na horizontal. */
+.rolagemTabela {
+  overflow-x: auto;
+  border: 1px solid var(--superficie-borda);
+  border-radius: var(--mantine-radius-md);
+  background-color: var(--superficie);
+}
+
+.tabela {
+  min-width: 940px;
+}
+
+.tabela thead th {
+  white-space: nowrap;
+  background-color: var(--superficie);
+  color: var(--mantine-color-text);
+}
+
+/* A data não pode quebrar em duas linhas: ela é a coluna de referência para ler o
+   resto da linha. */
+.celulaInstante {
+  white-space: nowrap;
+}
+
+.campoBusca {
+  min-width: 260px;
+  flex: 1 1 260px;
+}
+
+.campoFiltro {
+  min-width: 190px;
+}
+
+/* Ausência de definição é o próprio dado aqui, não falta de carregamento — daí
+   aparecer como texto esmaecido em vez de célula vazia. */
+.valorAusente {
+  color: var(--mantine-color-text);
+  opacity: 0.45;
+  font-style: italic;
+}

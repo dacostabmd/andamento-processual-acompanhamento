@@ -1,4 +1,4 @@
-import { Alert, Button, Group, Modal, Select, Stack, Text, Title } from '@mantine/core'
+import { Alert, Button, Group, Modal, MultiSelect, Select, Stack, Text, Title } from '@mantine/core'
 import { useMemo, useState } from 'react'
 import {
   CAMPOS_CADASTRO_PESSOA,
@@ -9,6 +9,7 @@ import {
 } from '../../types/domain'
 import {
   CAMPOS_COM_FONTE_BITRIX,
+  CAMPOS_MULTIPLOS,
   calcularAlteracoes,
   rascunhoDaPessoa,
   rascunhoDoVinculo,
@@ -149,8 +150,30 @@ export function CadastroPessoaEdicao({
           original && original.modo === 'herdar' ? original : { modo: 'herdar' as const, id: null, nome: null }
         return { ...atual, [campo]: { ...doBitrix, modo: 'herdar' } }
       }
-      return { ...atual, [campo]: { modo, id: null, nome: null } }
+      const vazio: RascunhoVinculo = { modo, id: null, nome: null }
+      if (CAMPOS_MULTIPLOS.includes(campo)) vazio.ids = []
+      return { ...atual, [campo]: vazio }
     })
+  }
+
+  /** Troca a lista de um campo múltiplo (departamentos). Lista vazia desassocia. */
+  function definirLista(campo: CampoCadastroPessoa, ids: number[], rotulos: string[]) {
+    setRascunho((atual) =>
+      atual
+        ? {
+            ...atual,
+            [campo]: {
+              // Lista vazia é "desassociar de todos", não "voltar a herdar": quem
+              // esvazia o controle está decidindo que a pessoa não tem departamento,
+              // e herdar de volta desfaria essa decisão no próximo sync.
+              modo: ids.length === 0 ? 'desassociar' : 'definir',
+              id: ids[0] ?? null,
+              nome: rotulos[0] ?? null,
+              ids,
+            },
+          }
+        : atual,
+    )
   }
 
   const alteracoes: AlteracoesCadastro =
@@ -193,14 +216,75 @@ export function CadastroPessoaEdicao({
                     ? UFS.map((uf) => ({ value: uf, label: uf }))
                     : usuarios
 
+            // O controle vem preenchido com o valor EFETIVO, não só com o que foi
+            // definido à mão: um campo vazio sobre um dado que existe leva a pessoa
+            // a redigitar o que já estava certo, ou a salvar em cima com menos
+            // informação do que havia. Só 'desassociar' aparece vazio, porque ali o
+            // vazio É o valor.
             const valor =
-              atual.modo !== 'definir'
+              atual.modo === 'desassociar'
                 ? null
                 : campo === 'estado_uf'
                   ? atual.nome
                   : atual.id !== null
                     ? String(atual.id)
                     : null
+
+            if (CAMPOS_MULTIPLOS.includes(campo)) {
+              return (
+                <div key={campo} className={classes.campoEdicao}>
+                  <MultiSelect
+                    radius="lg"
+                    classNames={{
+                      input: classesInput.input,
+                      label: classesInput.label,
+                      section: classesInput.secao,
+                      dropdown: classesInput.dropdown,
+                      option: classesInput.option,
+                    }}
+                    label={ROTULO_CAMPO_CADASTRO[campo]}
+                    description="Uma pessoa pode estar em vários departamentos. Salvar grava esta lista na ficha do portal."
+                    placeholder={
+                      (atual.ids ?? []).length > 0 ? undefined : placeholderDoCampo(campo, atual, temFonteBitrix)
+                    }
+                    data={dados}
+                    value={(atual.ids ?? []).map(String)}
+                    disabled={!podeEditar || salvando}
+                    searchable
+                    clearable
+                    hidePickedOptions
+                    nothingFoundMessage="Nada encontrado"
+                    onChange={(escolhidos) => {
+                      const ids = escolhidos.map(Number).filter((n) => !Number.isNaN(n))
+                      definirLista(campo, ids, ids.map((id) => nomeDoDepartamento(opcoes, id)))
+                    }}
+                  />
+
+                  <Group gap="xs" mt={6} justify="space-between" wrap="wrap">
+                    <Text size="xs" className={classeDoModo(atual.modo)}>
+                      {descreverModo(campo, atual, temFonteBitrix)}
+                    </Text>
+                    {atual.modo !== 'herdar' && (
+                      <Button
+                        variant="subtle"
+                        color="gray"
+                        size="compact-xs"
+                        disabled={!podeEditar || salvando}
+                        onClick={() => trocarModo(campo, 'herdar')}
+                      >
+                        Usar os do Bitrix
+                      </Button>
+                    )}
+                  </Group>
+
+                  {original.modo === 'herdar' && (original.ids ?? []).length > 0 && atual.modo !== 'herdar' && (
+                    <Text size="xs" c="dimmed" mt={2}>
+                      No Bitrix: {(original.ids ?? []).map((id) => nomeDoDepartamento(opcoes, id)).join(', ')}
+                    </Text>
+                  )}
+                </div>
+              )
+            }
 
             return (
               <div key={campo} className={classes.campoEdicao}>
@@ -223,7 +307,11 @@ export function CadastroPessoaEdicao({
                   nothingFoundMessage="Nada encontrado"
                   onChange={(escolhido, opcao) => {
                     if (escolhido === null) {
-                      trocarModo(campo, 'herdar')
+                      // Agora que o controle abre preenchido, esvaziá-lo é um ato
+                      // deliberado. Onde há fonte no Bitrix isso significa "esta
+                      // pessoa não tem este vínculo" (desassociar); onde não há, o
+                      // único sentido possível é apagar a definição manual.
+                      trocarModo(campo, temFonteBitrix ? 'desassociar' : 'herdar')
                       return
                     }
                     if (campo === 'estado_uf') {
@@ -280,14 +368,6 @@ export function CadastroPessoaEdicao({
             </Alert>
           )}
 
-          <Alert color="blue" variant="light" title="O que isto muda, e o que não muda">
-            Estes vínculos ficam guardados no servidor do dashboard e valem para as métricas — eles
-            NÃO são escritos no Bitrix24, então a ficha da pessoa no portal continua como está. As
-            tarefas já sincronizadas são recalculadas na hora ao salvar. O departamento de estado
-            ("Andamento - SP") existe só aqui e convive com o de equipe: quem decide a equipe nas
-            métricas continua sendo o departamento de equipe.
-          </Alert>
-
           <Group justify="flex-end" gap="sm">
             <Button variant="default" onClick={onFechar} disabled={salvando}>
               Cancelar
@@ -305,6 +385,11 @@ export function CadastroPessoaEdicao({
       )}
     </Modal>
   )
+}
+
+/** Nome de um departamento pelo id, das mesmas opções que o seletor oferece. */
+function nomeDoDepartamento(opcoes: OpcoesCadastro, id: number): string {
+  return opcoes.departamentos.find((d) => d.id === id)?.nome ?? `Dep ${id}`
 }
 
 function placeholderDoCampo(

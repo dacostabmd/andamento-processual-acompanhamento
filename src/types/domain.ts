@@ -148,6 +148,13 @@ export interface VinculoEfetivo {
   id: number | null
   nome: string | null
   origem: 'bitrix' | 'cadastro' | 'desassociado' | 'ausente'
+  /**
+   * Só em `departamento`: TODOS os departamentos efetivos da pessoa, com nome.
+   * `UF_DEPARTMENT` é um array no Bitrix e quase todo mundo está em vários, então
+   * o MultiSelect precisa vir marcado com a lista inteira — exibir só o principal
+   * faria salvar apagar os outros, agora inclusive no portal.
+   */
+  itens?: Array<{ id: number; nome: string }>
 }
 
 /** Uma linha da tabela da tela de configurações. */
@@ -205,11 +212,28 @@ export interface OpcoesCadastro {
 /** Uma linha do histórico de alterações de uma pessoa. */
 export interface HistoricoCadastro {
   id: number
+  usuarioId: number
+  /** Nome da pessoa editada. Só vem na visão de auditoria (log de todas as pessoas). */
+  usuarioNome?: string | null
   campo: CampoCadastroPessoa
   valorAnterior: string | null
   valorNovo: string | null
   autorNome: string
   criadoEm: string
+}
+
+/**
+ * O que aconteceu com a escrita no portal Bitrix24 ao salvar.
+ *
+ * Chega em toda resposta de escrita porque o silêncio aqui seria enganoso: sem
+ * isto, "salvo" significaria tanto "o portal foi atualizado" quanto "o portal
+ * recusou e só o cadastro local mudou", e as duas pedem ações diferentes de quem
+ * editou.
+ */
+export interface ResultadoPortal {
+  usuarioId: number
+  situacao: 'gravado' | 'sem_permissao' | 'falhou' | 'desativado' | 'nao_aplicavel'
+  mensagem: string | null
 }
 
 /**

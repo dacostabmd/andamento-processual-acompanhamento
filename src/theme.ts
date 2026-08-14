@@ -45,6 +45,23 @@ export const theme = createTheme({
         },
       },
     },
+    // Respiro das bordas em TODO modal, definido uma vez aqui em vez de repetido
+    // em cada componente: o padrão do Mantine ('md', 16px) deixava o conteúdo
+    // encostado na borda, e resolver caso a caso garantia que o próximo modal
+    // nasceria com o problema de volta. 'lg' são 24px, e vale também para o
+    // cabeçalho, que compartilha o mesmo padding horizontal do corpo.
+    Modal: {
+      defaultProps: {
+        padding: 'lg',
+      },
+    },
+    // Mesma razão para os dois vizinhos do Modal, que herdam o mesmo padrão de 16px
+    // e aparecem nos mesmos fluxos.
+    Drawer: {
+      defaultProps: {
+        padding: 'lg',
+      },
+    },
   },
 })
 

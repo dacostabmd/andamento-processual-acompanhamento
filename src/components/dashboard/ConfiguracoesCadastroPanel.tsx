@@ -27,7 +27,13 @@ import {
   verificarPermissaoCadastro,
 } from '../../services/cadastroPessoasApi'
 import { descartarCacheTarefas } from '../../services/dashboardService'
-import type { Colaborador, OpcoesCadastro, PessoaCadastro, VinculoEfetivo } from '../../types/domain'
+import type {
+  Colaborador,
+  OpcoesCadastro,
+  PessoaCadastro,
+  ResultadoPortal,
+  VinculoEfetivo,
+} from '../../types/domain'
 import { EstadoVazio } from '../EstadoVazio'
 import { CadastroPessoaEdicao } from './CadastroPessoaEdicao'
 import type { AlteracoesCadastro } from './cadastroRascunho'
@@ -157,7 +163,7 @@ export function ConfiguracoesCadastroPanel({
     // A permissão vem do worker, e não da lista local em utils/pessoas: duas
     // cópias divergiriam, e a divergência apareceria como um 403 no salvamento
     // sem nada na tela que explicasse o motivo.
-    void verificarPermissaoCadastro(colaborador).then(setPodeEditar)
+    void verificarPermissaoCadastro(colaborador).then((p) => setPodeEditar(p.podeEditar))
   }, [aberto, carregar, colaborador])
 
   const departamentosFiltro = useMemo(() => valoresDistintos(pessoas, (p) => p.departamento), [pessoas])
@@ -186,6 +192,7 @@ export function ConfiguracoesCadastroPanel({
     try {
       let tarefasAtualizadas = 0
       let aviso: string | null = null
+      let portal: ResultadoPortal | null = null
       if (Object.keys(alteracoes.definir).length > 0) {
         const r = await salvarVinculosPessoa(
           emEdicao.usuarioId,
@@ -195,6 +202,7 @@ export function ConfiguracoesCadastroPanel({
         )
         tarefasAtualizadas += r.tarefasAtualizadas
         aviso = r.aviso ?? aviso
+        portal = r.portal ?? portal
       }
       if (alteracoes.reverter.length > 0) {
         const r = await reverterVinculosPessoa(emEdicao.usuarioId, alteracoes.reverter, colaborador)
@@ -202,18 +210,28 @@ export function ConfiguracoesCadastroPanel({
         aviso = r.aviso ?? aviso
       }
 
-      // Amarelo quando houve aviso: o cadastro foi salvo, mas as tarefas já
-      // sincronizadas não foram recalculadas — dizer "tudo certo" em verde
-      // esconderia justamente a parte que ficou pendente.
+      // A recusa do portal é dita explicitamente. Sem isto, "salvo" cobriria
+      // tanto "a ficha no Bitrix mudou" quanto "o Bitrix recusou e só o cadastro
+      // local mudou" — e quem editou o departamento de alguém precisa saber em
+      // qual dos dois está.
+      const portalRecusou = portal?.situacao === 'sem_permissao' || portal?.situacao === 'falhou'
+      const pendencia = aviso ?? (portalRecusou ? portal?.mensagem ?? null : null)
+
       notifications.show({
-        color: aviso ? 'yellow' : 'teal',
-        title: aviso ? 'Cadastro salvo, com pendência' : 'Cadastro salvo',
+        color: pendencia ? 'yellow' : 'teal',
+        title: pendencia
+          ? portalRecusou
+            ? 'Salvo aqui, mas o portal não aceitou'
+            : 'Cadastro salvo, com pendência'
+          : 'Cadastro salvo',
         message:
-          aviso ??
-          (tarefasAtualizadas > 0
-            ? `${tarefasAtualizadas} linha(s) de tarefa recalculada(s) com o novo vínculo.`
-            : 'Nenhuma tarefa no recorte atual usa esta pessoa — o vínculo vale a partir do próximo sync.'),
-        autoClose: aviso ? 12000 : undefined,
+          pendencia ??
+          (portal?.situacao === 'gravado'
+            ? `Vínculo salvo e ficha atualizada no Bitrix24. ${tarefasAtualizadas} linha(s) de tarefa recalculada(s).`
+            : tarefasAtualizadas > 0
+              ? `${tarefasAtualizadas} linha(s) de tarefa recalculada(s) com o novo vínculo.`
+              : 'Nenhuma tarefa no recorte atual usa esta pessoa — o vínculo vale a partir do próximo sync.'),
+        autoClose: pendencia ? 14000 : undefined,
       })
 
       setEmEdicao(null)
@@ -582,19 +600,37 @@ function CelulaVinculo({ vinculo }: { vinculo: VinculoEfetivo }) {
     )
   }
 
+  // Departamento é lista: a coluna mostra o PRINCIPAL (o que decide setor e
+  // equipe) e conta os demais. Sem a contagem, uma pessoa em três departamentos
+  // pareceria estar em um só, e quem abrisse o modal veria três marcados sem
+  // entender de onde vieram.
+  const extras = (vinculo.itens?.length ?? 0) - 1
+  const sufixo = extras > 0 ? ` +${extras}` : ''
+  const titulo =
+    extras > 0 ? vinculo.itens!.map((i) => i.nome).join(', ') : null
+
   if (vinculo.origem === 'cadastro') {
     return (
-      <Tooltip label="Definido nesta tela — vence o Bitrix" withArrow>
+      <Tooltip label={titulo ?? 'Definido nesta tela — vence o Bitrix'} withArrow multiline w={260}>
         <Text size="sm" component="span" className={classes.valorEditado}>
-          {vinculo.nome} ✎
+          {vinculo.nome} ✎{sufixo}
         </Text>
       </Tooltip>
     )
   }
 
-  return (
+  const conteudo = (
     <Text size="sm" component="span" className={classes.valorHerdado}>
       {vinculo.nome}
+      {sufixo}
     </Text>
+  )
+
+  return titulo ? (
+    <Tooltip label={titulo} withArrow multiline w={260}>
+      {conteudo}
+    </Tooltip>
+  ) : (
+    conteudo
   )
 }

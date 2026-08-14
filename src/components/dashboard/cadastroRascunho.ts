@@ -30,7 +30,12 @@ export interface RascunhoVinculo {
   modo: ModoVinculo
   id: number | null
   nome: string | null
+  /** Só em `departamento`: a lista completa que o MultiSelect edita. */
+  ids?: number[]
 }
+
+/** Campos que guardam uma LISTA, não um valor único. */
+export const CAMPOS_MULTIPLOS: CampoCadastroPessoa[] = ['departamento']
 
 export type Rascunho = Record<CampoCadastroPessoa, RascunhoVinculo>
 
@@ -46,11 +51,44 @@ export function vinculoDaPessoa(
   return pessoa[campo]
 }
 
+/**
+ * Traduz o vínculo efetivo no rascunho do controle.
+ *
+ * O valor (`id`/`nome`/`ids`) é preservado nos TRÊS modos, e não só em 'definir':
+ * é o que faz o controle abrir já preenchido com o que vale hoje, inclusive quando
+ * o valor é herdado do Bitrix. Um campo vazio sobre um dado que existe leva a
+ * pessoa a preencher de novo o que já estava certo — ou a salvar em cima com menos
+ * informação do que havia.
+ */
 export function rascunhoDoVinculo(vinculo?: VinculoEfetivo | null): RascunhoVinculo {
   if (!vinculo) return { modo: 'herdar', id: null, nome: null }
-  if (vinculo.origem === 'cadastro') return { modo: 'definir', id: vinculo.id, nome: vinculo.nome }
-  if (vinculo.origem === 'desassociado') return { modo: 'desassociar', id: null, nome: null }
-  return { modo: 'herdar', id: vinculo.id, nome: vinculo.nome }
+  const ids = vinculo.itens ? vinculo.itens.map((i) => i.id) : undefined
+  if (vinculo.origem === 'cadastro') {
+    return { modo: 'definir', id: vinculo.id, nome: vinculo.nome, ids }
+  }
+  if (vinculo.origem === 'desassociado') {
+    return { modo: 'desassociar', id: null, nome: null, ids: ids ? [] : undefined }
+  }
+  return { modo: 'herdar', id: vinculo.id, nome: vinculo.nome, ids }
+}
+
+/** Duas listas com os mesmos elementos, em qualquer ordem. */
+function mesmaLista(a: number[], b: number[]): boolean {
+  if (a.length !== b.length) return false
+  const conjunto = new Set(b)
+  return a.every((item) => conjunto.has(item))
+}
+
+/**
+ * A lista de um vínculo múltiplo, tolerando o formato antigo de um id só.
+ *
+ * `ids` ausente NÃO é lista vazia: é um vínculo que veio de antes de o campo ser
+ * múltiplo. Tratá-lo como vazio faria a comparação enxergar uma remoção que
+ * ninguém pediu, e o salvamento desassociaria a pessoa de todos os departamentos.
+ */
+export function listaDoRascunho(vinculo: RascunhoVinculo): number[] {
+  if (vinculo.ids) return vinculo.ids
+  return vinculo.id !== null ? [vinculo.id] : []
 }
 
 export function rascunhoDaPessoa(pessoa: PessoaCadastro): Rascunho {
@@ -80,7 +118,9 @@ export function ufDoDepartamentoEstado(nome: string | null): string | null {
 
 export interface AlteracoesCadastro {
   /** Campos a gravar (definir ou desassociar). */
-  definir: Partial<Record<CampoCadastroPessoa, { id: number | null; nome: string | null }>>
+  definir: Partial<
+    Record<CampoCadastroPessoa, { id: number | null; nome: string | null; ids?: number[] }>
+  >
   /** Campos a devolver ao Bitrix (apagar a definição manual). */
   reverter: CampoCadastroPessoa[]
 }
@@ -105,12 +145,27 @@ export function calcularAlteracoes(
   for (const campo of CAMPOS_CADASTRO_PESSOA) {
     const atual = rascunho[campo]
     const antes = rascunhoDoVinculo(vinculoDaPessoa(original, campo))
+    const multiplo = CAMPOS_MULTIPLOS.includes(campo)
 
     if (atual.modo === 'definir') {
-      const identico = antes.modo === 'definir' && antes.id === atual.id && antes.nome === atual.nome
-      if (!identico) definir[campo] = { id: atual.id, nome: atual.nome }
+      // Em campo de lista a comparação é sobre a LISTA, não sobre o id principal:
+      // trocar [149, 1070, 1252] por [1252] mantém o mesmo principal e seria lido
+      // como "nada mudou", engolindo a remoção de dois departamentos.
+      const identico = multiplo
+        ? antes.modo === 'definir' && mesmaLista(listaDoRascunho(antes), listaDoRascunho(atual))
+        : antes.modo === 'definir' && antes.id === atual.id && antes.nome === atual.nome
+      if (!identico) {
+        if (multiplo) {
+          const lista = listaDoRascunho(atual)
+          definir[campo] = { id: lista[0] ?? null, nome: atual.nome, ids: lista }
+        } else {
+          definir[campo] = { id: atual.id, nome: atual.nome }
+        }
+      }
     } else if (atual.modo === 'desassociar') {
-      if (antes.modo !== 'desassociar') definir[campo] = { id: null, nome: null }
+      if (antes.modo !== 'desassociar') {
+        definir[campo] = multiplo ? { id: null, nome: null, ids: [] } : { id: null, nome: null }
+      }
     } else if (antes.modo !== 'herdar') {
       reverter.push(campo)
     }
