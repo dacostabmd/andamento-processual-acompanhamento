@@ -163,7 +163,7 @@ export interface PessoaCadastro {
   nome: string
   equipe: EquipeAtendimento
   departamento: VinculoEfetivo
-  /** Segundo departamento: "Andamento - <UF>". Existe só no worker, nunca no Bitrix. */
+  /** Segundo departamento: um dos 27 departamentos de estado do Bitrix (ex.: "AC - ACRE"). */
   departamentoEstado: VinculoEfetivo
   supervisor: VinculoEfetivo
   gerente: VinculoEfetivo
@@ -205,7 +205,7 @@ export interface OpcoesCadastro {
    */
   usuarios: Array<{ id: number; nome: string; andamento: boolean; desligado: boolean }>
   equipes: string[]
-  /** Os 27 departamentos "Andamento - <UF>", locais ao worker. */
+  /** Os 27 departamentos de estado do Bitrix, com ID fixo (ex.: "AC - ACRE"). */
   departamentosEstado: Array<{ id: number; nome: string; uf: string }>
 }
 

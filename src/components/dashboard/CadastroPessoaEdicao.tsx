@@ -156,16 +156,14 @@ export function CadastroPessoaEdicao({
     return grupos
   }, [opcoes.departamentos])
 
-  /** Departamentos de estado: garante a presença de todos os 27 estados "Andamento - <UF>". */
+  /** Departamentos de estado: os 27 IDs reais do Bitrix, na ordem fixa de UFS_BRASIL. */
   const departamentosEstadoOptions = useMemo(() => {
-    const mapaExistentes = new Map(opcoes.departamentosEstado.map((d) => [d.nome.toUpperCase(), d]))
+    const porUf = new Map(opcoes.departamentosEstado.map((d) => [d.uf.toUpperCase(), d]))
 
-    return UFS.map((uf, idx) => {
-      const nome = `Andamento - ${uf}`
-      const existente = mapaExistentes.get(nome.toUpperCase())
-      const id = existente ? existente.id : -9000 - idx
-      return { value: String(id), label: nome }
-    })
+    return UFS.map((uf) => {
+      const existente = porUf.get(uf.toUpperCase())
+      return { value: String(existente?.id ?? ''), label: existente?.nome ?? uf }
+    }).filter((opcao) => opcao.value !== '')
   }, [opcoes.departamentosEstado])
 
   const ufsOptions = useMemo(() => UFS.map((uf) => ({ value: uf, label: uf })), [])
@@ -383,11 +381,7 @@ function obterRotuloOpcao(opcoes: OpcoesCadastro, campo: CampoCadastroPessoa, id
     return opcoes.departamentos.find((d) => d.id === id)?.nome ?? `Dep ${id}`
   }
   if (campo === 'departamento_estado') {
-    const achado = opcoes.departamentosEstado.find((d) => d.id === id)
-    if (achado) return achado.nome
-    const idx = -9000 - id
-    if (idx >= 0 && idx < UFS.length) return `Andamento - ${UFS[idx]}`
-    return `Dep Estado ${id}`
+    return opcoes.departamentosEstado.find((d) => d.id === id)?.nome ?? `Dep Estado ${id}`
   }
   return opcoes.usuarios.find((u) => u.id === id)?.nome ?? `Usuário ${id}`
 }
@@ -414,7 +408,7 @@ function placeholderDoCampo(
 ): string {
   if (atual.modo === 'desassociar') return 'Desassociado'
   if (campo === 'estado_uf') return 'Selecione as UFs'
-  if (campo === 'departamento_estado') return 'Selecione os estados (Andamento - <UF>)'
+  if (campo === 'departamento_estado') return 'Selecione os estados'
   if (campo === 'departamento') return 'Selecione as equipes'
   if (atual.modo === 'herdar' && atual.nome) return 'Herdado (digite para alterar)'
   if (temFonteBitrix) return 'Não cadastrado no Bitrix'

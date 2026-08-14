@@ -110,16 +110,16 @@ export function rascunhoDaPessoa(pessoa: PessoaCadastro): Rascunho {
 }
 
 /**
- * Sigla da UF embutida no nome de um departamento de estado ("Andamento - SP").
+ * Sigla da UF embutida no nome de um departamento de estado ("SP - SÃO PAULO").
  *
  * Serve para o modal preencher o campo de UF junto quando alguém escolhe o
  * departamento de estado: são a mesma informação dita de duas formas, e deixar os
- * dois campos discordarem na tela é convite para gravar um "Andamento - SP" com
+ * dois campos discordarem na tela é convite para gravar um "SP - SÃO PAULO" com
  * UF "RJ". O preenchimento fica VISÍVEL no rascunho antes de salvar, e pode ser
  * trocado — não é um efeito escondido.
  */
 export function ufDoDepartamentoEstado(nome: string | null): string | null {
-  const match = (nome ?? '').match(/-\s*([A-Za-z]{2})\s*$/)
+  const match = (nome ?? '').match(/^\s*([A-Za-z]{2})\s*-/)
   return match ? match[1].toUpperCase() : null
 }
 

@@ -144,27 +144,27 @@ describe('rascunhoDaPessoa', () => {
 describe('departamento de estado', () => {
   it('é um vínculo à parte: atribuí-lo não mexe no departamento de equipe', () => {
     // O ponto central do desenho. Se os dois compartilhassem o mesmo campo,
-    // escolher "Andamento - SP" tiraria a pessoa da equipe dela e a métrica da
+    // escolher "SP - SÃO PAULO" tiraria a pessoa da equipe dela e a métrica da
     // equipe cairia sem nada na tela explicando por quê.
     const p = pessoa()
     const r = comMudanca(p, {
-      departamento_estado: { modo: 'definir', id: -9024, nome: 'Andamento - SP' },
+      departamento_estado: { modo: 'definir', id: 1455, nome: 'SP - SÃO PAULO' },
     })
     expect(calcularAlteracoes(p, r)).toEqual({
-      definir: { departamento_estado: { id: -9024, nome: 'Andamento - SP' } },
+      definir: { departamento_estado: { id: 1455, nome: 'SP - SÃO PAULO' } },
       reverter: [],
     })
   })
 
   it('reverter devolve o campo ao estado de não-atribuído', () => {
-    const p = pessoa({ departamentoEstado: editado('Andamento - RJ', -9018) })
+    const p = pessoa({ departamentoEstado: editado('RJ - RIO DE JANEIRO', 1449) })
     const r = comMudanca(p, { departamento_estado: { modo: 'herdar', id: null, nome: null } })
     expect(calcularAlteracoes(p, r)).toEqual({ definir: {}, reverter: ['departamento_estado'] })
   })
 
   it('rascunhoDaPessoa lê o vínculo do campo departamentoEstado', () => {
-    const r = rascunhoDaPessoa(pessoa({ departamentoEstado: editado('Andamento - MG', -9012) }))
-    expect(r.departamento_estado).toEqual({ modo: 'definir', id: -9012, nome: 'Andamento - MG' })
+    const r = rascunhoDaPessoa(pessoa({ departamentoEstado: editado('MG - MINAS GERAIS', 1443) }))
+    expect(r.departamento_estado).toEqual({ modo: 'definir', id: 1443, nome: 'MG - MINAS GERAIS' })
   })
 })
 
@@ -224,13 +224,13 @@ describe('departamento como lista (UF_DEPARTMENT é array)', () => {
 
 describe('ufDoDepartamentoEstado', () => {
   it('extrai a sigla do nome do departamento', () => {
-    expect(ufDoDepartamentoEstado('Andamento - SP')).toBe('SP')
-    expect(ufDoDepartamentoEstado('Andamento -rj')).toBe('RJ')
+    expect(ufDoDepartamentoEstado('SP - SÃO PAULO')).toBe('SP')
+    expect(ufDoDepartamentoEstado('rj -Rio de Janeiro')).toBe('RJ')
   })
 
   it('devolve null para o que não é departamento de estado', () => {
     // Sem isto, "Andamento Simone Freitas" produziria uma UF inventada a partir das
-    // duas últimas letras de um nome próprio.
+    // duas primeiras letras de um nome próprio.
     expect(ufDoDepartamentoEstado('Andamento Simone Freitas')).toBeNull()
     expect(ufDoDepartamentoEstado(null)).toBeNull()
     expect(ufDoDepartamentoEstado('')).toBeNull()
