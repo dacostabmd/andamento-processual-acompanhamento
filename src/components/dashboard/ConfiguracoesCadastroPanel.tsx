@@ -29,6 +29,7 @@ import {
 import { descartarCacheTarefas } from '../../services/dashboardService'
 import type {
   Colaborador,
+  EquipeAtendimento,
   OpcoesCadastro,
   PessoaCadastro,
   ResultadoPortal,
@@ -37,6 +38,8 @@ import type {
 import { EstadoVazio } from '../EstadoVazio'
 import { CadastroPessoaEdicao } from './CadastroPessoaEdicao'
 import type { AlteracoesCadastro } from './cadastroRascunho'
+import { compararNumero, compararTexto, useOrdenacaoTabela } from './ordenacao'
+import { COR_POR_EQUIPE } from './tarefaApresentacao'
 import classesInput from './FiltrosPainel.module.css'
 import classes from './ConfiguracoesCadastroPanel.module.css'
 
@@ -83,12 +86,51 @@ const OPCOES_VAZIAS: OpcoesCadastro = {
   departamentosEstado: [],
 }
 
+type ColunaOrdenacaoCadastro =
+  | 'nome'
+  | 'equipe'
+  | 'departamento'
+  | 'departamentoEstado'
+  | 'supervisor'
+  | 'gerente'
+  | 'diretor'
+  | 'estadoUf'
+  | 'totalCards'
+
 function normalizar(texto: string): string {
   return texto
     .trim()
     .toLowerCase()
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '')
+}
+
+function hexToRgb(hex: string): string {
+  const limpo = hex.replace('#', '')
+  const num = parseInt(limpo, 16)
+  const r = (num >> 16) & 255
+  const g = (num >> 8) & 255
+  const b = num & 255
+  return `${r}, ${g}, ${b}`
+}
+
+function BadgeEquipe({ equipe }: { equipe: EquipeAtendimento }) {
+  const corHex = COR_POR_EQUIPE[equipe] ?? COR_POR_EQUIPE.indefinido
+  const rgb = hexToRgb(corHex)
+  return (
+    <Badge
+      size="sm"
+      style={{
+        backgroundColor: `rgba(${rgb}, 0.16)`,
+        color: corHex,
+        border: `1px solid rgba(${rgb}, 0.4)`,
+        fontWeight: 600,
+        textTransform: 'none',
+      }}
+    >
+      {equipe}
+    </Badge>
+  )
 }
 
 /** Valores distintos de um vínculo entre as pessoas carregadas, para os seletores de filtro. */
@@ -101,26 +143,6 @@ function valoresDistintos(pessoas: PessoaCadastro[], extrair: (p: PessoaCadastro
   return [...valores].sort((a, b) => a.localeCompare(b, 'pt-BR'))
 }
 
-/**
- * Tela de configurações: departamento, supervisor, gerente, diretor e Estado/UF
- * de cada pessoa que aparece nas métricas.
- *
- * As três primeiras dimensões — departamento, supervisor e UF — são justamente
- * por onde as métricas de equipe são cortadas, e as duas primeiras vêm do Bitrix
- * com cobertura incompleta (supervisor: 61% das pessoas). Gerente, diretor,
- * departamento de estado e UF de atuação não têm valor legível no portal (ver
- * docs/cadastro-pessoas-e-worker.md §1). Esta tela é a camada de correção; ela
- * grava no worker, não no Bitrix.
- *
- * A ORIGEM de cada valor aparece na tabela de propósito: um supervisor exibido
- * sem ela é indistinguível entre "o Bitrix diz isso" e "alguém digitou isso", e
- * as duas situações pedem ações opostas de quem está conferindo.
- *
- * Pessoas DESLIGADAS aparecem na lista com etiqueta, e a Situação é um filtro —
- * nunca uma remoção. Elas seguem sendo o fechador de cards antigos, e o vínculo
- * delas ainda corta métrica; esconder por padrão faria um número não fechar sem
- * nada na tela explicando quem está de fora.
- */
 export function ConfiguracoesCadastroPanel({
   aberto,
   colaborador,
@@ -138,6 +160,11 @@ export function ConfiguracoesCadastroPanel({
   const [reaplicando, setReaplicando] = useState(false)
   const [todosOsUsuarios, setTodosOsUsuarios] = useState(false)
   const [totalNoDiretorio, setTotalNoDiretorio] = useState(0)
+
+  const { ordem, alternar } = useOrdenacaoTabela<ColunaOrdenacaoCadastro>({
+    chave: 'nome',
+    direcao: 'asc',
+  })
 
   const carregar = useCallback(
     async (recarregarDiretorio = false, escopoTodos = todosOsUsuarios) => {
@@ -160,9 +187,6 @@ export function ConfiguracoesCadastroPanel({
   useEffect(() => {
     if (!aberto) return
     void carregar()
-    // A permissão vem do worker, e não da lista local em utils/pessoas: duas
-    // cópias divergiriam, e a divergência apareceria como um 403 no salvamento
-    // sem nada na tela que explicasse o motivo.
     void verificarPermissaoCadastro(colaborador).then((p) => setPodeEditar(p.podeEditar))
   }, [aberto, carregar, colaborador])
 
@@ -183,6 +207,33 @@ export function ConfiguracoesCadastroPanel({
       return true
     })
   }, [pessoas, filtros])
+
+  const ordenadas = useMemo(() => {
+    return [...filtradas].sort((a, b) => {
+      switch (ordem.chave) {
+        case 'nome':
+          return compararTexto(a.nome, b.nome, ordem.direcao)
+        case 'equipe':
+          return compararTexto(a.equipe, b.equipe, ordem.direcao)
+        case 'departamento':
+          return compararTexto(a.departamento.nome, b.departamento.nome, ordem.direcao)
+        case 'departamentoEstado':
+          return compararTexto(a.departamentoEstado.nome, b.departamentoEstado.nome, ordem.direcao)
+        case 'supervisor':
+          return compararTexto(a.supervisor.nome, b.supervisor.nome, ordem.direcao)
+        case 'gerente':
+          return compararTexto(a.gerente.nome, b.gerente.nome, ordem.direcao)
+        case 'diretor':
+          return compararTexto(a.diretor.nome, b.diretor.nome, ordem.direcao)
+        case 'estadoUf':
+          return compararTexto(a.estadoUf.nome, b.estadoUf.nome, ordem.direcao)
+        case 'totalCards':
+          return compararNumero(a.totalCards, b.totalCards, ordem.direcao)
+        default:
+          return 0
+      }
+    })
+  }, [filtradas, ordem])
 
   const desligados = useMemo(() => pessoas.filter((p) => p.desligado).length, [pessoas])
 
@@ -210,10 +261,6 @@ export function ConfiguracoesCadastroPanel({
         aviso = r.aviso ?? aviso
       }
 
-      // A recusa do portal é dita explicitamente. Sem isto, "salvo" cobriria
-      // tanto "a ficha no Bitrix mudou" quanto "o Bitrix recusou e só o cadastro
-      // local mudou" — e quem editou o departamento de alguém precisa saber em
-      // qual dos dois está.
       const portalRecusou = portal?.situacao === 'sem_permissao' || portal?.situacao === 'falhou'
       const pendencia = aviso ?? (portalRecusou ? portal?.mensagem ?? null : null)
 
@@ -236,8 +283,6 @@ export function ConfiguracoesCadastroPanel({
 
       setEmEdicao(null)
       await carregar()
-      // O snapshot em memória do dashboard ficou velho: as colunas de setor,
-      // supervisor e equipe das tarefas dessa pessoa acabaram de mudar no banco.
       descartarCacheTarefas()
       onCadastroAlterado()
     } catch (e) {
@@ -271,6 +316,31 @@ export function ConfiguracoesCadastroPanel({
     } finally {
       setReaplicando(false)
     }
+  }
+
+  function HeaderOrdenavel({
+    coluna,
+    rotulo,
+    alinhamento = 'left',
+  }: {
+    coluna: ColunaOrdenacaoCadastro
+    rotulo: string
+    alinhamento?: 'left' | 'right'
+  }) {
+    const ativo = ordem.chave === coluna
+    const seta = ativo ? (ordem.direcao === 'asc' ? ' ▲' : ' ▼') : ''
+    return (
+      <Table.Th
+        style={{ cursor: 'pointer', userSelect: 'none' }}
+        ta={alinhamento}
+        onClick={() => alternar(coluna, coluna === 'totalCards' ? 'desc' : 'asc')}
+      >
+        <Text size="xs" fw={700} c={ativo ? 'yellow' : 'dimmed'} component="span">
+          {rotulo}
+          {seta}
+        </Text>
+      </Table.Th>
+    )
   }
 
   return (
@@ -391,7 +461,7 @@ export function ConfiguracoesCadastroPanel({
                   />
                 </Tooltip>
                 <Text size="sm" c="dimmed">
-                  {filtradas.length} de {pessoas.length} pessoa(s)
+                  {ordenadas.length} de {pessoas.length} pessoa(s)
                   {totalNoDiretorio > pessoas.length && ` · ${totalNoDiretorio} no diretório`}
                 </Text>
               </Group>
@@ -442,7 +512,7 @@ export function ConfiguracoesCadastroPanel({
               <Center mih={240}>
                 <Loader />
               </Center>
-            ) : filtradas.length === 0 ? (
+            ) : ordenadas.length === 0 ? (
               <EstadoVazio
                 titulo="Nenhuma pessoa encontrada"
                 descricao="Nenhuma pessoa atende aos filtros aplicados. Ajuste a busca ou limpe os filtros."
@@ -452,25 +522,23 @@ export function ConfiguracoesCadastroPanel({
                 <Table highlightOnHover className={classes.tabela} verticalSpacing="sm">
                   <Table.Thead>
                     <Table.Tr>
-                      <Table.Th>Pessoa</Table.Th>
-                      <Table.Th>Equipe</Table.Th>
-                      <Table.Th>Departamento</Table.Th>
-                      <Table.Th>Depto. estado</Table.Th>
-                      <Table.Th>Supervisor</Table.Th>
-                      <Table.Th>Gerente</Table.Th>
-                      <Table.Th>Diretor</Table.Th>
-                      <Table.Th>UF</Table.Th>
-                      <Table.Th ta="right">Cards</Table.Th>
+                      <HeaderOrdenavel coluna="nome" rotulo="Pessoa" />
+                      <HeaderOrdenavel coluna="equipe" rotulo="Equipe" />
+                      <HeaderOrdenavel coluna="departamento" rotulo="Departamento" />
+                      <HeaderOrdenavel coluna="departamentoEstado" rotulo="Depto. estado" />
+                      <HeaderOrdenavel coluna="supervisor" rotulo="Supervisor" />
+                      <HeaderOrdenavel coluna="gerente" rotulo="Gerente" />
+                      <HeaderOrdenavel coluna="diretor" rotulo="Diretor" />
+                      <HeaderOrdenavel coluna="estadoUf" rotulo="UF" />
+                      <HeaderOrdenavel coluna="totalCards" rotulo="Tarefas" alinhamento="right" />
                       <Table.Th ta="right">Editar</Table.Th>
                     </Table.Tr>
                   </Table.Thead>
                   <Table.Tbody>
-                    {filtradas.map((pessoa) => (
+                    {ordenadas.map((pessoa) => (
                       <Table.Tr
                         key={pessoa.usuarioId}
                         className={classes.linha}
-                        // A linha inteira abre a edição — o lápis continua ali como
-                        // o controle focável pelo teclado, com rótulo próprio.
                         onClick={() => setEmEdicao(pessoa)}
                       >
                         <Table.Td className={classes.celulaPessoa}>
@@ -482,8 +550,8 @@ export function ConfiguracoesCadastroPanel({
                               <Tooltip
                                 label={
                                   pessoa.desligadoEm
-                                    ? `Saiu do portal — detectado em ${new Date(pessoa.desligadoEm).toLocaleDateString('pt-BR')}. O cadastro e os cards antigos permanecem.`
-                                    : 'Saiu do portal. O cadastro e os cards antigos permanecem.'
+                                    ? `Saiu do portal — detectado em ${new Date(pessoa.desligadoEm).toLocaleDateString('pt-BR')}. O cadastro e as tarefas antigas permanecem.`
+                                    : 'Saiu do portal. O cadastro e as tarefas antigas permanecem.'
                                 }
                                 multiline
                                 w={280}
@@ -502,13 +570,7 @@ export function ConfiguracoesCadastroPanel({
                           )}
                         </Table.Td>
                         <Table.Td>
-                          <Badge
-                            variant="light"
-                            color={pessoa.equipe === 'indefinido' ? 'gray' : 'yellow'}
-                            size="sm"
-                          >
-                            {pessoa.equipe}
-                          </Badge>
+                          <BadgeEquipe equipe={pessoa.equipe} />
                         </Table.Td>
                         <Table.Td>
                           <CelulaVinculo vinculo={pessoa.departamento} />
@@ -529,7 +591,7 @@ export function ConfiguracoesCadastroPanel({
                           <CelulaVinculo vinculo={pessoa.estadoUf} />
                         </Table.Td>
                         <Table.Td ta="right">
-                          <Text size="sm">{pessoa.totalCards}</Text>
+                          <Text size="sm" fw={500}>{pessoa.totalCards}</Text>
                         </Table.Td>
                         <Table.Td ta="right">
                           <ActionIcon
@@ -576,10 +638,7 @@ export function ConfiguracoesCadastroPanel({
 }
 
 /**
- * Uma célula de vínculo com a procedência visível. Herdado, editado à mão,
- * desassociado e ausente têm aparências distintas porque pedem ações distintas de
- * quem confere: o primeiro se corrige no portal, o segundo se revisa aqui, o
- * terceiro foi uma decisão consciente e o quarto é falta de dado.
+ * Uma célula de vínculo com a procedência visível.
  */
 function CelulaVinculo({ vinculo }: { vinculo: VinculoEfetivo }) {
   if (vinculo.origem === 'desassociado') {
@@ -600,10 +659,6 @@ function CelulaVinculo({ vinculo }: { vinculo: VinculoEfetivo }) {
     )
   }
 
-  // Departamento é lista: a coluna mostra o PRINCIPAL (o que decide setor e
-  // equipe) e conta os demais. Sem a contagem, uma pessoa em três departamentos
-  // pareceria estar em um só, e quem abrisse o modal veria três marcados sem
-  // entender de onde vieram.
   const extras = (vinculo.itens?.length ?? 0) - 1
   const sufixo = extras > 0 ? ` +${extras}` : ''
   const titulo =
