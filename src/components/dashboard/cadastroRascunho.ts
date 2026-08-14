@@ -34,8 +34,15 @@ export interface RascunhoVinculo {
   ids?: number[]
 }
 
-/** Campos que guardam uma LISTA, não um valor único. */
-export const CAMPOS_MULTIPLOS: CampoCadastroPessoa[] = ['departamento']
+/** Campos que guardam uma LISTA (MultiSelect). */
+export const CAMPOS_MULTIPLOS: CampoCadastroPessoa[] = [
+  'departamento',
+  'departamento_estado',
+  'supervisor',
+  'gerente',
+  'diretor',
+  'estado_uf',
+]
 
 export type Rascunho = Record<CampoCadastroPessoa, RascunhoVinculo>
 
@@ -145,26 +152,27 @@ export function calcularAlteracoes(
   for (const campo of CAMPOS_CADASTRO_PESSOA) {
     const atual = rascunho[campo]
     const antes = rascunhoDoVinculo(vinculoDaPessoa(original, campo))
-    const multiplo = CAMPOS_MULTIPLOS.includes(campo)
 
     if (atual.modo === 'definir') {
-      // Em campo de lista a comparação é sobre a LISTA, não sobre o id principal:
-      // trocar [149, 1070, 1252] por [1252] mantém o mesmo principal e seria lido
-      // como "nada mudou", engolindo a remoção de dois departamentos.
-      const identico = multiplo
-        ? antes.modo === 'definir' && mesmaLista(listaDoRascunho(antes), listaDoRascunho(atual))
-        : antes.modo === 'definir' && antes.id === atual.id && antes.nome === atual.nome
+      const idsAtuais = listaDoRascunho(atual)
+      const idsAntigos = listaDoRascunho(antes)
+
+      const identico =
+        antes.modo === 'definir' &&
+        (campo === 'departamento' || (atual.ids && atual.ids.length > 1)
+          ? mesmaLista(idsAntigos, idsAtuais)
+          : antes.id === atual.id && antes.nome === atual.nome)
+
       if (!identico) {
-        if (multiplo) {
-          const lista = listaDoRascunho(atual)
-          definir[campo] = { id: lista[0] ?? null, nome: atual.nome, ids: lista }
+        if (campo === 'departamento' || (atual.ids && atual.ids.length > 1)) {
+          definir[campo] = { id: idsAtuais[0] ?? null, nome: atual.nome, ids: idsAtuais }
         } else {
           definir[campo] = { id: atual.id, nome: atual.nome }
         }
       }
     } else if (atual.modo === 'desassociar') {
       if (antes.modo !== 'desassociar') {
-        definir[campo] = multiplo ? { id: null, nome: null, ids: [] } : { id: null, nome: null }
+        definir[campo] = campo === 'departamento' ? { id: null, nome: null, ids: [] } : { id: null, nome: null }
       }
     } else if (antes.modo !== 'herdar') {
       reverter.push(campo)
