@@ -106,7 +106,8 @@ export interface Tarefa {
    */
   ufFechador: string | null
   ufAtendimento: string | null
-  criadoEm?: string | null
+  /** Data de criação do card no Bitrix (CREATED_DATE). */
+  criadoEm: string | null
   comentariosCount?: number
   /** Campos personalizados de Faturamento Vigente do Bitrix24 (Valor da cobrança e Data de Pagamento) */
   valorCobranca?: number | null

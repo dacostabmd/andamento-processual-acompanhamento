@@ -48,7 +48,14 @@ export function ProjecaoTarefasInfografico({ pacotes }: ProjecaoTarefasInfografi
   const scheme = useComputedColorScheme('dark', { getInitialValueInEffect: true })
   const cores = useMemo(() => coresChrome(scheme), [scheme])
 
-  const tendencia = useMemo(() => calcularTendenciaDiaria(pacotes, new Date()), [pacotes])
+  // Considera apenas o período com dados reais disponíveis no snapshot (filtra dias zerados de fora da janela de sync)
+  const tendencia = useMemo(() => {
+    const brutos = calcularTendenciaDiaria(pacotes, new Date())
+    const primeiroIndiceComDados = brutos.findIndex((p) => p.concluidas > 0)
+    if (primeiroIndiceComDados === -1) return brutos
+    const inicio = Math.max(0, primeiroIndiceComDados - 1)
+    return brutos.slice(inicio)
+  }, [pacotes])
 
   async function aoGerarProjecao() {
     setCarregando(true)
@@ -60,7 +67,57 @@ export function ProjecaoTarefasInfografico({ pacotes }: ProjecaoTarefasInfografi
         concluidas: p.concluidas,
       }))
       const resultado = await obterProjecaoTarefas(serieDiaria)
-      setProjecao(resultado)
+
+      // Ajusta a projeção diária e semanal para considerar finais de semana e evitar valores idênticos repetidos
+      if (resultado && resultado.projecaoDiaria.length > 0) {
+        const mediaDiasUteis =
+          tendencia.length > 0
+            ? tendencia.reduce((acc, p) => acc + p.concluidas, 0) / tendencia.length
+            : 50
+
+        const projecaoAjustada = resultado.projecaoDiaria.map((p) => {
+          const dt = new Date(p.data)
+          const diaSemana = dt.getDay() // 0 = Domingo, 6 = Sábado
+          const ehFimDeSemana = diaSemana === 0 || diaSemana === 6
+          const fator = ehFimDeSemana ? 0.15 : 1.0
+          const valorBase = p.totalProjetado > 0 ? p.totalProjetado : mediaDiasUteis
+          return {
+            ...p,
+            totalProjetado: Math.round(valorBase * fator),
+          }
+        })
+
+        // Recalcula as 4 semanas com base na projeção diária ajustada aos dias úteis
+        const semanasAjustadas: Array<{ semanaLabel: string; totalProjetado: number }> = []
+        for (let i = 0; i < projecaoAjustada.length; i += 7) {
+          const fatia = projecaoAjustada.slice(i, i + 7)
+          if (fatia.length === 0) continue
+          const inicio = rotuloDeData(fatia[0].data)
+          const fim = rotuloDeData(fatia[fatia.length - 1].data)
+          const somaSemana = fatia.reduce((acc, f) => acc + f.totalProjetado, 0)
+          semanasAjustadas.push({
+            semanaLabel: `${inicio} - ${fim}`,
+            totalProjetado: somaSemana,
+          })
+        }
+
+        const narrativaCorrigida = `A projeção considera os últimos ${tendencia.length} dias de atividade real. A tendência semanal prevê uma média de ~${Math.round(
+          semanasAjustadas[0]?.totalProjetado ?? 0,
+        )} entregas por semana em dias úteis, reduzindo a carga nos finais de semana.`
+
+        setProjecao({
+          ...resultado,
+          projecaoDiaria: projecaoAjustada,
+          projecaoSemanal: semanasAjustadas.slice(0, 5),
+          narrativa: narrativaCorrigida,
+          meta: {
+            ...resultado.meta,
+            amostraDias: tendencia.length,
+          },
+        })
+      } else {
+        setProjecao(resultado)
+      }
     } catch (err) {
       setErro(err instanceof Error ? err.message : 'Não foi possível gerar a projeção.')
     } finally {
