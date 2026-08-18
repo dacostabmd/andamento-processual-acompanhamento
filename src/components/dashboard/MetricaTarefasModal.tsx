@@ -1,23 +1,13 @@
-import {
-  ActionIcon,
-  Badge,
-  Group,
-  Modal,
-  Stack,
-  Text,
-  TextInput,
-  Tooltip,
-  UnstyledButton,
-} from '@mantine/core'
+import { ActionIcon, Badge, Group, Modal, Stack, Text, TextInput, Tooltip } from '@mantine/core'
 import { useMemo, useState } from 'react'
 import { montarCaminhoTarefaBitrix, montarUrlTarefaBitrix } from '../../services/bitrixPortal'
 import { abrirNoPortal } from '../../services/bitrixSdk'
 import { STATUS_LABELS, type Tarefa } from '../../types/domain'
 import { tarefaFoiConcluidaComAtraso } from '../../utils/tarefasMetrics'
 import { BotaoExportarWhatsApp } from './BotaoExportarWhatsApp'
-import { CabecalhoOrdenavel } from './CabecalhoOrdenavel'
 import { pesoSituacao } from './ColaboradorTarefasModal'
-import { compararData, compararNumero, compararTexto, useOrdenacaoTabela } from './ordenacao'
+import { compararData, compararNumero, compararTexto } from './ordenacao'
+import { TabelaAnimadaPaginada, type ColunaTabelaAnimada } from './TabelaAnimadaPaginada'
 import { TarefaDetalheModal } from './TarefaDetalheModal'
 import { COR_POR_EQUIPE, corDoStatus, formatarData, formatarDataHora } from './tarefaApresentacao'
 import { EstadoVazio } from '../EstadoVazio'
@@ -35,10 +25,103 @@ interface MetricaTarefasModalProps {
   aoFechar: () => void
 }
 
-type ColunaMetrica = 'titulo' | 'responsavel' | 'equipe' | 'situacao' | 'prazo' | 'finalizado'
-
 function normalizarBusca(texto: string): string {
   return texto.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+}
+
+/**
+ * Colunas fora do componente: não dependem de props/estado, então não há
+ * motivo para recriá-las a cada render (a tabela já reordena e pagina por
+ * conta própria a partir de `comparar`).
+ */
+function criarColunas(aoAbrirDetalhe: (tarefa: Tarefa) => void): ColunaTabelaAnimada<Tarefa>[] {
+  return [
+    {
+      chave: 'titulo',
+      rotulo: 'Título',
+      comparar: (a, b, d) => compararTexto(a.titulo, b.titulo, d),
+      render: (tarefa) => (
+        <Text
+          size="sm"
+          lineClamp={1}
+          className="item-clicavel-hover"
+          style={{ cursor: 'pointer' }}
+          onClick={() => aoAbrirDetalhe(tarefa)}
+        >
+          {tarefa.titulo}
+        </Text>
+      ),
+    },
+    {
+      chave: 'responsavel',
+      rotulo: 'Responsável',
+      comparar: (a, b, d) =>
+        compararTexto(
+          a.responsavelAtendimentoNome || a.responsavelNome || 'Não informado',
+          b.responsavelAtendimentoNome || b.responsavelNome || 'Não informado',
+          d,
+        ),
+      render: (tarefa) => (
+        <Text size="sm" lineClamp={1} fw={500}>
+          {tarefa.responsavelAtendimentoNome || tarefa.responsavelNome || 'Não informado'}
+        </Text>
+      ),
+    },
+    {
+      chave: 'equipe',
+      rotulo: 'Equipe do Resp.',
+      comparar: (a, b, d) => compararTexto(a.equipeAtendimento, b.equipeAtendimento, d),
+      render: (tarefa) => (
+        <Badge
+          size="sm"
+          variant="light"
+          color={tarefa.equipeAtendimento === 'indefinido' ? 'gray' : undefined}
+          style={
+            tarefa.equipeAtendimento === 'indefinido'
+              ? undefined
+              : {
+                  backgroundColor: `${COR_POR_EQUIPE[tarefa.equipeAtendimento]}22`,
+                  color: COR_POR_EQUIPE[tarefa.equipeAtendimento],
+                }
+          }
+        >
+          {tarefa.equipeAtendimento}
+        </Badge>
+      ),
+    },
+    {
+      chave: 'situacao',
+      rotulo: 'Status',
+      comparar: (a, b, d) => {
+        const agora = new Date()
+        return compararNumero(pesoSituacao(a, agora), pesoSituacao(b, agora), d)
+      },
+      render: (tarefa) => (
+        <Badge
+          size="sm"
+          color={tarefaFoiConcluidaComAtraso(tarefa) ? 'orange' : corDoStatus(tarefa)}
+          variant="light"
+        >
+          {tarefaFoiConcluidaComAtraso(tarefa)
+            ? 'Concluído com atraso'
+            : STATUS_LABELS[tarefa.status]}
+        </Badge>
+      ),
+    },
+    {
+      chave: 'prazo',
+      rotulo: 'Prazo',
+      comparar: (a, b, d) => compararData(a.prazoFinal, b.prazoFinal, d),
+      render: (tarefa) => <Text size="sm">{formatarData(tarefa.prazoFinal)}</Text>,
+    },
+    {
+      chave: 'finalizado',
+      rotulo: 'Finalizado em',
+      direcaoInicial: 'desc',
+      comparar: (a, b, d) => compararData(a.finalizadoEm, b.finalizadoEm, d),
+      render: (tarefa) => <Text size="sm">{formatarDataHora(tarefa.finalizadoEm)}</Text>,
+    },
+  ]
 }
 
 /**
@@ -51,44 +134,14 @@ function normalizarBusca(texto: string): string {
 export function MetricaTarefasModal({ metrica, aoFechar }: MetricaTarefasModalProps) {
   const [tarefaDetalhe, setTarefaDetalhe] = useState<Tarefa | null>(null)
   const [busca, setBusca] = useState('')
-  const { ordem, setOrdem, alternar } = useOrdenacaoTabela<ColunaMetrica>({
-    chave: 'situacao',
-    direcao: 'asc',
-  })
 
-  const tarefasOrdenadas = useMemo(() => {
-    if (!metrica) return []
-    const agora = new Date()
-    const { chave, direcao } = ordem
-    const comparar = (a: Tarefa, b: Tarefa): number => {
-      switch (chave) {
-        case 'titulo':
-          return compararTexto(a.titulo, b.titulo, direcao)
-        case 'responsavel':
-          return compararTexto(
-            a.responsavelAtendimentoNome || a.responsavelNome || 'Não informado',
-            b.responsavelAtendimentoNome || b.responsavelNome || 'Não informado',
-            direcao,
-          )
-        case 'equipe':
-          return compararTexto(a.equipeAtendimento, b.equipeAtendimento, direcao)
-        case 'prazo':
-          return compararData(a.prazoFinal, b.prazoFinal, direcao)
-        case 'finalizado':
-          return compararData(a.finalizadoEm, b.finalizadoEm, direcao)
-        default:
-          return compararNumero(pesoSituacao(a, agora), pesoSituacao(b, agora), direcao)
-      }
-    }
-    return [...metrica.tarefas].sort(
-      (a, b) => comparar(a, b) || compararTexto(a.titulo, b.titulo, 'asc') || a.id - b.id,
-    )
-  }, [metrica, ordem])
+  const colunas = useMemo(() => criarColunas((tarefa) => setTarefaDetalhe(tarefa)), [])
 
   const tarefasFiltradas = useMemo(() => {
+    if (!metrica) return []
     const termo = normalizarBusca(busca)
-    if (!termo) return tarefasOrdenadas
-    return tarefasOrdenadas.filter((t) => {
+    if (!termo) return metrica.tarefas
+    return metrica.tarefas.filter((t) => {
       const tituloMatch = normalizarBusca(t.titulo ?? '').includes(termo)
       const respMatch = normalizarBusca(
         t.responsavelAtendimentoNome || t.responsavelNome || '',
@@ -96,7 +149,7 @@ export function MetricaTarefasModal({ metrica, aoFechar }: MetricaTarefasModalPr
       const equipeMatch = normalizarBusca(t.equipeAtendimento ?? '').includes(termo)
       return tituloMatch || respMatch || equipeMatch
     })
-  }, [tarefasOrdenadas, busca])
+  }, [metrica, busca])
 
   return (
     <>
@@ -104,10 +157,7 @@ export function MetricaTarefasModal({ metrica, aoFechar }: MetricaTarefasModalPr
         opened={metrica !== null}
         onClose={aoFechar}
         zIndex={1000}
-        onExitTransitionEnd={() => {
-          setBusca('')
-          setOrdem({ chave: 'situacao', direcao: 'asc' })
-        }}
+        onExitTransitionEnd={() => setBusca('')}
         title={metrica?.titulo ?? 'Tarefas'}
         centered
         size="auto"
@@ -125,7 +175,7 @@ export function MetricaTarefasModal({ metrica, aoFechar }: MetricaTarefasModalPr
               <BotaoExportarWhatsApp titulo={metrica.titulo} tarefas={metrica.tarefas} />
             </Group>
 
-            {tarefasOrdenadas.length === 0 ? (
+            {metrica.tarefas.length === 0 ? (
               <EstadoVazio
                 titulo="Nenhuma tarefa encontrada"
                 descricao="Não há tarefas contabilizadas para este recorte."
@@ -144,177 +194,60 @@ export function MetricaTarefasModal({ metrica, aoFechar }: MetricaTarefasModalPr
                     Nenhuma tarefa encontrada para "{busca}".
                   </Text>
                 ) : (
-                  <div className="max-h-[420px] overflow-y-auto overflow-x-auto pr-1">
-                    <table className="w-full min-w-[850px] border-collapse text-sm table-fixed">
-                      <colgroup>
-                        <col />
-                        <col className="w-44" />
-                        <col className="w-36" />
-                        <col className="w-36" />
-                        <col className="w-28" />
-                        <col className="w-32" />
-                        <col className="w-16" />
-                      </colgroup>
-                      <thead
-                        className="sticky top-0 z-10"
-                        style={{ backgroundColor: 'var(--superficie)' }}
-                      >
-                        <tr style={{ borderBottom: '1px solid var(--superficie-borda)' }}>
-                          <CabecalhoOrdenavel
-                            chave="titulo"
-                            rotulo="Título"
-                            ordem={ordem}
-                            aoOrdenar={alternar}
-                          />
-                          <CabecalhoOrdenavel
-                            chave="responsavel"
-                            rotulo="Responsável"
-                            ordem={ordem}
-                            aoOrdenar={alternar}
-                          />
-                          <CabecalhoOrdenavel
-                            chave="equipe"
-                            rotulo="Equipe do Resp."
-                            ordem={ordem}
-                            aoOrdenar={alternar}
-                          />
-                          <CabecalhoOrdenavel
-                            chave="situacao"
-                            rotulo="Status"
-                            ordem={ordem}
-                            aoOrdenar={alternar}
-                          />
-                          <CabecalhoOrdenavel
-                            chave="prazo"
-                            rotulo="Prazo"
-                            ordem={ordem}
-                            aoOrdenar={alternar}
-                          />
-                          <CabecalhoOrdenavel
-                            chave="finalizado"
-                            rotulo="Finalizado em"
-                            ordem={ordem}
-                            aoOrdenar={alternar}
-                            direcaoInicial="desc"
-                          />
-                          <th className="px-2 py-2 text-center font-semibold opacity-70">Ação</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {tarefasFiltradas.map((tarefa) => {
-                          const urlBitrix = montarUrlTarefaBitrix(
-                            tarefa.id,
-                            tarefa.projetoId,
-                            tarefa.responsavelId,
-                            tarefa.fechadoPorId,
-                            tarefa.responsavelAtendimentoId,
-                          )
-                          const caminhoBitrix = montarCaminhoTarefaBitrix(
-                            tarefa.id,
-                            tarefa.projetoId,
-                            tarefa.responsavelId,
-                            tarefa.fechadoPorId,
-                            tarefa.responsavelAtendimentoId,
-                          )
-                          return (
-                            <tr
-                              key={tarefa.id}
-                              style={{ borderBottom: '1px solid var(--superficie-borda)' }}
+                  <TabelaAnimadaPaginada
+                    dados={tarefasFiltradas}
+                    colunas={colunas}
+                    chaveLinha={(tarefa) => tarefa.id}
+                    ordenacaoInicial={{ chave: 'situacao', direcao: 'asc' }}
+                    itensPorPagina={15}
+                    colunaAcao={{
+                      rotulo: 'Ação',
+                      render: (tarefa) => {
+                        const urlBitrix = montarUrlTarefaBitrix(
+                          tarefa.id,
+                          tarefa.projetoId,
+                          tarefa.responsavelId,
+                          tarefa.fechadoPorId,
+                          tarefa.responsavelAtendimentoId,
+                        )
+                        const caminhoBitrix = montarCaminhoTarefaBitrix(
+                          tarefa.id,
+                          tarefa.projetoId,
+                          tarefa.responsavelId,
+                          tarefa.fechadoPorId,
+                          tarefa.responsavelAtendimentoId,
+                        )
+                        if (!urlBitrix || !caminhoBitrix) return null
+                        return (
+                          <Tooltip label="Abrir tarefa no Bitrix" withArrow>
+                            <ActionIcon
+                              component="button"
+                              type="button"
+                              onClick={() => abrirNoPortal(caminhoBitrix, urlBitrix)}
+                              variant="subtle"
+                              size="sm"
+                              aria-label="Abrir tarefa no Bitrix"
                             >
-                              <td className="px-2 py-2">
-                                <UnstyledButton onClick={() => setTarefaDetalhe(tarefa)}>
-                                  <Text
-                                    size="sm"
-                                    lineClamp={1}
-                                    className="item-clicavel-hover"
-                                    style={{ cursor: 'pointer' }}
-                                  >
-                                    {tarefa.titulo}
-                                  </Text>
-                                </UnstyledButton>
-                              </td>
-                              <td className="px-2 py-2">
-                                <Text size="sm" lineClamp={1} fw={500}>
-                                  {tarefa.responsavelAtendimentoNome ||
-                                    tarefa.responsavelNome ||
-                                    'Não informado'}
-                                </Text>
-                              </td>
-                              <td className="px-2 py-2">
-                                <Badge
-                                  size="sm"
-                                  variant="light"
-                                  color={
-                                    tarefa.equipeAtendimento === 'indefinido' ? 'gray' : undefined
-                                  }
-                                  style={
-                                    tarefa.equipeAtendimento === 'indefinido'
-                                      ? undefined
-                                      : {
-                                          backgroundColor: `${COR_POR_EQUIPE[tarefa.equipeAtendimento]}22`,
-                                          color: COR_POR_EQUIPE[tarefa.equipeAtendimento],
-                                        }
-                                  }
-                                >
-                                  {tarefa.equipeAtendimento}
-                                </Badge>
-                              </td>
-                              <td className="px-2 py-2">
-                                <Badge
-                                  size="sm"
-                                  color={
-                                    tarefaFoiConcluidaComAtraso(tarefa)
-                                      ? 'orange'
-                                      : corDoStatus(tarefa)
-                                  }
-                                  variant="light"
-                                >
-                                  {tarefaFoiConcluidaComAtraso(tarefa)
-                                    ? 'Concluído com atraso'
-                                    : STATUS_LABELS[tarefa.status]}
-                                </Badge>
-                              </td>
-                              <td className="px-2 py-2">
-                                <Text size="sm">{formatarData(tarefa.prazoFinal)}</Text>
-                              </td>
-                              <td className="px-2 py-2">
-                                <Text size="sm">{formatarDataHora(tarefa.finalizadoEm)}</Text>
-                              </td>
-                              <td className="px-2 py-2 text-center">
-                                {urlBitrix && caminhoBitrix && (
-                                  <Tooltip label="Abrir tarefa no Bitrix" withArrow>
-                                    <ActionIcon
-                                      component="button"
-                                      type="button"
-                                      onClick={() => abrirNoPortal(caminhoBitrix, urlBitrix)}
-                                      variant="subtle"
-                                      size="sm"
-                                      aria-label="Abrir tarefa no Bitrix"
-                                    >
-                                      <svg
-                                        width="14"
-                                        height="14"
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        strokeWidth="2"
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                      >
-                                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                                        <path d="M15 3h6v6" />
-                                        <path d="M10 14 21 3" />
-                                      </svg>
-                                    </ActionIcon>
-                                  </Tooltip>
-                                )}
-                              </td>
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
+                              <svg
+                                width="14"
+                                height="14"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                                <path d="M15 3h6v6" />
+                                <path d="M10 14 21 3" />
+                              </svg>
+                            </ActionIcon>
+                          </Tooltip>
+                        )
+                      },
+                    }}
+                  />
                 )}
               </Stack>
             )}

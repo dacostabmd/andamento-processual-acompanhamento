@@ -9,7 +9,6 @@ import {
   Text,
   TextInput,
   Tooltip,
-  UnstyledButton,
 } from '@mantine/core'
 import { UserCheck } from 'lucide-react'
 import { useMemo, useState } from 'react'
@@ -32,9 +31,9 @@ import {
 import { EstadoVazio } from '../EstadoVazio'
 import { UserAvatar } from '../UserAvatar'
 import { BotaoExportarWhatsApp } from './BotaoExportarWhatsApp'
-import { CabecalhoOrdenavel } from './CabecalhoOrdenavel'
 import { ColaboradorPerfilAvancadoModal } from './ColaboradorPerfilAvancadoModal'
-import { compararData, compararNumero, compararTexto, useOrdenacaoTabela } from './ordenacao'
+import { compararData, compararNumero, compararTexto } from './ordenacao'
+import { TabelaAnimadaPaginada, type ColunaTabelaAnimada } from './TabelaAnimadaPaginada'
 import { TarefaDetalheModal } from './TarefaDetalheModal'
 import {
   COR_POR_EQUIPE,
@@ -63,8 +62,6 @@ const SITUACOES_BREAKDOWN: Array<{ chave: keyof typeof COR_POR_SITUACAO; label: 
   { chave: 'adiadas', label: 'Adiadas' },
 ]
 
-type ColunaModal = 'situacao' | 'titulo' | 'prazo' | 'finalizado'
-
 export function pesoSituacao(t: Tarefa, agora: Date): number {
   if (tarefaEstaAtrasada(t, agora)) return 0
   if (tarefaFoiConcluidaComAtraso(t)) return 2
@@ -77,6 +74,63 @@ function normalizarBusca(texto: string): string {
   return texto.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
 }
 
+/**
+ * Colunas fora do componente: não dependem de props/estado, então não há
+ * motivo para recriá-las a cada render.
+ */
+function criarColunas(aoAbrirDetalhe: (tarefa: Tarefa) => void): ColunaTabelaAnimada<Tarefa>[] {
+  return [
+    {
+      chave: 'titulo',
+      rotulo: 'Título',
+      comparar: (a, b, d) => compararTexto(a.titulo, b.titulo, d),
+      render: (tarefa) => (
+        <Text
+          size="sm"
+          lineClamp={1}
+          className="item-clicavel-hover"
+          style={{ cursor: 'pointer' }}
+          onClick={() => aoAbrirDetalhe(tarefa)}
+        >
+          {tarefa.titulo}
+        </Text>
+      ),
+    },
+    {
+      chave: 'situacao',
+      rotulo: 'Status',
+      comparar: (a, b, d) => {
+        const agora = new Date()
+        return compararNumero(pesoSituacao(a, agora), pesoSituacao(b, agora), d)
+      },
+      render: (tarefa) => (
+        <Badge
+          size="sm"
+          color={tarefaFoiConcluidaComAtraso(tarefa) ? 'orange' : corDoStatus(tarefa)}
+          variant="light"
+        >
+          {tarefaFoiConcluidaComAtraso(tarefa)
+            ? 'Concluído com atraso'
+            : STATUS_LABELS[tarefa.status]}
+        </Badge>
+      ),
+    },
+    {
+      chave: 'prazo',
+      rotulo: 'Prazo',
+      comparar: (a, b, d) => compararData(a.prazoFinal, b.prazoFinal, d),
+      render: (tarefa) => <Text size="xs">{formatarData(tarefa.prazoFinal)}</Text>,
+    },
+    {
+      chave: 'finalizado',
+      rotulo: 'Finalizado em',
+      direcaoInicial: 'desc',
+      comparar: (a, b, d) => compararData(a.finalizadoEm, b.finalizadoEm, d),
+      render: (tarefa) => <Text size="xs">{formatarDataHora(tarefa.finalizadoEm)}</Text>,
+    },
+  ]
+}
+
 export function ColaboradorTarefasModal({
   colaborador,
   aoFechar,
@@ -86,10 +140,8 @@ export function ColaboradorTarefasModal({
   const [tarefaDetalhe, setTarefaDetalhe] = useState<Tarefa | null>(null)
   const [busca, setBusca] = useState('')
   const [modalPerfilAvancadoAberto, setModalPerfilAvancadoAberto] = useState(false)
-  const { ordem, setOrdem, alternar } = useOrdenacaoTabela<ColunaModal>({
-    chave: 'situacao',
-    direcao: 'asc',
-  })
+
+  const colunas = useMemo(() => criarColunas((tarefa) => setTarefaDetalhe(tarefa)), [])
 
   const contagem = useMemo(
     () => (colaborador ? contarSituacoes(colaborador.cards) : null),
@@ -130,36 +182,12 @@ export function ColaboradorTarefasModal({
     return { url, caminho }
   }, [pessoaId])
 
-  // Padrão: mais críticas primeiro — ajuda a achar o que precisa de atenção sem
-  // rolar tudo. As outras colunas ficam a um clique no cabeçalho.
-  const cardsOrdenados = useMemo(() => {
-    if (!colaborador) return []
-    const agora = new Date()
-    const { chave, direcao } = ordem
-    const comparar = (a: Tarefa, b: Tarefa): number => {
-      switch (chave) {
-        case 'titulo':
-          return compararTexto(a.titulo, b.titulo, direcao)
-        case 'prazo':
-          return compararData(a.prazoFinal, b.prazoFinal, direcao)
-        case 'finalizado':
-          return compararData(a.finalizadoEm, b.finalizadoEm, direcao)
-        default:
-          return compararNumero(pesoSituacao(a, agora), pesoSituacao(b, agora), direcao)
-      }
-    }
-    // Desempate por título: sem ele, tarefas com a mesma data (ou mesma
-    // situação) trocariam de lugar entre renders.
-    return [...colaborador.cards].sort(
-      (a, b) => comparar(a, b) || compararTexto(a.titulo, b.titulo, 'asc') || a.id - b.id,
-    )
-  }, [colaborador, ordem])
-
   const cardsFiltrados = useMemo(() => {
+    if (!colaborador) return []
     const termo = normalizarBusca(busca)
-    if (!termo) return cardsOrdenados
-    return cardsOrdenados.filter((t) => normalizarBusca(t.titulo).includes(termo))
-  }, [cardsOrdenados, busca])
+    if (!termo) return colaborador.cards
+    return colaborador.cards.filter((t) => normalizarBusca(t.titulo).includes(termo))
+  }, [colaborador, busca])
 
   return (
     <>
@@ -167,10 +195,7 @@ export function ColaboradorTarefasModal({
         opened={colaborador !== null}
         onClose={aoFechar}
         zIndex={1000}
-        onExitTransitionEnd={() => {
-          setBusca('')
-          setOrdem({ chave: 'situacao', direcao: 'asc' })
-        }}
+        onExitTransitionEnd={() => setBusca('')}
         title="Tarefas contabilizadas"
         centered
         size="auto"
@@ -289,7 +314,7 @@ export function ColaboradorTarefasModal({
               ))}
             </SimpleGrid>
 
-            {cardsOrdenados.length === 0 ? (
+            {colaborador.cards.length === 0 ? (
               <EstadoVazio
                 titulo="Nenhuma tarefa encontrada"
                 descricao="Não há tarefas contabilizadas para esta pessoa no recorte de filtros atual."
@@ -308,144 +333,60 @@ export function ColaboradorTarefasModal({
                     Nenhuma tarefa encontrada para "{busca}".
                   </Text>
                 ) : (
-                  <div className="max-h-[420px] overflow-y-auto overflow-x-auto pr-1">
-                    <table className="w-full min-w-[600px] border-collapse text-sm table-fixed">
-                      <colgroup>
-                        <col />
-                        <col className="w-32" />
-                        <col className="w-24" />
-                        <col className="w-32" />
-                        <col className="w-16" />
-                      </colgroup>
-                      <thead
-                        className="sticky top-0 z-10"
-                        style={{ backgroundColor: 'var(--superficie)' }}
-                      >
-                        <tr style={{ borderBottom: '1px solid var(--superficie-borda)' }}>
-                          <CabecalhoOrdenavel
-                            chave="titulo"
-                            rotulo="Título"
-                            ordem={ordem}
-                            aoOrdenar={alternar}
-                          />
-                          <CabecalhoOrdenavel
-                            chave="situacao"
-                            rotulo="Status"
-                            ordem={ordem}
-                            aoOrdenar={alternar}
-                          />
-                          {/* Prazo crescente = vencendo primeiro; finalização
-                              decrescente = entregas mais recentes primeiro. */}
-                          <CabecalhoOrdenavel
-                            chave="prazo"
-                            rotulo="Prazo"
-                            ordem={ordem}
-                            aoOrdenar={alternar}
-                          />
-                          <CabecalhoOrdenavel
-                            chave="finalizado"
-                            rotulo="Finalizado em"
-                            ordem={ordem}
-                            aoOrdenar={alternar}
-                            direcaoInicial="desc"
-                          />
-                          <th className="px-2 py-2 text-center font-semibold opacity-70">Ação</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {cardsFiltrados.map((tarefa) => {
-                          const urlBitrix = montarUrlTarefaBitrix(
-                            tarefa.id,
-                            tarefa.projetoId,
-                            tarefa.responsavelId,
-                            tarefa.fechadoPorId,
-                            tarefa.responsavelAtendimentoId,
-                          )
-                          const caminhoBitrix = montarCaminhoTarefaBitrix(
-                            tarefa.id,
-                            tarefa.projetoId,
-                            tarefa.responsavelId,
-                            tarefa.fechadoPorId,
-                            tarefa.responsavelAtendimentoId,
-                          )
-                          return (
-                            <tr
-                              key={tarefa.id}
-                              style={{ borderBottom: '1px solid var(--superficie-borda)' }}
+                  <TabelaAnimadaPaginada
+                    dados={cardsFiltrados}
+                    colunas={colunas}
+                    chaveLinha={(tarefa) => tarefa.id}
+                    ordenacaoInicial={{ chave: 'situacao', direcao: 'asc' }}
+                    itensPorPagina={15}
+                    colunaAcao={{
+                      rotulo: 'Ação',
+                      render: (tarefa) => {
+                        const urlBitrix = montarUrlTarefaBitrix(
+                          tarefa.id,
+                          tarefa.projetoId,
+                          tarefa.responsavelId,
+                          tarefa.fechadoPorId,
+                          tarefa.responsavelAtendimentoId,
+                        )
+                        const caminhoBitrix = montarCaminhoTarefaBitrix(
+                          tarefa.id,
+                          tarefa.projetoId,
+                          tarefa.responsavelId,
+                          tarefa.fechadoPorId,
+                          tarefa.responsavelAtendimentoId,
+                        )
+                        if (!urlBitrix || !caminhoBitrix) return null
+                        return (
+                          <Tooltip label="Abrir no Bitrix" withArrow>
+                            <ActionIcon
+                              component="button"
+                              type="button"
+                              onClick={() => abrirNoPortal(caminhoBitrix, urlBitrix)}
+                              variant="subtle"
+                              size="sm"
+                              aria-label="Abrir tarefa no Bitrix"
                             >
-                              <td className="px-2 py-2">
-                                <UnstyledButton onClick={() => setTarefaDetalhe(tarefa)}>
-                                  <Text
-                                    size="sm"
-                                    lineClamp={1}
-                                    className="item-clicavel-hover"
-                                    style={{ cursor: 'pointer' }}
-                                  >
-                                    {tarefa.titulo}
-                                  </Text>
-                                </UnstyledButton>
-                              </td>
-                              <td className="px-2 py-2">
-                                <Badge
-                                  size="sm"
-                                  color={
-                                    tarefaFoiConcluidaComAtraso(tarefa)
-                                      ? 'orange'
-                                      : corDoStatus(tarefa)
-                                  }
-                                  variant="light"
-                                >
-                                  {tarefaFoiConcluidaComAtraso(tarefa)
-                                    ? 'Concluído com atraso'
-                                    : STATUS_LABELS[tarefa.status]}
-                                </Badge>
-                              </td>
-                              <td className="px-2 py-2">
-                                <Text size="xs">{formatarData(tarefa.prazoFinal)}</Text>
-                              </td>
-                              <td className="px-2 py-2">
-                                <Text size="xs">{formatarDataHora(tarefa.finalizadoEm)}</Text>
-                              </td>
-                              <td className="px-2 py-2">
-                                <div className="flex items-center justify-center">
-                                  {urlBitrix && caminhoBitrix && (
-                                    <Tooltip label="Abrir no Bitrix" withArrow>
-                                      <ActionIcon
-                                        component="button"
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation()
-                                          abrirNoPortal(caminhoBitrix, urlBitrix)
-                                        }}
-                                        variant="subtle"
-                                        size="sm"
-                                        aria-label="Abrir tarefa no Bitrix"
-                                      >
-                                        <svg
-                                          width="14"
-                                          height="14"
-                                          viewBox="0 0 24 24"
-                                          fill="none"
-                                          stroke="currentColor"
-                                          strokeWidth="2"
-                                          strokeLinecap="round"
-                                          strokeLinejoin="round"
-                                        >
-                                          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                                          <path d="M15 3h6v6" />
-                                          <path d="M10 14 21 3" />
-                                        </svg>
-                                      </ActionIcon>
-                                    </Tooltip>
-                                  )}
-                                </div>
-                              </td>
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
+                              <svg
+                                width="14"
+                                height="14"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                                <path d="M15 3h6v6" />
+                                <path d="M10 14 21 3" />
+                              </svg>
+                            </ActionIcon>
+                          </Tooltip>
+                        )
+                      },
+                    }}
+                  />
                 )}
               </Stack>
             )}
