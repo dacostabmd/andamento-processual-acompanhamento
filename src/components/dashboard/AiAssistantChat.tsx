@@ -21,6 +21,13 @@ interface AiAssistantChatProps {
   /** Visão ativa na tela; repassada à IA para ela usar a mesma noção de equipe. */
   visao?: VisaoDashboard
   filtros: FiltrosDashboard
+  /**
+   * 'flutuante' (padrão): botão + janela fixos no canto da tela, como hoje.
+   * 'inline': sem botão flutuante, já aberto, ocupando 100% do contêiner pai
+   * (usado ao lado da tabela de últimas tarefas) — mesma lógica/estado, só a
+   * posição/tamanho mudam.
+   */
+  variant?: 'flutuante' | 'inline'
 }
 
 function BolinhasLoadingIA() {
@@ -194,8 +201,15 @@ function BotaoVerResultado({ quantidade, onClick }: { quantidade: number; onClic
   )
 }
 
-export function AiAssistantChat({ metricas, pacotes, filtros, visao }: AiAssistantChatProps) {
-  const [aberto, setAberto] = useState(false)
+export function AiAssistantChat({
+  metricas,
+  pacotes,
+  filtros,
+  visao,
+  variant = 'flutuante',
+}: AiAssistantChatProps) {
+  const inline = variant === 'inline'
+  const [aberto, setAberto] = useState(inline)
   const [mensagens, setMensagens] = useState<MensagemChat[]>([])
   const [textoInput, setTextoInput] = useState('')
   const [carregando, setCarregando] = useState(false)
@@ -313,90 +327,101 @@ export function AiAssistantChat({ metricas, pacotes, filtros, visao }: AiAssista
 
   return (
     <>
-      {/* Botão Acionador Flutuante (Floating Action Button) */}
-      <button
-        type="button"
-        className={classes.floatingTrigger}
-        onClick={() => setAberto((prev) => !prev)}
-        aria-label={aberto ? 'Fechar Assistente IA' : 'Abrir Assistente IA'}
-        title={aberto ? 'Fechar Assistente IA' : 'Abrir Assistente IA'}
-      >
-        {aberto ? (
-          <svg
-            width="22"
-            height="22"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-          >
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
-        ) : (
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
-            <path d="M12 2a10 10 0 0 1 10 10c0 5.523-4.477 10-10 10a9.96 9.96 0 0 1-4.587-1.112L2 22l1.112-5.413A9.96 9.96 0 0 1 2 12C2 6.477 6.477 2 12 2z" />
-            <circle cx="8.5" cy="12" r="1" fill="currentColor" />
-            <circle cx="12" cy="12" r="1" fill="currentColor" />
-            <circle cx="15.5" cy="12" r="1" fill="currentColor" />
-          </svg>
-        )}
-      </button>
+      {/* Botão Acionador Flutuante (Floating Action Button) — só na variante flutuante */}
+      {!inline && (
+        <button
+          type="button"
+          className={classes.floatingTrigger}
+          onClick={() => setAberto((prev) => !prev)}
+          aria-label={aberto ? 'Fechar Assistente IA' : 'Abrir Assistente IA'}
+          title={aberto ? 'Fechar Assistente IA' : 'Abrir Assistente IA'}
+        >
+          {aberto ? (
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          ) : (
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <path d="M12 2a10 10 0 0 1 10 10c0 5.523-4.477 10-10 10a9.96 9.96 0 0 1-4.587-1.112L2 22l1.112-5.413A9.96 9.96 0 0 1 2 12C2 6.477 6.477 2 12 2z" />
+              <circle cx="8.5" cy="12" r="1" fill="currentColor" />
+              <circle cx="12" cy="12" r="1" fill="currentColor" />
+              <circle cx="15.5" cy="12" r="1" fill="currentColor" />
+            </svg>
+          )}
+        </button>
+      )}
 
-      {/* Janela de Chat Flutuante */}
+      {/* Janela de Chat — flutuante ou acoplada, conforme `variant` */}
       <AnimatePresence>
         {aberto && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.94, y: 20 }}
+            initial={inline ? false : { opacity: 0, scale: 0.94, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.94, y: 20 }}
             transition={{ duration: 0.25, ease: 'easeOut' }}
-            className={`${classes.chatWidgetContainer} ${
-              chatExpandido ? classes.chatWidgetContainerExpandido : ''
-            }`}
+            className={
+              inline
+                ? classes.chatWidgetContainerInline
+                : `${classes.chatWidgetContainer} ${
+                    chatExpandido ? classes.chatWidgetContainerExpandido : ''
+                  }`
+            }
           >
             {/* Header */}
             <div className={classes.header}>
               <div className={classes.headerTitleGroup}>
-                <span className={classes.statusDot} />
                 <span className={classes.headerTitle}>
-                  Ajudante Virtual do Andamento Processual
+                  Assistente de IA do Andamento Processual
                 </span>
               </div>
 
-              <div className={classes.headerBadges}>
-                <button
-                  type="button"
-                  className={classes.closeButton}
-                  onClick={() => setAberto(false)}
-                  aria-label="Fechar"
-                >
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
+              {!inline && (
+                <div className={classes.headerBadges}>
+                  <button
+                    type="button"
+                    className={classes.closeButton}
+                    onClick={() => setAberto(false)}
+                    aria-label="Fechar"
                   >
-                    <line x1="18" y1="6" x2="6" y2="18" />
-                    <line x1="6" y1="6" x2="18" y2="18" />
-                  </svg>
-                </button>
-              </div>
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <line x1="18" y1="6" x2="6" y2="18" />
+                      <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Área de Mensagens */}
             <div
               className={`${classes.messagesArea} ${
-                chatExpandido ? classes.messagesAreaExpandido : ''
+                inline
+                  ? classes.messagesAreaInline
+                  : chatExpandido
+                    ? classes.messagesAreaExpandido
+                    : ''
               }`}
             >
               {mensagens.length === 0 ? (

@@ -1,0 +1,187 @@
+/* Ripples de equipe: copiados verbatim de GraficosInteligencia.module.css —
+   CSS Modules não compartilham classes entre arquivos, e este componente tem
+   seu próprio ripple-wave independente do de GraficosInteligencia.tsx. */
+
+.ripples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mantine-spacing-sm);
+  margin-bottom: var(--mantine-spacing-md);
+}
+
+.ripple {
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--superficie-borda);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: var(--mantine-font-size-sm);
+  font-weight: 500;
+  color: var(--mantine-color-text);
+  cursor: pointer;
+  background-clip: padding-box;
+  background-color: var(--superficie);
+  transition:
+    border-color 0.12s ease,
+    background-color 0.12s ease,
+    opacity 0.15s ease,
+    color 0.25s ease;
+}
+
+/* Dot indicador da cor da equipe — a única cor sólida no ripple. */
+.ripple::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+  /* --cor-equipe é injetada inline por equipe. */
+  background-color: var(--cor-equipe, var(--mantine-color-gray-6));
+}
+
+.ripple:hover {
+  filter: brightness(1.15);
+}
+
+/* Quando há uma equipe selecionada, as não-selecionadas ficam esmaecidas. */
+.rippleApagado {
+  opacity: 0.4;
+}
+
+.rippleAtivo {
+  border-color: var(--mantine-color-text);
+  background-color: var(--sombra-contraste);
+  font-weight: 700;
+}
+
+.rippleContagem {
+  opacity: 0.7;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Onda circular disparada no clique (adicionada/removida via JS). */
+.ondaRipple {
+  position: absolute;
+  border-radius: 50%;
+  transform: scale(0);
+  background-color: var(--mantine-color-text);
+  opacity: 0.4;
+  pointer-events: none;
+  animation: ripple-expand 0.6s ease-out;
+}
+
+@keyframes ripple-expand {
+  to {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ondaRipple {
+    animation: none;
+    display: none;
+  }
+}
+
+/* --- Tiles de desempenho por equipe --- */
+.grade {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--mantine-spacing-md);
+}
+
+.cartaoEquipe {
+  background-color: var(--superficie);
+  border-radius: var(--mantine-radius-md);
+  padding: var(--mantine-spacing-md);
+  border: 1px solid var(--superficie-borda);
+  border-top: 3px solid var(--cor-equipe, var(--mantine-color-gray-6));
+  box-shadow: 0 4px 16px var(--sombra-contraste);
+  transition:
+    background-color 0.25s ease,
+    border-color 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+.nomeEquipe {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dotEquipe {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: none;
+  background-color: var(--cor-equipe, var(--mantine-color-gray-6));
+}
+
+/* --- Painel de Infográficos da Equipe Selecionada --- */
+.painelDetalhamentoEquipe {
+  background-color: var(--superficie);
+  border-radius: var(--mantine-radius-md);
+  padding: var(--mantine-spacing-md);
+  border: 1px solid var(--superficie-borda);
+  border-top: 3px solid var(--cor-equipe, var(--mantine-color-dourado-4));
+  box-shadow: 0 4px 16px var(--sombra-contraste);
+}
+
+.dotEquipeGrande {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.boxInfografico {
+  background-color: var(--sombra-contraste, rgba(0, 0, 0, 0.15));
+  border: 1px solid var(--superficie-borda);
+  border-radius: var(--mantine-radius-md);
+  padding: 14px 16px;
+}
+
+.barraProgressoSegmentada {
+  display: flex;
+  height: 12px;
+  border-radius: 6px;
+  overflow: hidden;
+  background-color: rgba(255, 255, 255, 0.06);
+  gap: 2px;
+  margin-top: 8px;
+}
+
+.segmentoProgresso {
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.cardFaixaAtraso {
+  background-color: var(--superficie);
+  border: 1px solid var(--superficie-borda);
+  border-radius: var(--mantine-radius-sm);
+  padding: 10px 12px;
+  text-align: center;
+}
+
+.linhaColaboradorEquipe {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-radius: var(--mantine-radius-sm);
+  background-color: var(--superficie);
+  border: 1px solid var(--superficie-borda);
+  transition:
+    background-color 0.15s ease,
+    border-color 0.25s ease;
+}
+
+.linhaColaboradorEquipe:hover {
+  background-color: var(--superficie-borda);
+}

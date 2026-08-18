@@ -106,6 +106,11 @@ export interface Tarefa {
    */
   ufFechador: string | null
   ufAtendimento: string | null
+  criadoEm?: string | null
+  comentariosCount?: number
+  /** Campos personalizados de Faturamento Vigente do Bitrix24 (Valor da cobrança e Data de Pagamento) */
+  valorCobranca?: number | null
+  dataPagamento?: string | null
 }
 
 // ─── Cadastro de pessoas (tela de configurações) ───────────────────────────
@@ -234,6 +239,52 @@ export interface ResultadoPortal {
   usuarioId: number
   situacao: 'gravado' | 'sem_permissao' | 'falhou' | 'desativado' | 'nao_aplicavel'
   mensagem: string | null
+}
+
+// ─── Equipes (tela de configurações) ───────────────────────────────────────
+
+/**
+ * Uma equipe: departamento + supervisor + colaboradores, editada como grupo.
+ * Espelha `Equipe` em worker-nodejs-andamento/src/types.ts. Salvar uma equipe
+ * grava, por baixo dos panos, o vínculo departamento/supervisor de cada membro
+ * em `pessoas_cadastro` — as métricas continuam lendo exatamente isso.
+ */
+export interface Equipe {
+  id: number
+  /** Derivado: nome do supervisor, ou do departamento na ausência dele. */
+  nome: string
+  departamentoId: number | null
+  departamentoNome: string | null
+  supervisorId: number | null
+  supervisorNome: string | null
+  colaboradores: Array<{ id: number; nome: string }>
+  criadoEm: string
+  atualizadoEm: string
+  atualizadoPorId: number | null
+  atualizadoPorNome: string | null
+}
+
+/** Payload de criação/edição de equipe. `id` presente = edição. */
+export interface EquipeInput {
+  id?: number
+  departamentoId: number | null
+  departamentoNome: string | null
+  supervisorId: number | null
+  supervisorNome: string | null
+  colaboradores: Array<{ id: number; nome: string }>
+}
+
+/** Opções para os seletores do modal de equipe — mesmas fontes que o worker aceita gravar. */
+export interface OpcoesEquipe {
+  departamentos: Array<{
+    id: number
+    nome: string
+    andamento: boolean
+    equipe: string | null
+    estadoUf: string | null
+  }>
+  usuarios: Array<{ id: number; nome: string; andamento: boolean; desligado: boolean }>
+  departamentosEstado: Array<{ id: number; nome: string; uf: string }>
 }
 
 /**
@@ -491,6 +542,21 @@ export interface PontoTendenciaMensal {
 }
 
 /**
+ * Um ponto da série diária (por dia de prazoFinal): total concluído, e — das
+ * concluídas — a % que terminou depois do prazo (finalizadoEm > prazoFinal).
+ * Mesma leitura de PontoTendenciaMensal, em granularidade diária — usada pelo
+ * gráfico "tarefas por dia" dos últimos 30 dias.
+ */
+export interface PontoTendenciaDiaria {
+  /** Chave "AAAA-MM-DD" (ordenável como string). */
+  dia: string
+  /** Rótulo curto para o eixo (ex.: "17/08"). */
+  label: string
+  concluidas: number
+  taxaAtraso: number
+}
+
+/**
  * Modelo de dados consolidado que alimenta os gráficos da tela de inteligência.
  * Derivado dos pacotes já filtrados — recalculado a cada mudança de filtro.
  */
@@ -532,6 +598,7 @@ export interface FiltrosDashboard {
   status: FiltroStatus
   filtroPrazo: FiltroPrazo
   setor: string | null
+  setores?: string[]
   projetoId: number | null
   fechadoPorId: number | null
   responsavelId: number | null
@@ -544,6 +611,8 @@ export interface FiltrosDashboard {
   modoTaxaAtraso: 'ativas' | 'total'
   /** Quando true, TODAS as métricas consideram apenas tarefas concluídas. Quando false, consideram tarefas gerais (backlog + concluídas). */
   apenasConcluidas: boolean
+  ocultarSemResponsavel?: boolean
+  buscaTexto?: string
 }
 
 /**
@@ -566,15 +635,18 @@ export function filtrosVazios(_agora?: Date): FiltrosDashboard {
     status: 'todos',
     filtroPrazo: 'todas',
     setor: null,
+    setores: [],
     projetoId: null,
     fechadoPorId: null,
     responsavelId: null,
     prioridade: null,
     estado: null,
-    ocultarIndefinidos: true,
+    ocultarIndefinidos: false,
     ocultarForaDasEquipes: false,
     modoTaxaAtraso: 'total',
     apenasConcluidas: false,
+    ocultarSemResponsavel: false,
+    buscaTexto: '',
   }
 }
 

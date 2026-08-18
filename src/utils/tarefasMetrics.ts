@@ -13,6 +13,7 @@ import {
   type MetricasPorEquipe,
   type MetricasTarefas,
   type PacoteAtendimento,
+  type PontoTendenciaDiaria,
   type PontoTendenciaMensal,
   type RankingFechador,
   type RankingFechadores,
@@ -21,7 +22,7 @@ import {
   type VolumePorUf,
   type VolumeResponsavel,
 } from '../types/domain'
-import { equipeSupervisionadaPeloNome } from './pessoas'
+import { ehNomeDePessoa, equipeSupervisionadaPeloNome } from './pessoas'
 
 export function tarefaEstaAtrasada(tarefa: Tarefa, agora: Date): boolean {
   return (
@@ -149,12 +150,55 @@ export function aplicarFiltros(tarefas: Tarefa[], filtros: FiltrosDashboard): Ta
     if (filtros.status === 'atrasado' && !tarefaEstaAtrasada(tarefa, agora)) return false
     if (filtros.status === 'no_prazo' && !tarefaNoPrazo(tarefa, agora)) return false
     if (filtros.setor && !tarefa.fechadoPorDepartamentos.includes(filtros.setor)) return false
+    if (filtros.setores && filtros.setores.length > 0) {
+      const bateSetor = filtros.setores.some(
+        (s) =>
+          tarefa.fechadoPorDepartamentos.includes(s) ||
+          tarefa.setorAtendimento === s ||
+          tarefa.setorFechador === s,
+      )
+      if (!bateSetor) return false
+    }
     if (filtros.projetoId !== null && tarefa.projetoId !== filtros.projetoId) return false
     if (filtros.fechadoPorId !== null && tarefa.fechadoPorId !== filtros.fechadoPorId) return false
     if (filtros.responsavelId !== null && tarefa.responsavelId !== filtros.responsavelId)
       return false
     if (filtros.prioridade !== null && tarefa.prioridade !== filtros.prioridade) return false
     if (filtros.estado !== null && tarefa.estadoUf !== filtros.estado) return false
+    if (filtros.ocultarSemResponsavel) {
+      if (tarefa.responsavelId === null && tarefa.responsavelAtendimentoId === null) return false
+      if (!tarefa.responsavelNome && !tarefa.responsavelAtendimentoNome) return false
+    }
+    if (filtros.buscaTexto) {
+      const termo = filtros.buscaTexto
+        .trim()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+      if (termo) {
+        const tituloNorm = (tarefa.titulo ?? '')
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+        const respNorm = (tarefa.responsavelNome ?? '')
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+        const fechNorm = (tarefa.fechadoPorNome ?? '')
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+        const idStr = String(tarefa.id)
+        const prazoStr = tarefa.prazoFinal ? tarefa.prazoFinal.slice(0, 10) : ''
+        const match =
+          tituloNorm.includes(termo) ||
+          respNorm.includes(termo) ||
+          fechNorm.includes(termo) ||
+          idStr.includes(termo) ||
+          prazoStr.includes(termo)
+        if (!match) return false
+      }
+    }
     if (filtros.ocultarIndefinidos) {
       if (tarefa.equipeAtendimento === 'indefinido') return false
       if (tarefa.responsavelAtendimentoId === null) return false
@@ -694,6 +738,66 @@ function calcularTendenciaMensal(
   })
 }
 
+const DIAS_TENDENCIA = 30
+
+/** Chave "AAAA-MM-DD" de uma data — usada para agrupar por dia e para localizar as tarefas de um ponto da tendência diária ao clicar no gráfico. */
+export function chaveDia(data: Date): string {
+  const ano = data.getFullYear()
+  const mes = String(data.getMonth() + 1).padStart(2, '0')
+  const dia = String(data.getDate()).padStart(2, '0')
+  return `${ano}-${mes}-${dia}`
+}
+
+function rotuloDia(chave: string): string {
+  const [, mes, dia] = chave.split('-')
+  return `${dia}/${mes}`
+}
+
+/**
+ * Série dos últimos N dias (por prazoFinal) — mesmo critério de
+ * calcularTendenciaMensal (volume concluído no dia e, das concluídas com prazo
+ * naquele dia, a % que terminou depois do prazo), em granularidade diária.
+ * Alimenta o gráfico "tarefas por dia" dos últimos 30 dias.
+ */
+export function calcularTendenciaDiaria(
+  pacotes: PacoteAtendimento[],
+  agora: Date,
+  dias: number = DIAS_TENDENCIA,
+): PontoTendenciaDiaria[] {
+  const chaves: string[] = []
+  const cursor = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate())
+  for (let i = dias - 1; i >= 0; i--) {
+    const d = new Date(cursor)
+    d.setDate(d.getDate() - i)
+    chaves.push(chaveDia(d))
+  }
+
+  const porDia = new Map<string, { concluidas: number; concluidasComAtraso: number }>()
+  chaves.forEach((c) => porDia.set(c, { concluidas: 0, concluidasComAtraso: 0 }))
+
+  pacotes.forEach((pacote) => {
+    pacote.cards.forEach((card) => {
+      if (!tarefaEstaConcluida(card) || !card.finalizadoEm || !card.prazoFinal) return
+      const chave = chaveDia(new Date(card.prazoFinal))
+      const bucket = porDia.get(chave)
+      if (!bucket) return // fora da janela de dias considerada
+      bucket.concluidas += 1
+      if (new Date(card.finalizadoEm) > new Date(card.prazoFinal)) bucket.concluidasComAtraso += 1
+    })
+  })
+
+  return chaves.map((chave) => {
+    const bucket = porDia.get(chave)!
+    return {
+      dia: chave,
+      label: rotuloDia(chave),
+      concluidas: bucket.concluidas,
+      taxaAtraso:
+        bucket.concluidas === 0 ? 0 : (bucket.concluidasComAtraso / bucket.concluidas) * 100,
+    }
+  })
+}
+
 /** Agrupa as tarefas por setor (fechadoPorDepartamentos) e calcula as métricas de cada grupo. */
 export function calcularMetricasPorSetor(tarefas: Tarefa[]): MetricasPorSetor[] {
   const tarefasPorSetor = new Map<string, Tarefa[]>()
@@ -728,4 +832,133 @@ export function calcularMetricasPorEquipe(
       metricas: calcularMetricas(tarefasDaEquipe, modoTaxaAtraso),
     }
   })
+}
+
+export interface FaturamentoPorEquipe {
+  equipe: string
+  pago: number
+  pendente: number
+  total: number
+  qtdPago: number
+  qtdPendente: number
+}
+
+export interface FaturadorRanking {
+  nome: string
+  equipe: string
+  totalPago: number
+  totalPendente: number
+  qtdTarefas: number
+}
+
+export interface DadosFaturamentoVigente {
+  totalRealizado: number
+  totalPendente: number
+  totalGeral: number
+  ticketMedio: number
+  qtdPagos: number
+  qtdPendentes: number
+  porEquipe: FaturamentoPorEquipe[]
+  topFechadores: FaturadorRanking[]
+}
+
+/**
+ * Calcula os cruzamentos de Faturamento Vigente (Valor da cobrança e Data de Pagamento)
+ * com tarefas, equipes e colaboradores/fechadores.
+ */
+export function calcularFaturamentoVigente(
+  tarefas: Tarefa[],
+  visao: VisaoDashboard = 'executora',
+): DadosFaturamentoVigente {
+  let totalRealizado = 0
+  let totalPendente = 0
+  let qtdPagos = 0
+  let qtdPendentes = 0
+
+  const porEquipeMap = new Map<string, FaturamentoPorEquipe>()
+  EQUIPES_ATENDIMENTO.forEach((eq) => {
+    porEquipeMap.set(eq, {
+      equipe: eq,
+      pago: 0,
+      pendente: 0,
+      total: 0,
+      qtdPago: 0,
+      qtdPendente: 0,
+    })
+  })
+
+  const faturadoresMap = new Map<string, FaturadorRanking>()
+
+  tarefas.forEach((tarefa) => {
+    const valor = tarefa.valorCobranca ?? 0
+    if (valor <= 0) return
+
+    const equipe = equipeDaTarefa(tarefa, visao)
+    const ehPago = Boolean(tarefa.dataPagamento) || tarefaEstaConcluida(tarefa)
+
+    if (ehPago) {
+      totalRealizado += valor
+      qtdPagos += 1
+    } else {
+      totalPendente += valor
+      qtdPendentes += 1
+    }
+
+    // Agrupa por equipe
+    const dadoseq = porEquipeMap.get(equipe) ?? {
+      equipe,
+      pago: 0,
+      pendente: 0,
+      total: 0,
+      qtdPago: 0,
+      qtdPendente: 0,
+    }
+    if (ehPago) {
+      dadoseq.pago += valor
+      dadoseq.qtdPago += 1
+    } else {
+      dadoseq.pendente += valor
+      dadoseq.qtdPendente += 1
+    }
+    dadoseq.total += valor
+    porEquipeMap.set(equipe, dadoseq)
+
+    // Agrupa por fechador / colaborador
+    const nomeFechador =
+      tarefa.fechadoPorNome || tarefa.responsavelAtendimentoNome || tarefa.responsavelNome
+    if (nomeFechador && ehNomeDePessoa(nomeFechador)) {
+      const faturador = faturadoresMap.get(nomeFechador) ?? {
+        nome: nomeFechador,
+        equipe: String(equipe),
+        totalPago: 0,
+        totalPendente: 0,
+        qtdTarefas: 0,
+      }
+      if (ehPago) {
+        faturador.totalPago += valor
+      } else {
+        faturador.totalPendente += valor
+      }
+      faturador.qtdTarefas += 1
+      faturadoresMap.set(nomeFechador, faturador)
+    }
+  })
+
+  const totalGeral = totalRealizado + totalPendente
+  const ticketMedio = qtdPagos > 0 ? totalRealizado / qtdPagos : 0
+
+  const topFechadores = Array.from(faturadoresMap.values())
+    .sort((a, b) => b.totalPago - a.totalPago)
+    .slice(0, 10)
+
+  return {
+    totalRealizado,
+    totalPendente,
+    totalGeral,
+    ticketMedio,
+    qtdPagos,
+    qtdPendentes,
+    porEquipe: Array.from(porEquipeMap.values()),
+    topFechadores,
+  }
 }

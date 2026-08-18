@@ -1,13 +1,17 @@
-import { Group, Skeleton, Text } from '@mantine/core'
+import { Group, Skeleton, Text, Tooltip } from '@mantine/core'
 import { AnimatePresence, motion } from 'motion/react'
 import { useState } from 'react'
-import type { MetricasPorEquipe, MetricasTarefas } from '../../types/domain'
+import type { MetricasPorEquipe, MetricasTarefas, Tarefa } from '../../types/domain'
+import { classificarUrgenciaTarefa, tarefaEstaAtrasada } from '../../utils/tarefasMetrics'
+import type { MetricaSelecionada } from './MetricaTarefasModal'
 import classes from './MetricasCards.module.css'
 
 interface MetricasCardsProps {
   titulo: string
   metricas: MetricasTarefas | null
   metricasPorEquipe: MetricasPorEquipe[]
+  tarefasFiltradas?: Tarefa[]
+  onSelecionarMetrica?: (metrica: MetricaSelecionada) => void
 }
 
 function montarStats(metricas: MetricasTarefas) {
@@ -72,7 +76,13 @@ function montarStats(metricas: MetricasTarefas) {
   ]
 }
 
-export function MetricasCards({ titulo, metricas, metricasPorEquipe }: MetricasCardsProps) {
+export function MetricasCards({
+  titulo,
+  metricas,
+  metricasPorEquipe,
+  tarefasFiltradas = [],
+  onSelecionarMetrica,
+}: MetricasCardsProps) {
   const [grupoAtivo, setGrupoAtivo] = useState(0)
   const [direcao, setDirecao] = useState(1)
 
@@ -92,6 +102,53 @@ export function MetricasCards({ titulo, metricas, metricasPorEquipe }: MetricasC
   function irParaProximo() {
     setDirecao(1)
     setGrupoAtivo((atual) => (atual + 1) % totalGrupos)
+  }
+
+  function aoClicarMetrica(statLabel: string) {
+    if (!onSelecionarMetrica || tarefasFiltradas.length === 0) return
+    const agora = new Date()
+
+    const tarefasDoGrupo =
+      grupo === 0
+        ? tarefasFiltradas
+        : tarefasFiltradas.filter(
+            (t) => t.equipeAtendimento === metricasPorEquipe[grupo - 1].equipe,
+          )
+
+    let selecionadas: Tarefa[] = []
+    let tituloModal = statLabel
+    let subtituloModal = ''
+
+    if (statLabel === 'Em Andamento' || statLabel === 'No Prazo') {
+      selecionadas = tarefasDoGrupo.filter((t) => t.status !== 5 && !tarefaEstaAtrasada(t, agora))
+      subtituloModal = `${selecionadas.length} tarefa(s) em andamento no prazo`
+    } else if (statLabel === 'Risco de Atraso') {
+      selecionadas = tarefasDoGrupo.filter(
+        (t) => t.status !== 5 && classificarUrgenciaTarefa(t, agora) === 'ateTresDias',
+      )
+      subtituloModal = `${selecionadas.length} tarefa(s) vencendo nos próximos 3 dias`
+    } else if (statLabel === 'Atrasadas' || statLabel === 'Com Atraso') {
+      selecionadas = tarefasDoGrupo.filter((t) => t.status !== 5 && tarefaEstaAtrasada(t, agora))
+      subtituloModal = `${selecionadas.length} tarefa(s) ativas com prazo vencido`
+    } else if (statLabel === 'Taxa de Atraso') {
+      selecionadas = tarefasDoGrupo.filter((t) => t.status !== 5 && tarefaEstaAtrasada(t, agora))
+      subtituloModal = `${selecionadas.length} tarefa(s) atrasadas que compõem a taxa de atraso`
+    } else if (statLabel === 'Concluídas') {
+      selecionadas = tarefasDoGrupo.filter((t) => t.status === 5)
+      subtituloModal = `${selecionadas.length} tarefa(s) concluídas`
+    } else {
+      selecionadas = tarefasDoGrupo
+    }
+
+    if (grupo > 0) {
+      tituloModal += ` — Equipe ${metricasPorEquipe[grupo - 1].equipe}`
+    }
+
+    onSelecionarMetrica({
+      titulo: tituloModal,
+      subtitulo: subtituloModal,
+      tarefas: selecionadas,
+    })
   }
 
   return (
@@ -139,11 +196,23 @@ export function MetricasCards({ titulo, metricas, metricasPorEquipe }: MetricasC
                 style={{ display: 'flex', width: '100%' }}
               >
                 {stats.map((stat) => (
-                  <div key={stat.label} className={classes.stat}>
-                    <Text className={classes.count}>{stat.valor}</Text>
-                    <Text className={classes.title}>{stat.label}</Text>
-                    <Text className={classes.description}>{stat.descricao}</Text>
-                  </div>
+                  <Tooltip
+                    key={stat.label}
+                    label={`Clique para ver a lista de tarefas: ${stat.label}`}
+                    withArrow
+                  >
+                    <div
+                      className={classes.stat}
+                      onClick={() => aoClicarMetrica(stat.label)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => e.key === 'Enter' && aoClicarMetrica(stat.label)}
+                    >
+                      <Text className={classes.count}>{stat.valor}</Text>
+                      <Text className={classes.title}>{stat.label}</Text>
+                      <Text className={classes.description}>{stat.descricao}</Text>
+                    </div>
+                  </Tooltip>
                 ))}
               </motion.div>
             </AnimatePresence>

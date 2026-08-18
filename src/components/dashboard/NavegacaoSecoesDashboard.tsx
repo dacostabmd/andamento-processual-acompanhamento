@@ -57,11 +57,18 @@ export function NavegacaoSecoesDashboard({ secoes }: NavegacaoSecoesDashboardPro
         accentColor="#cba556"
         textColor="var(--mantine-color-dimmed)"
         markerColor="var(--mantine-color-dimmed)"
-        proximityRadius={90}
-        maxShift={18}
-        fontSize={0.95}
-        itemGap={16}
-        markerLength={36}
+        falloff="linear"
+        proximityRadius={40}
+        maxShift={16}
+        markerLength={20}
+        markerGap={0}
+        tickScale={0.18}
+        itemGap={25}
+        fontSize={1.1}
+        smoothing={80}
+        showIndex={false}
+        showMarker={false}
+        scaleTick={false}
       />
     </div>
   )

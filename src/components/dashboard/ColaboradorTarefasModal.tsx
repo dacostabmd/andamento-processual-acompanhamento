@@ -1,6 +1,8 @@
 import {
   ActionIcon,
   Badge,
+  Button,
+  Group,
   Modal,
   SimpleGrid,
   Stack,
@@ -9,6 +11,7 @@ import {
   Tooltip,
   UnstyledButton,
 } from '@mantine/core'
+import { UserCheck } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useFotosColaboradores } from '../../hooks/useFotosColaboradores'
 import {
@@ -28,7 +31,9 @@ import {
 } from '../../utils/tarefasMetrics'
 import { EstadoVazio } from '../EstadoVazio'
 import { UserAvatar } from '../UserAvatar'
+import { BotaoExportarWhatsApp } from './BotaoExportarWhatsApp'
 import { CabecalhoOrdenavel } from './CabecalhoOrdenavel'
+import { ColaboradorPerfilAvancadoModal } from './ColaboradorPerfilAvancadoModal'
 import { compararData, compararNumero, compararTexto, useOrdenacaoTabela } from './ordenacao'
 import { TarefaDetalheModal } from './TarefaDetalheModal'
 import {
@@ -42,14 +47,15 @@ import {
 export interface ColaboradorSelecionado {
   nome: string
   equipe: EquipeAtendimento
-  /** Rótulo do papel já resolvido pelo caller — ex.: "Responsável pelo atendimento" ou "Fechado por". */
-  papel: string
+  papel: 'Fechado por' | 'Responsável pelo atendimento'
   cards: Tarefa[]
 }
 
 interface ColaboradorTarefasModalProps {
   colaborador: ColaboradorSelecionado | null
   aoFechar: () => void
+  usuarioLogadoNome?: string | null
+  usuarioLogadoId?: number | null
 }
 
 const SITUACOES_BREAKDOWN: Array<{ chave: keyof typeof COR_POR_SITUACAO; label: string }> = [
@@ -59,14 +65,6 @@ const SITUACOES_BREAKDOWN: Array<{ chave: keyof typeof COR_POR_SITUACAO; label: 
 
 type ColunaModal = 'situacao' | 'titulo' | 'prazo' | 'finalizado'
 
-/**
- * Peso de criticidade: menor = mais precisa de atenção.
- *
- * Tem de separar "concluída com atraso" de "concluída" — são dois badges
- * visuais diferentes na coluna Status (laranja x verde). Antes as duas caíam
- * no mesmo peso (bastava `tarefaEstaConcluida`), então ordenar por Status
- * intercalava os dois badges em vez de agrupá-los.
- */
 export function pesoSituacao(t: Tarefa, agora: Date): number {
   if (tarefaEstaAtrasada(t, agora)) return 0
   if (tarefaFoiConcluidaComAtraso(t)) return 2
@@ -79,9 +77,15 @@ function normalizarBusca(texto: string): string {
   return texto.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
 }
 
-export function ColaboradorTarefasModal({ colaborador, aoFechar }: ColaboradorTarefasModalProps) {
+export function ColaboradorTarefasModal({
+  colaborador,
+  aoFechar,
+  usuarioLogadoNome,
+  usuarioLogadoId,
+}: ColaboradorTarefasModalProps) {
   const [tarefaDetalhe, setTarefaDetalhe] = useState<Tarefa | null>(null)
   const [busca, setBusca] = useState('')
+  const [modalPerfilAvancadoAberto, setModalPerfilAvancadoAberto] = useState(false)
   const { ordem, setOrdem, alternar } = useOrdenacaoTabela<ColunaModal>({
     chave: 'situacao',
     direcao: 'asc',
@@ -177,39 +181,56 @@ export function ColaboradorTarefasModal({ colaborador, aoFechar }: ColaboradorTa
         {colaborador && contagem && (
           <Stack gap="xl">
             <Stack gap={10}>
-              <div className="flex items-center gap-2">
-                <UserAvatar nome={colaborador.nome} fotoUrl={fotoUrl} size={45} />
-                <Text fw={700} size="lg">
-                  {colaborador.nome}
-                </Text>
-                {perfilBitrix && (
-                  <Tooltip label="Abrir perfil no Bitrix" withArrow>
-                    <ActionIcon
-                      component="button"
-                      type="button"
-                      onClick={() => abrirNoPortal(perfilBitrix.caminho, perfilBitrix.url)}
-                      variant="subtle"
-                      size="sm"
-                      aria-label="Abrir perfil no Bitrix"
-                    >
-                      <svg
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
+              <Group justify="space-between" align="center" wrap="wrap">
+                <div className="flex items-center gap-2">
+                  <UserAvatar nome={colaborador.nome} fotoUrl={fotoUrl} size={45} />
+                  <Text fw={700} size="lg">
+                    {colaborador.nome}
+                  </Text>
+                  {perfilBitrix && (
+                    <Tooltip label="Abrir perfil no Bitrix" withArrow>
+                      <ActionIcon
+                        component="button"
+                        type="button"
+                        onClick={() => abrirNoPortal(perfilBitrix.caminho, perfilBitrix.url)}
+                        variant="subtle"
+                        size="sm"
+                        aria-label="Abrir perfil no Bitrix"
                       >
-                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                        <path d="M15 3h6v6" />
-                        <path d="M10 14 21 3" />
-                      </svg>
-                    </ActionIcon>
-                  </Tooltip>
-                )}
-              </div>
+                        <svg
+                          width="14"
+                          height="14"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                          <path d="M15 3h6v6" />
+                          <path d="M10 14 21 3" />
+                        </svg>
+                      </ActionIcon>
+                    </Tooltip>
+                  )}
+                </div>
+                <Group gap="xs">
+                  <Button
+                    size="xs"
+                    color="yellow"
+                    variant="light"
+                    leftSection={<UserCheck size={14} />}
+                    onClick={() => setModalPerfilAvancadoAberto(true)}
+                  >
+                    Perfil & Métricas Avançadas
+                  </Button>
+                  <BotaoExportarWhatsApp
+                    titulo={`Tarefas - ${colaborador.nome}`}
+                    tarefas={colaborador.cards}
+                  />
+                </Group>
+              </Group>
               <Badge
                 size="sm"
                 variant="light"
@@ -294,7 +315,7 @@ export function ColaboradorTarefasModal({ colaborador, aoFechar }: ColaboradorTa
                         <col className="w-32" />
                         <col className="w-24" />
                         <col className="w-32" />
-                        <col className="w-12" />
+                        <col className="w-16" />
                       </colgroup>
                       <thead
                         className="sticky top-0 z-10"
@@ -337,11 +358,15 @@ export function ColaboradorTarefasModal({ colaborador, aoFechar }: ColaboradorTa
                             tarefa.id,
                             tarefa.projetoId,
                             tarefa.responsavelId,
+                            tarefa.fechadoPorId,
+                            tarefa.responsavelAtendimentoId,
                           )
                           const caminhoBitrix = montarCaminhoTarefaBitrix(
                             tarefa.id,
                             tarefa.projetoId,
                             tarefa.responsavelId,
+                            tarefa.fechadoPorId,
+                            tarefa.responsavelAtendimentoId,
                           )
                           return (
                             <tr
@@ -429,6 +454,14 @@ export function ColaboradorTarefasModal({ colaborador, aoFechar }: ColaboradorTa
       </Modal>
 
       <TarefaDetalheModal tarefa={tarefaDetalhe} aoFechar={() => setTarefaDetalhe(null)} />
+
+      <ColaboradorPerfilAvancadoModal
+        colaborador={colaborador}
+        aberto={modalPerfilAvancadoAberto}
+        aoFechar={() => setModalPerfilAvancadoAberto(false)}
+        usuarioLogadoNome={usuarioLogadoNome}
+        usuarioLogadoId={usuarioLogadoId}
+      />
     </>
   )
 }

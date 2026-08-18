@@ -1,10 +1,7 @@
-import { Checkbox, Grid, Group, Select, Tooltip } from '@mantine/core'
-
-import { DatePickerInput } from '@mantine/dates'
+import { Checkbox, Grid, Group, MultiSelect, Select, TextInput, Tooltip } from '@mantine/core'
 import { useEffect, useState } from 'react'
 import {
   listarColaboradoresDisponiveis,
-  listarEstadosDisponiveis,
   listarResponsaveisDisponiveis,
   listarSetoresDisponiveis,
 } from '../../services/dashboardService'
@@ -16,7 +13,6 @@ import {
   type Projeto,
 } from '../../types/domain'
 import classes from './FiltrosPainel.module.css'
-
 import { SeletorGrupos } from './SeletorGrupos'
 
 const OPCOES_STATUS: Array<{ value: FiltroStatus; label: string }> = [
@@ -68,7 +64,6 @@ export function FiltrosPainel({
   const [responsaveisDisponiveis, setResponsaveisDisponiveis] = useState<
     Array<{ id: number; nome: string }>
   >([])
-  const [estadosDisponiveis, setEstadosDisponiveis] = useState<string[]>([])
   const [ripples, setRipples] = useState<Ripple[]>([])
 
   const handleLimparFiltros = (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -119,105 +114,11 @@ export function FiltrosPainel({
     }
   }, [projetosPermitidos, gruposSelecionados])
 
-  useEffect(() => {
-    let cancelado = false
-    listarEstadosDisponiveis(filtros, projetosPermitidos, gruposSelecionados).then((estados) => {
-      if (!cancelado) setEstadosDisponiveis(estados)
-    })
-    return () => {
-      cancelado = true
-    }
-  }, [projetosPermitidos, gruposSelecionados])
-
   return (
     <div>
       <Grid align="flex-end">
-        {/* LINHA 1: Grupos de tarefas (6) + Status (3) + Prazo (3) = 12 spans */}
-        <Grid.Col span={{ base: 12, md: 6 }}>
-          <SeletorGrupos
-            projetosPermitidos={projetosPermitidos}
-            selecionados={gruposSelecionados}
-            onChange={onMudarGrupos}
-          />
-        </Grid.Col>
+        {/* Fechado por */}
         <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
-          <Select
-            radius="lg"
-            classNames={CLASSES_INPUT}
-            label="Status"
-            data={OPCOES_STATUS}
-            value={filtros.status}
-            onChange={(valor) =>
-              onChange({ ...filtros, status: (valor as FiltroStatus | null) ?? 'todos' })
-            }
-            allowDeselect={false}
-          />
-        </Grid.Col>
-        <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
-          <Select
-            radius="lg"
-            classNames={CLASSES_INPUT}
-            label="Prazo"
-            data={OPCOES_PRAZO}
-            value={filtros.filtroPrazo}
-            onChange={(valor) =>
-              onChange({ ...filtros, filtroPrazo: (valor as FiltroPrazo | null) ?? 'todas' })
-            }
-            allowDeselect={false}
-          />
-        </Grid.Col>
-
-        {/* LINHA 2: Data início (3) + Data fim (3) + Departamento (3) + Estado UF (3) = 12 spans */}
-        <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
-          <DatePickerInput
-            radius="lg"
-            classNames={CLASSES_INPUT}
-            label="Data início"
-            placeholder="Selecione a data"
-            value={filtros.dataInicio}
-            onChange={(valor) => onChange({ ...filtros, dataInicio: valor })}
-            clearable
-          />
-        </Grid.Col>
-        <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
-          <DatePickerInput
-            radius="lg"
-            classNames={CLASSES_INPUT}
-            label="Data fim"
-            placeholder="Selecione a data"
-            value={filtros.dataFim}
-            onChange={(valor) => onChange({ ...filtros, dataFim: valor })}
-            clearable
-          />
-        </Grid.Col>
-        <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
-          <Select
-            radius="lg"
-            classNames={CLASSES_INPUT}
-            label="Departamento"
-            placeholder="Todos"
-            data={setoresDisponiveis}
-            value={filtros.setor}
-            onChange={(valor) => onChange({ ...filtros, setor: valor })}
-            clearable
-          />
-        </Grid.Col>
-        <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
-          <Select
-            radius="lg"
-            classNames={CLASSES_INPUT}
-            label="Estado (UF)"
-            placeholder="Todos"
-            data={estadosDisponiveis}
-            value={filtros.estado}
-            onChange={(valor) => onChange({ ...filtros, estado: valor })}
-            searchable
-            clearable
-          />
-        </Grid.Col>
-
-        {/* LINHA 3: Fechado por (6) + Responsável (6) = 12 spans */}
-        <Grid.Col span={{ base: 12, md: 6 }}>
           <Select
             radius="lg"
             classNames={CLASSES_INPUT}
@@ -232,7 +133,9 @@ export function FiltrosPainel({
             clearable
           />
         </Grid.Col>
-        <Grid.Col span={{ base: 12, md: 6 }}>
+
+        {/* Responsável */}
+        <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
           <Select
             radius="lg"
             classNames={CLASSES_INPUT}
@@ -247,6 +150,72 @@ export function FiltrosPainel({
             clearable
           />
         </Grid.Col>
+
+        {/* Departamentos (MultiSelect) */}
+        <Grid.Col span={{ base: 12, md: 6 }}>
+          <MultiSelect
+            radius="lg"
+            classNames={CLASSES_INPUT}
+            label="Departamentos"
+            placeholder="Todos os departamentos"
+            data={setoresDisponiveis}
+            value={filtros.setores ?? []}
+            onChange={(valores) => onChange({ ...filtros, setores: valores })}
+            searchable
+            clearable
+          />
+        </Grid.Col>
+
+        {/* Status */}
+        <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
+          <Select
+            radius="lg"
+            classNames={CLASSES_INPUT}
+            label="Status"
+            data={OPCOES_STATUS}
+            value={filtros.status}
+            onChange={(valor) =>
+              onChange({ ...filtros, status: (valor as FiltroStatus | null) ?? 'todos' })
+            }
+            allowDeselect={false}
+          />
+        </Grid.Col>
+
+        {/* Prazo */}
+        <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
+          <Select
+            radius="lg"
+            classNames={CLASSES_INPUT}
+            label="Prazo"
+            data={OPCOES_PRAZO}
+            value={filtros.filtroPrazo}
+            onChange={(valor) =>
+              onChange({ ...filtros, filtroPrazo: (valor as FiltroPrazo | null) ?? 'todas' })
+            }
+            allowDeselect={false}
+          />
+        </Grid.Col>
+
+        {/* Grupo de Tarefas */}
+        <Grid.Col span={{ base: 12, md: 6 }}>
+          <SeletorGrupos
+            projetosPermitidos={projetosPermitidos}
+            selecionados={gruposSelecionados}
+            onChange={onMudarGrupos}
+          />
+        </Grid.Col>
+
+        {/* Tarefa (individual por nome, cpf ou data) */}
+        <Grid.Col span={12}>
+          <TextInput
+            radius="lg"
+            classNames={CLASSES_INPUT}
+            label="Tarefa (individual por nome, CPF ou data)"
+            placeholder="Digite para buscar por nome da tarefa, CPF, ID ou data..."
+            value={filtros.buscaTexto ?? ''}
+            onChange={(e) => onChange({ ...filtros, buscaTexto: e.currentTarget.value })}
+          />
+        </Grid.Col>
       </Grid>
 
       <Group
@@ -257,22 +226,6 @@ export function FiltrosPainel({
         className={classes.rodapeFiltros}
       >
         <Group gap="xl" wrap="wrap">
-          <Checkbox
-            classNames={{ input: classes.checkboxInput, label: classes.checkboxLabel }}
-            label="Ocultar dados indefinidos"
-            checked={filtros.ocultarIndefinidos}
-            onChange={(evento) =>
-              onChange({ ...filtros, ocultarIndefinidos: evento.currentTarget.checked })
-            }
-          />
-          <Checkbox
-            classNames={{ input: classes.checkboxInput, label: classes.checkboxLabel }}
-            label="Ocultar quem não é das equipes"
-            checked={filtros.ocultarForaDasEquipes}
-            onChange={(evento) =>
-              onChange({ ...filtros, ocultarForaDasEquipes: evento.currentTarget.checked })
-            }
-          />
           <Group gap="xs" align="center">
             <Checkbox
               classNames={{ input: classes.checkboxInput, label: classes.checkboxLabel }}
@@ -283,7 +236,7 @@ export function FiltrosPainel({
               }
             />
             <Tooltip
-              label="Quando marcado: TODAS as métricas consideram apenas tarefas concluídas. Quando desmarcado (padrão): considera tarefas gerais (backlog ativo + concluídas dos últimos 10 dias)."
+              label="Quando marcado: TODAS as métricas consideram apenas tarefas concluídas."
               multiline
               w={280}
               withArrow
@@ -308,44 +261,15 @@ export function FiltrosPainel({
               </span>
             </Tooltip>
           </Group>
-          <Group gap="xs" align="center">
-            <Checkbox
-              classNames={{ input: classes.checkboxInput, label: classes.checkboxLabel }}
-              label="Taxa de Atraso sobre Fila Ativa"
-              checked={filtros.modoTaxaAtraso === 'ativas'}
-              onChange={(evento) =>
-                onChange({
-                  ...filtros,
-                  modoTaxaAtraso: evento.currentTarget.checked ? 'ativas' : 'total',
-                })
-              }
-            />
-            <Tooltip
-              label="Fila Ativa: Calcula a % de atraso apenas sobre tarefas pendentes (Atrasadas / Ativas). Quando desmarcado, calcula sobre o Volume Total (Atrasadas / Total Geral)."
-              multiline
-              w={260}
-              withArrow
-            >
-              <span
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '18px',
-                  height: '18px',
-                  borderRadius: '50%',
-                  backgroundColor: 'var(--superficie-borda, rgba(255, 255, 255, 0.12))',
-                  color: 'var(--mantine-color-dourado-4, #cba556)',
-                  fontSize: '11px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  userSelect: 'none',
-                }}
-              >
-                ?
-              </span>
-            </Tooltip>
-          </Group>
+
+          <Checkbox
+            classNames={{ input: classes.checkboxInput, label: classes.checkboxLabel }}
+            label="Ocultar sem responsável"
+            checked={filtros.ocultarSemResponsavel ?? false}
+            onChange={(evento) =>
+              onChange({ ...filtros, ocultarSemResponsavel: evento.currentTarget.checked })
+            }
+          />
         </Group>
 
         <button

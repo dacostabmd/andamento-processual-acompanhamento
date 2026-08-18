@@ -1,0 +1,35 @@
+.cartao {
+  background-color: var(--superficie);
+  border-radius: var(--mantine-radius-md);
+  padding: var(--mantine-spacing-md);
+  color: var(--mantine-color-text);
+  border: 1px solid var(--superficie-borda);
+}
+
+.tituloCartao {
+  color: var(--mantine-color-text);
+}
+
+.subtitulo {
+  color: var(--mantine-color-text);
+  opacity: 0.7;
+  margin-bottom: var(--mantine-spacing-sm);
+}
+
+.areaGrafico {
+  position: relative;
+  height: 320px;
+}
+
+.narrativa {
+  background-color: rgba(203, 165, 86, 0.08);
+  border: 1px solid rgba(203, 165, 86, 0.3);
+  border-radius: var(--mantine-radius-md);
+  padding: var(--mantine-spacing-sm) var(--mantine-spacing-md);
+}
+
+.botaoGerar {
+  background: linear-gradient(135deg, var(--mantine-color-dourado-6), #8d6b34);
+  color: #ffffff;
+  border: none;
+}

@@ -1,8 +1,10 @@
-import { Badge, Modal, Stack, Text, TextInput } from '@mantine/core'
+import { ActionIcon, Badge, Group, Modal, Stack, Text, TextInput, Tooltip } from '@mantine/core'
+import { ExternalLink } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import type { TarefaLink } from '../../services/aiAssistantService'
-import { EQUIPES_ATENDIMENTO } from '../../types/domain'
+import { EQUIPES_ATENDIMENTO, type Tarefa } from '../../types/domain'
 import { EstadoVazio } from '../EstadoVazio'
+import { BotaoExportarWhatsApp } from './BotaoExportarWhatsApp'
 import { CabecalhoOrdenavel } from './CabecalhoOrdenavel'
 import { compararData, compararNumero, compararTexto, useOrdenacaoTabela } from './ordenacao'
 import { COR_POR_EQUIPE, formatarDataHora } from './tarefaApresentacao'
@@ -49,6 +51,40 @@ export function ResultadoTarefasModal({ tarefas, aoFechar }: Props) {
   // render quando o modal está fechado (tarefas null), e isso invalidaria a
   // memoização de `ordenadas` a cada render em vez de só quando o resultado muda.
   const lista = useMemo(() => tarefas ?? [], [tarefas])
+
+  const tarefasParaExportar = useMemo<Tarefa[]>(() => {
+    return lista.map((t) => ({
+      id: t.id,
+      titulo: t.titulo ?? '',
+      projetoId: null,
+      projetoNome: null,
+      responsavelId: null,
+      responsavelNome: t.fechadoPorNome ?? null,
+      responsavelAtendimentoId: null,
+      responsavelAtendimentoNome: t.fechadoPorNome ?? 'Não informado',
+      equipeAtendimento: (t.equipe as any) ?? 'indefinido',
+      equipeFechador: (t.equipe as any) ?? 'indefinido',
+      origemEquipeAtendimento: 'nao_atribuida',
+      fechadoPorId: null,
+      fechadoPorNome: t.fechadoPorNome ?? null,
+      setorFechador: null,
+      gestorFechadorId: null,
+      gestorFechadorNome: null,
+      setorAtendimento: null,
+      gestorAtendimentoId: null,
+      gestorAtendimentoNome: null,
+      ufFechador: null,
+      ufAtendimento: null,
+      estadoUf: null,
+      status: 5,
+      prioridade: '1',
+      prazoFinal: null,
+      criadoEm: '',
+      finalizadoEm: t.finalizadoEm ?? null,
+      comentariosCount: 0,
+      fechadoPorDepartamentos: [],
+    }))
+  }, [lista])
 
   // Colunas de detalhe só aparecem quando pelo menos uma tarefa trouxe o
   // campo: consultas antigas (ou um worker ainda não atualizado na VPS) não
@@ -105,14 +141,21 @@ export function ResultadoTarefasModal({ tarefas, aoFechar }: Props) {
         content: {
           width:
             temFechadoPor || temEquipe || temFinalizado
-              ? 'min(920px, calc(100vw - 2rem))'
-              : 'min(720px, calc(100vw - 2rem))',
+              ? 'min(960px, calc(100vw - 2rem))'
+              : 'min(760px, calc(100vw - 2rem))',
         },
       }}
       radius="md"
       transitionProps={{ transition: 'slide-up', duration: 250 }}
     >
       <Stack gap="sm">
+        <Group justify="space-between" align="center" wrap="wrap">
+          <Text size="xs" c="dimmed">
+            Exibindo {lista.length} tarefa(s) encontradas.
+          </Text>
+          <BotaoExportarWhatsApp titulo="Resultado IA" tarefas={tarefasParaExportar} />
+        </Group>
+
         <TextInput
           placeholder="Buscar por título, ID, responsável ou equipe…"
           value={busca}
@@ -130,13 +173,14 @@ export function ResultadoTarefasModal({ tarefas, aoFechar }: Props) {
           )
         ) : (
           <div className="max-h-[420px] overflow-y-auto overflow-x-auto pr-1">
-            <table className="w-full min-w-[420px] border-collapse text-sm table-fixed">
+            <table className="w-full min-w-[480px] border-collapse text-sm table-fixed">
               <colgroup>
                 <col className="w-24" />
                 <col />
                 {temFechadoPor && <col className="w-32" />}
                 {temEquipe && <col className="w-32" />}
                 {temFinalizado && <col className="w-32" />}
+                <col className="w-14" />
               </colgroup>
               <thead className="sticky top-0 z-10" style={{ backgroundColor: 'var(--superficie)' }}>
                 <tr style={{ borderBottom: '1px solid var(--superficie-borda)' }}>
@@ -177,6 +221,7 @@ export function ResultadoTarefasModal({ tarefas, aoFechar }: Props) {
                       direcaoInicial="desc"
                     />
                   )}
+                  <th className="px-2 py-2 text-center font-semibold opacity-70">Ação</th>
                 </tr>
               </thead>
               <tbody>
@@ -240,6 +285,27 @@ export function ResultadoTarefasModal({ tarefas, aoFechar }: Props) {
                           </Text>
                         </td>
                       )}
+                      <td className="px-2 py-2 text-center">
+                        {t.link ? (
+                          <Tooltip label="Abrir tarefa no Bitrix" withArrow>
+                            <ActionIcon
+                              component="a"
+                              href={t.link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              variant="subtle"
+                              size="sm"
+                              aria-label="Abrir tarefa no Bitrix"
+                            >
+                              <ExternalLink size={14} />
+                            </ActionIcon>
+                          </Tooltip>
+                        ) : (
+                          <Text size="xs" c="dimmed">
+                            —
+                          </Text>
+                        )}
+                      </td>
                     </tr>
                   )
                 })}

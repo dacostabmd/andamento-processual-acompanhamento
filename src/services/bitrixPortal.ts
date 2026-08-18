@@ -4,53 +4,51 @@
  * VITE_BITRIX_API_URL (webhook REST com token) — opcional, sem ela os links
  * simplesmente não aparecem.
  */
-function basePortalUrl(): string | null {
+function basePortalUrl(): string {
   const bruta = import.meta.env.VITE_BITRIX_PORTAL_URL?.trim()
-  if (!bruta) return null
+  if (!bruta) return 'https://advocaciadias.bitrix24.com.br'
   return bruta.endsWith('/') ? bruta.slice(0, -1) : bruta
 }
 
 /**
- * Caminho (sem domínio) de uma tarefa específica no Bitrix24, ou null se
- * VITE_BITRIX_PORTAL_URL não estiver configurada. O Bitrix não tem uma rota
- * curta universal por ID — tarefas de grupo de trabalho (GROUP_ID, aqui
- * `projetoId`) usam `/workgroups/group/{id}/tasks/task/view/{id}/`, e tarefas
- * pessoais (sem grupo) usam `/company/personal/user/{RESPONSIBLE_ID}/tasks/task/view/{id}/`.
- * Usar `user/0` como placeholder ou a rota curta sozinha resulta em
- * ERROR_METHOD_NOT_FOUND — confirmado com URLs reais do portal do usuário.
+ * Caminho (sem domínio) de uma tarefa específica no Bitrix24. O Bitrix usa
+ * `/workgroups/group/{id}/tasks/task/view/{id}/` para tarefas de grupo e
+ * `/company/personal/user/{RESPONSIBLE_ID}/tasks/task/view/{id}/` para pessoais.
  */
 export function montarCaminhoTarefaBitrix(
   tarefaId: number,
-  projetoId: number | null,
-  responsavelId: number | null,
-): string | null {
+  projetoId?: number | null,
+  responsavelId?: number | null,
+  fechadoPorId?: number | null,
+  responsavelAtendimentoId?: number | null,
+): string {
   if (projetoId) return `/workgroups/group/${projetoId}/tasks/task/view/${tarefaId}/`
-  if (responsavelId) return `/company/personal/user/${responsavelId}/tasks/task/view/${tarefaId}/`
-  return null
+  const userId = responsavelId || responsavelAtendimentoId || fechadoPorId || 1
+  return `/company/personal/user/${userId}/tasks/task/view/${tarefaId}/`
 }
 
-/** Caminho (sem domínio) da página de perfil do usuário no Bitrix24, ou null se não houver ID. */
+/** Caminho (sem domínio) da página de perfil do usuário no Bitrix24. */
 export function montarCaminhoPerfilBitrix(usuarioId: number | null): string | null {
   if (!usuarioId) return null
   return `/company/personal/user/${usuarioId}/`
 }
 
-/**
- * Deep-link absoluto (com domínio) para uma tarefa específica, ou null se
- * VITE_BITRIX_PORTAL_URL não estiver configurada. Usado como `href` do link —
- * funciona ao copiar/colar ou abrir fora do iframe do Bitrix24. DENTRO do
- * iframe, prefira abrir via BX24.openPath (ver bitrixSdk.ts abrirNoPortal),
- * que usa o caminho relativo e evita o BX24 reescrever a URL para passar pela
- * rota REST autenticada.
- */
+/** Deep-link absoluto (com domínio) para uma tarefa específica. */
 export function montarUrlTarefaBitrix(
   tarefaId: number,
-  projetoId: number | null,
-  responsavelId: number | null,
-): string | null {
+  projetoId?: number | null,
+  responsavelId?: number | null,
+  fechadoPorId?: number | null,
+  responsavelAtendimentoId?: number | null,
+): string {
   const base = basePortalUrl()
-  const caminho = montarCaminhoTarefaBitrix(tarefaId, projetoId, responsavelId)
-  if (!base || !caminho) return null
+  const caminho = montarCaminhoTarefaBitrix(
+    tarefaId,
+    projetoId,
+    responsavelId,
+    fechadoPorId,
+    responsavelAtendimentoId,
+  )
   return `${base}${caminho}`
 }
 

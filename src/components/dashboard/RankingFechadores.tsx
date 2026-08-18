@@ -270,10 +270,7 @@ function LinhaFechador({
 
   return (
     <tr style={{ borderBottom: '1px solid var(--superficie-borda)' }}>
-      <td className="px-2 py-2 tabular-nums opacity-60">
-        {/* A posição só é significativa quando a ordenação é por volume. */}
-        {ordenadoPorVolume ? posicao : '–'}
-      </td>
+      <td className="px-2 py-2 tabular-nums font-semibold opacity-70 text-xs">{posicao}º</td>
       <td className="px-2 py-2">
         <UnstyledButton
           onClick={() =>
@@ -286,6 +283,9 @@ function LinhaFechador({
           }
         >
           <Group gap="xs" wrap="nowrap" align="center">
+            <Text size="xs" fw={700} c="dimmed" style={{ minWidth: 24, textAlign: 'right' }}>
+              {posicao}º
+            </Text>
             <UserAvatar nome={linha.nome} fotoUrl={fotoUrl} size={35} />
             <Text
               size="sm"

@@ -31,6 +31,7 @@ import {
   tarefaEstaConcluida,
   tarefasDaPessoa,
 } from '../../utils/tarefasMetrics'
+import { dispararOnda } from '../../utils/rippleEffect'
 import { EstadoVazio } from '../EstadoVazio'
 import type { ColaboradorSelecionado } from './ColaboradorTarefasModal'
 import type { MetricaSelecionada } from './MetricaTarefasModal'
@@ -143,20 +144,6 @@ function equipesComCards(dados: InteligenciaDados): EquipeAtendimento[] {
     const linha = dados.porEquipe.find((e) => e.equipe === equipe)
     return linha ? linha.contagem.total > 0 : false
   })
-}
-
-/** Dispara a onda circular do ripple no ponto do clique. */
-function dispararOnda(evento: React.MouseEvent<HTMLButtonElement>) {
-  const botao = evento.currentTarget
-  const onda = document.createElement('span')
-  const tamanho = Math.max(botao.clientWidth, botao.clientHeight)
-  const rect = botao.getBoundingClientRect()
-  onda.className = classes.ondaRipple
-  onda.style.width = onda.style.height = `${tamanho}px`
-  onda.style.left = `${evento.clientX - rect.left - tamanho / 2}px`
-  onda.style.top = `${evento.clientY - rect.top - tamanho / 2}px`
-  botao.appendChild(onda)
-  onda.addEventListener('animationend', () => onda.remove())
 }
 
 export function GraficosInteligencia({
@@ -531,7 +518,7 @@ export function GraficosInteligencia({
                 }`}
                 style={{ ['--cor-equipe' as string]: COR_POR_EQUIPE[equipe] }}
                 onClick={(e) => {
-                  dispararOnda(e)
+                  dispararOnda(e, classes.ondaRipple)
                   setEquipeSelecionada((atual) => (atual === equipe ? null : equipe))
                 }}
               >

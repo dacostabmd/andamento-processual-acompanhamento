@@ -82,6 +82,58 @@ export function equipeSupervisionadaPeloNome(
 const IDS_SUPERUSUARIOS = new Set([9129, 26471])
 
 /**
+ * Um "slot" de supervisor exibido nos ícones do canto superior esquerdo —
+ * camada de APRESENTAÇÃO sobre EQUIPES_ATENDIMENTO, não um dado novo.
+ *
+ * Cinthia Filgueiras e Simone Freitas foram desligadas em 2026-08-18; Handerson
+ * Salles assume o setor delas até segunda ordem. Por pedido explícito do
+ * usuário, isso NÃO mexe em departamento/UF_HEAD/equipe_atendimento — os dados
+ * e o histórico de cada uma das duas equipes continuam exatamente como são
+ * hoje (cada colaborador com o mesmo departamento). O que muda é só a vitrine:
+ * um slot "Handerson Salles" que reúne visualmente as duas equipes antigas num
+ * ícone e painel só, ao lado dos slots (inalterados) de Quézia Karen e Lorena
+ * Pontes.
+ */
+export interface SlotSupervisor {
+  chave: string
+  rotulo: string
+  equipes: readonly EquipeAtendimento[]
+  /** ID Bitrix fixo para a foto do ícone — só o slot do Handerson precisa, pois
+   * ele não é o UF_HEAD de nenhuma das duas equipes (ver useSupervisorIdPorEquipe). */
+  fotoUsuarioId?: number
+}
+
+export const SLOTS_SUPERVISOR: readonly SlotSupervisor[] = [
+  {
+    chave: 'handerson',
+    rotulo: 'Handerson Salles',
+    equipes: ['Cinthia Filgueiras', 'Simone Freitas'],
+    fotoUsuarioId: 9129,
+  },
+  { chave: 'quezia-karen', rotulo: 'Quézia Karen', equipes: ['Quézia Karen'] },
+  { chave: 'lorena-pontes', rotulo: 'Lorena Pontes', equipes: ['Lorena Pontes'] },
+]
+
+/**
+ * Slot cujo rótulo bate com o nome informado — reconhecimento por nome do
+ * usuário logado, equivalente a `equipeSupervisionadaPeloNome` mas para a
+ * vitrine dos 3 slots (inclui "Handerson" sozinho, já que o rótulo completo é
+ * "Handerson Salles" e o Bitrix pode devolver o nome de formas diferentes).
+ *
+ * Não reaproveita `equipeSupervisionadaPeloNome`: aquela função também resolve
+ * a equipe de uma tarefa em `equipeExecutoraDaTarefa` (tarefasMetrics.ts) — é
+ * lógica de métrica ativa que o pedido do usuário foi explícito em não tocar.
+ */
+export function identificarSlotSupervisorPeloNome(
+  nome: string | null | undefined,
+): SlotSupervisor | null {
+  if (!nome) return null
+  const alvo = normalizar(nome)
+  if (alvo.includes('handerson')) return SLOTS_SUPERVISOR[0]
+  return SLOTS_SUPERVISOR.find((slot) => normalizar(slot.rotulo) === alvo) ?? null
+}
+
+/**
  * `true` se o usuário for o administrador Caio Marques ou um dos IDs em
  * IDS_SUPERUSUARIOS (acesso total às 4 equipes). Reconhecimento por ID é
  * preferido por ser estável a variações de nome/acento; nome fica como
@@ -179,4 +231,85 @@ export function idsColaboradoresDasTarefas(tarefas: Tarefa[]): number[] {
     })
   })
   return Array.from(ids)
+}
+
+/**
+ * Permissão para visualizar/gerenciar observações e comentários do perfil avançado do colaborador.
+ * Permitidos:
+ *  - Bruno Durão (ID: 1)
+ *  - Caio Marques
+ *  - Handerson Salles (ID: 9129)
+ *  - Hellen / Helen Gomes (ID: 26471)
+ *  - Supervisores de Equipe (Quézia Karen, Lorena Pontes, Simone Freitas, Cinthia Filgueiras)
+ */
+export function podeVerComentariosPerfilColaborador(
+  nome: string | null | undefined,
+  id?: number | null,
+): boolean {
+  if (id === 1) return true
+  if (id != null && (IDS_SUPERUSUARIOS.has(id) || IDS_GESTAO_CADASTRO.has(id))) return true
+  if (!nome) return false
+  const alvo = normalizar(nome)
+  if (
+    alvo.includes('bruno durao') ||
+    alvo.includes('caio marques') ||
+    alvo.includes('handerson') ||
+    alvo.includes('helen') ||
+    alvo.includes('hellen') ||
+    alvo.includes('quezia') ||
+    alvo.includes('lorena') ||
+    alvo.includes('simone') ||
+    alvo.includes('cinthia')
+  ) {
+    return true
+  }
+  return (
+    equipeSupervisionadaPeloNome(nome) !== null || identificarSlotSupervisorPeloNome(nome) !== null
+  )
+}
+
+/**
+ * IDs Bitrix confirmados dos 6 administradores que podem configurar o Perfil
+ * de Colaborador (select de equipe, multiselect de departamentos de estado):
+ * Handerson (9129), Caio Marques (178968), Helen/Hellen Gomes (26471) e Lorena
+ * Pontes (999) — os mesmos de IDS_GESTAO_CADASTRO. Caio Araujo e Bruno Durão
+ * não têm ID confirmado no código e entram só por nome, abaixo.
+ */
+const IDS_CONFIG_PERFIL_COLABORADOR = new Set([9129, 178968, 26471, 999])
+
+const NOMES_CONFIG_PERFIL_COLABORADOR = [
+  'handerson',
+  'caio marques',
+  'helen gomes',
+  'hellen gomes',
+  'caio araujo',
+  'bruno durao',
+  'lorena pontes',
+]
+
+/**
+ * Quem pode configurar o Perfil de Colaborador: Handerson, Caio Marques, Helen
+ * Gomes, Caio Araujo, Bruno Durão e Lorena Pontes — lista PRÓPRIA dada pelo
+ * usuário, parecida com `podeGerenciarCadastro` mas não igual (inclui Caio
+ * Araujo e Bruno Durão, que não gerem equipes completas; não inclui Quézia,
+ * Simone e Cinthia). Só decide se os dois controles aparecem — a permissão de
+ * verdade é conferida no worker por `exigirGestaoCadastroOuConfigPerfil`
+ * (IDS_CONFIG_PERFIL_COLABORADOR / NOMES_CONFIG_PERFIL_COLABORADOR em
+ * config.ts), e a tela reconfere via `POST /pessoas/permissao`
+ * (`podeConfigurarPerfil`).
+ *
+ * Exige o nome completo ("caio araujo", não só "caio"): sem isso, "caio"
+ * sozinho casaria com Caio Marques também, e os dois administradores têm
+ * permissões diferentes em outras telas.
+ */
+export function podeConfigurarPerfilColaborador(
+  nome: string | null | undefined,
+  id?: number | null,
+): boolean {
+  if (id != null && IDS_CONFIG_PERFIL_COLABORADOR.has(id)) return true
+  if (!nome) return false
+  const alvo = normalizar(nome)
+  return NOMES_CONFIG_PERFIL_COLABORADOR.some(
+    (permitido) => alvo === permitido || alvo.includes(permitido),
+  )
 }

@@ -3,12 +3,12 @@ import { useMemo, useState } from 'react'
 import { useFotosColaboradores } from '../../hooks/useFotosColaboradores'
 import { useSupervisorIdPorEquipe } from '../../hooks/useSupervisorIdPorEquipe'
 import type {
-  EquipeAtendimento,
   MetricasPorEquipe,
+  MetricasTarefas,
   PacoteAtendimento,
   Tarefa,
 } from '../../types/domain'
-import { idsColaboradoresDasTarefas } from '../../utils/pessoas'
+import { idsColaboradoresDasTarefas, type SlotSupervisor } from '../../utils/pessoas'
 import { calcularRankingFechadores, tarefaFoiConcluidaComAtraso } from '../../utils/tarefasMetrics'
 import { UserAvatar } from '../UserAvatar'
 import type { ColaboradorSelecionado } from './ColaboradorTarefasModal'
@@ -20,8 +20,8 @@ import { ResumoCalculistaEquipe } from './ResumoCalculistaEquipe'
 import classes from './PainelSupervisorEquipe.module.css'
 
 interface PainelSupervisorEquipeProps {
-  /** Equipe a exibir; `null` fecha o painel. */
-  equipe: EquipeAtendimento | null
+  /** Slot de supervisor a exibir (1 ou mais equipes agrupadas); `null` fecha o painel. */
+  slot: SlotSupervisor | null
   /** Mesmos dados já carregados por DashboardPage — este painel não faz fetch próprio. */
   pacotes: PacoteAtendimento[]
   tarefasFiltradas: Tarefa[]
@@ -30,39 +30,70 @@ interface PainelSupervisorEquipeProps {
   onSelecionarColaborador: (colaborador: ColaboradorSelecionado) => void
 }
 
+/** Soma as métricas de 1+ equipes num único total — usada quando o slot agrupa mais de uma. */
+function somarMetricas(itens: MetricasTarefas[]): MetricasTarefas {
+  const total = itens.reduce((s, m) => s + m.total, 0)
+  const concluidas = itens.reduce((s, m) => s + m.concluidas, 0)
+  const atrasadas = itens.reduce((s, m) => s + m.atrasadas, 0)
+  const vencemEmBreve = itens.reduce((s, m) => s + m.vencemEmBreve, 0)
+  const aguardandoRevisao = itens.reduce((s, m) => s + m.aguardandoRevisao, 0)
+  const emAndamento = itens.reduce((s, m) => s + m.emAndamento, 0)
+  const baseTaxaAtraso = itens.reduce((s, m) => s + m.baseTaxaAtraso, 0)
+  return {
+    total,
+    concluidas,
+    atrasadas,
+    vencemEmBreve,
+    aguardandoRevisao,
+    emAndamento,
+    baseTaxaAtraso,
+    eficiencia: total === 0 ? 0 : (concluidas / total) * 100,
+    taxaAtraso: baseTaxaAtraso === 0 ? 0 : (atrasadas / baseTaxaAtraso) * 100,
+  }
+}
+
 /**
- * Painel de gestão de UMA equipe só, aberto pelos ícones de
- * `SupervisorAcessoBotoes`. Reaproveita os dados já carregados por
+ * Painel de gestão de um slot de supervisor (1 ou mais equipes), aberto pelos
+ * ícones de `SupervisorAcessoBotoes`. Reaproveita os dados já carregados por
  * `DashboardPage` (pacotes/tarefasFiltradas/metricasPorEquipe) filtrando-os
- * para a equipe aberta — sem fetch próprio, e respeitando os mesmos filtros
- * globais (período, status etc.) já selecionados no topo do dashboard.
+ * para as equipes do slot aberto — sem fetch próprio, e respeitando os mesmos
+ * filtros globais (período, status etc.) já selecionados no topo do dashboard.
+ *
+ * Quando o slot agrupa 2+ equipes (caso do Handerson Salles, cobrindo as
+ * antigas equipes de Cinthia Filgueiras e Simone Freitas), isto é PURAMENTE
+ * uma junção de exibição: `equipe_atendimento`, cores e rótulos de cada card
+ * continuam vindo da equipe original dele, intocados.
  */
 export function PainelSupervisorEquipe({
-  equipe,
+  slot,
   pacotes,
   tarefasFiltradas,
   metricasPorEquipe,
   onFechar,
   onSelecionarColaborador,
 }: PainelSupervisorEquipeProps) {
-  // Mantém a última equipe não-nula para o título/corpo não "sumirem" durante
-  // a transição de saída do Modal (que já recebe `equipe=null` de imediato).
-  const [equipeExibida, setEquipeExibida] = useState<EquipeAtendimento | null>(equipe)
-  if (equipe !== null && equipe !== equipeExibida) {
-    setEquipeExibida(equipe)
+  // Mantém o último slot não-nulo para o título/corpo não "sumirem" durante a
+  // transição de saída do Modal (que já recebe `slot=null` de imediato).
+  const [slotExibido, setSlotExibido] = useState<SlotSupervisor | null>(slot)
+  if (slot !== null && slot !== slotExibido) {
+    setSlotExibido(slot)
   }
   const supervisorIds = useSupervisorIdPorEquipe()
-  const supervisoraId = equipeExibida ? supervisorIds[equipeExibida] : undefined
+  const supervisoraId = slotExibido
+    ? (slotExibido.fotoUsuarioId ?? supervisorIds[slotExibido.equipes[0]])
+    : undefined
   const [metricaSelecionada, setMetricaSelecionada] = useState<MetricaSelecionada | null>(null)
 
   const pacotesDaEquipe = useMemo(
-    () => (equipeExibida ? pacotes.filter((p) => p.equipe === equipeExibida) : []),
-    [pacotes, equipeExibida],
+    () => (slotExibido ? pacotes.filter((p) => slotExibido.equipes.includes(p.equipe)) : []),
+    [pacotes, slotExibido],
   )
   const tarefasDaEquipe = useMemo(
     () =>
-      equipeExibida ? tarefasFiltradas.filter((t) => t.equipeAtendimento === equipeExibida) : [],
-    [tarefasFiltradas, equipeExibida],
+      slotExibido
+        ? tarefasFiltradas.filter((t) => slotExibido.equipes.includes(t.equipeAtendimento))
+        : [],
+    [tarefasFiltradas, slotExibido],
   )
   const idsColaboradores = useMemo(() => {
     const ids = idsColaboradoresDasTarefas(tarefasDaEquipe)
@@ -71,8 +102,13 @@ export function PainelSupervisorEquipe({
   }, [tarefasDaEquipe, supervisoraId])
   const fotos = useFotosColaboradores(idsColaboradores)
   const fotoSupervisora = supervisoraId ? fotos.get(supervisoraId) : undefined
-  const metricasDaEquipe =
-    metricasPorEquipe.find((m) => m.equipe === equipeExibida)?.metricas ?? null
+  const metricasDaEquipe = slotExibido
+    ? somarMetricas(
+        metricasPorEquipe
+          .filter((m) => slotExibido.equipes.includes(m.equipe))
+          .map((m) => m.metricas),
+      )
+    : null
 
   const rankingDaEquipe = useMemo(
     () => calcularRankingFechadores(tarefasDaEquipe),
@@ -110,35 +146,37 @@ export function PainelSupervisorEquipe({
   return (
     <>
       <Modal
-        opened={equipe !== null}
+        opened={slot !== null}
         onClose={onFechar}
         fullScreen
         zIndex={200}
         title={
-          equipeExibida && (
+          slotExibido && (
             <Group gap="sm" wrap="nowrap" align="center">
-              <UserAvatar nome={equipeExibida} fotoUrl={fotoSupervisora} size={40} />
+              <UserAvatar nome={slotExibido.rotulo} fotoUrl={fotoSupervisora} size={40} />
               <Title order={3} className={classes.titulo}>
-                Painel da equipe — {equipeExibida}
+                Painel — {slotExibido.rotulo}
               </Title>
             </Group>
           )
         }
         transitionProps={{ transition: 'slide-up', duration: 250 }}
       >
-        {equipeExibida && (
-          <div className={classes.conteudo} key={equipeExibida}>
+        {slotExibido && (
+          <div className={classes.conteudo} key={slotExibido.chave}>
             <Stack gap="xl">
               <Text size="sm" c="dimmed">
-                Métricas e gráficos restritos às tarefas de atendimento da equipe de {equipeExibida}
-                , no mesmo recorte de filtros selecionado no dashboard.
+                Métricas e gráficos restritos às tarefas de atendimento d
+                {slotExibido.equipes.length > 1 ? 'as equipes de' : 'a equipe de'}{' '}
+                {slotExibido.equipes.join(' e ')}, no mesmo recorte de filtros selecionado no
+                dashboard.
               </Text>
 
               {/* Resumos Analíticos e Calculistas (Dia, Semana, Mês) */}
-              <ResumoCalculistaEquipe equipe={equipeExibida} tarefas={tarefasDaEquipe} />
+              <ResumoCalculistaEquipe equipe={slotExibido.rotulo} tarefas={tarefasDaEquipe} />
 
               <MetricasCards
-                titulo={`Métricas — ${equipeExibida}`}
+                titulo={`Métricas — ${slotExibido.rotulo}`}
                 metricas={metricasDaEquipe}
                 metricasPorEquipe={[]}
               />
@@ -228,7 +266,7 @@ export function PainelSupervisorEquipe({
                   tarefasFiltradas={tarefasDaEquipe}
                   onSelecionarColaborador={onSelecionarColaborador}
                   onSelecionarMetrica={setMetricaSelecionada}
-                  ocultarComparativoEquipes
+                  ocultarComparativoEquipes={(slotExibido?.equipes.length ?? 1) <= 1}
                 />
               </div>
             </Stack>

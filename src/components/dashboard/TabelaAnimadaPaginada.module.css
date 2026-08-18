@@ -1,0 +1,80 @@
+/* Tabela genérica animada + paginada, reaproveitada em rankings e listagens do
+   painel (ex.: tarefas dos últimos 30 dias, ranking de quem mais fecha,
+   ranking de maior carga sob responsabilidade). Segue a mesma linguagem
+   visual das tabelas nativas do painel (RankingFechadores.tsx,
+   ColaboradorTarefasModal.tsx): fundo/borda via --superficie /
+   --superficie-borda, que mudam sozinhos com o tema claro/escuro. */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* A tabela pagina em vez de rolar verticalmente (no máximo `itensPorPagina`
+   linhas por vez), então só precisa de overflow horizontal para telas
+   estreitas — sem cabeçalho sticky nem altura máxima. */
+.scrollArea {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+}
+
+.tabela {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.cabecalho {
+  background-color: var(--superficie);
+}
+
+.cabecalho tr {
+  border-bottom: 1px solid var(--superficie-borda);
+}
+
+.linha {
+  border-bottom: 1px solid var(--superficie-borda);
+  transition: background-color 0.15s ease;
+}
+
+/* highlightOnHover "manual": as linhas são `motion.tr`, não `Table.Tr`, então
+   o prop `highlightOnHover` do Mantine não se aplica — replicado em CSS. */
+.linha:hover {
+  background-color: var(--superficie-borda);
+}
+
+.paginacaoWrapper {
+  display: flex;
+  justify-content: center;
+}
+
+.paginacaoControl {
+  background-color: var(--superficie);
+  border-color: var(--superficie-borda);
+  color: var(--mantine-color-text);
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.paginacaoControl:hover {
+  filter: brightness(1.08);
+}
+
+.paginacaoControl:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.paginacaoDots {
+  color: var(--mantine-color-text);
+  opacity: 0.6;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .linha {
+    transition: none;
+  }
+}

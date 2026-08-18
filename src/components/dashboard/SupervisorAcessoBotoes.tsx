@@ -2,34 +2,42 @@ import { ActionIcon, Avatar } from '@mantine/core'
 import { useMemo } from 'react'
 import { useFotosColaboradores } from '../../hooks/useFotosColaboradores'
 import { useSupervisorIdPorEquipe } from '../../hooks/useSupervisorIdPorEquipe'
-import { EQUIPES_ATENDIMENTO, type EquipeAtendimento } from '../../types/domain'
-import { ehCaioMarques } from '../../utils/pessoas'
+import type { EquipeAtendimento } from '../../types/domain'
+import {
+  ehCaioMarques,
+  identificarSlotSupervisorPeloNome,
+  SLOTS_SUPERVISOR,
+  type SlotSupervisor,
+} from '../../utils/pessoas'
 import { COR_POR_EQUIPE } from './tarefaApresentacao'
 import classes from './SupervisorAcessoBotoes.module.css'
 
 interface SupervisorAcessoBotoesProps {
-  /** Equipe reconhecida pelo nome do usuário logado no Bitrix; `null` se não for supervisor(a). */
-  equipeDoUsuario: EquipeAtendimento | null
-  /** Nome do colaborador logado no Bitrix (para liberação de superusuário Caio Marques). */
+  /** Nome do colaborador logado no Bitrix (para reconhecer o slot dele e a liberação de superusuário). */
   nomeUsuario?: string | null
   /** ID Bitrix do colaborador logado (para liberação de superusuário por ID). */
   idUsuario?: number | null
-  onAbrirEquipe: (equipe: EquipeAtendimento) => void
+  onAbrirSlot: (slot: SlotSupervisor) => void
 }
 
-/** Foto da supervisora de uma equipe, ou undefined se não resolvida (cai no fallback de iniciais). */
-function fotoDaEquipe(
-  equipe: EquipeAtendimento,
+/** Cor de referência do slot — a da primeira equipe (Handerson combina 2; as demais só têm 1). */
+function corDoSlot(slot: SlotSupervisor): string {
+  return COR_POR_EQUIPE[slot.equipes[0]]
+}
+
+/** Foto do slot: ID fixo quando definido (Handerson); senão, o UF_HEAD da equipe única do slot. */
+function fotoDoSlot(
+  slot: SlotSupervisor,
   supervisorIds: Partial<Record<EquipeAtendimento, number>>,
   fotos: Map<number, string>,
 ): string | undefined {
-  const id = supervisorIds[equipe]
+  const id = slot.fotoUsuarioId ?? supervisorIds[slot.equipes[0]]
   return id ? fotos.get(id) : undefined
 }
 
-/** Iniciais (até 2 letras) para diferenciar os ícones das 4 equipes de cabeceira. */
-function iniciaisDaEquipe(equipe: EquipeAtendimento): string {
-  return equipe
+/** Iniciais (até 2 letras) para diferenciar os ícones dos slots de cabeceira. */
+function iniciaisDoSlot(slot: SlotSupervisor): string {
+  return slot.rotulo
     .split(' ')
     .map((parte) => parte[0])
     .join('')
@@ -42,70 +50,73 @@ function iniciaisDaEquipe(equipe: EquipeAtendimento): string {
  * empilhados abaixo do ThemeToggle no canto superior esquerdo.
  *
  * Em produção mostra UM ícone só (com a foto da supervisora), quando o nome do
- * usuário logado no Bitrix bate com uma das 4 supervisoras.
+ * usuário logado no Bitrix bate com um dos 3 slots (ver SLOTS_SUPERVISOR).
  *
  * Superusuários (Caio Marques, Handerson e Hellen Gomes — ver
  * IDS_SUPERUSUARIOS em pessoas.ts) e o ambiente DEV (`import.meta.env.DEV`)
- * veem as 4 supervisoras sempre.
+ * veem os 3 slots sempre.
  */
 export function SupervisorAcessoBotoes({
-  equipeDoUsuario,
   nomeUsuario,
   idUsuario,
-  onAbrirEquipe,
+  onAbrirSlot,
 }: SupervisorAcessoBotoesProps) {
   const eCaioMarques = ehCaioMarques(nomeUsuario, idUsuario)
+  const slotDoUsuario = identificarSlotSupervisorPeloNome(nomeUsuario)
   const supervisorIds = useSupervisorIdPorEquipe()
   const idsColaboradores = useMemo(() => Object.values(supervisorIds), [supervisorIds])
   const fotos = useFotosColaboradores(idsColaboradores)
 
-  const equipesVisiveis: EquipeAtendimento[] =
+  const slotsVisiveis: SlotSupervisor[] =
     import.meta.env.DEV || eCaioMarques
-      ? [...EQUIPES_ATENDIMENTO]
-      : equipeDoUsuario
-        ? [equipeDoUsuario]
+      ? [...SLOTS_SUPERVISOR]
+      : slotDoUsuario
+        ? [slotDoUsuario]
         : []
 
-  if (equipesVisiveis.length === 0) return null
+  if (slotsVisiveis.length === 0) return null
 
   return (
     <div className={classes.pilha}>
-      {equipesVisiveis.map((equipe) => (
-        <ActionIcon
-          key={equipe}
-          variant="default"
-          size={43}
-          radius="xl"
-          className={classes.botao}
-          style={{
-            backgroundColor: `${COR_POR_EQUIPE[equipe]}22`,
-            color: COR_POR_EQUIPE[equipe],
-            borderColor: `${COR_POR_EQUIPE[equipe]}55`,
-            padding: 0,
-            overflow: 'hidden',
-          }}
-          onClick={() => onAbrirEquipe(equipe)}
-          aria-label={`Abrir painel da equipe ${equipe}`}
-          title={`Painel da equipe — ${equipe}`}
-        >
-          <Avatar
-            src={fotoDaEquipe(equipe, supervisorIds, fotos)}
-            alt={equipe}
+      {slotsVisiveis.map((slot) => {
+        const cor = corDoSlot(slot)
+        return (
+          <ActionIcon
+            key={slot.chave}
+            variant="default"
+            size={43}
             radius="xl"
-            size="100%"
-            styles={{
-              placeholder: {
-                backgroundColor: 'transparent',
-                color: COR_POR_EQUIPE[equipe],
-                fontWeight: 700,
-                fontSize: '1rem',
-              },
+            className={classes.botao}
+            style={{
+              backgroundColor: `${cor}22`,
+              color: cor,
+              borderColor: `${cor}55`,
+              padding: 0,
+              overflow: 'hidden',
             }}
+            onClick={() => onAbrirSlot(slot)}
+            aria-label={`Abrir painel de ${slot.rotulo}`}
+            title={`Painel — ${slot.rotulo}`}
           >
-            {iniciaisDaEquipe(equipe)}
-          </Avatar>
-        </ActionIcon>
-      ))}
+            <Avatar
+              src={fotoDoSlot(slot, supervisorIds, fotos)}
+              alt={slot.rotulo}
+              radius="xl"
+              size="100%"
+              styles={{
+                placeholder: {
+                  backgroundColor: 'transparent',
+                  color: cor,
+                  fontWeight: 700,
+                  fontSize: '1rem',
+                },
+              }}
+            >
+              {iniciaisDoSlot(slot)}
+            </Avatar>
+          </ActionIcon>
+        )
+      })}
     </div>
   )
 }

@@ -147,12 +147,19 @@ async function buscarTarefasDoSnapshot(gruposSelecionados: number[]): Promise<Ta
     const targetMaxTime = agora.getTime() + 20 * 24 * 60 * 60 * 1000
     const deltaMs = targetMaxTime - maxMockTime
 
-    return mock.tarefas.map((t) => ({
-      ...t,
-      prazoFinal: t.prazoFinal
-        ? new Date(new Date(t.prazoFinal).getTime() + deltaMs).toISOString()
-        : null,
-    }))
+    return mock.tarefas.map((t) => {
+      const valorBase = t.valorCobranca ?? Math.round(((t.id * 183) % 4500) + 350)
+      const dataPgto =
+        t.dataPagamento ?? (t.status === 5 ? t.finalizadoEm || new Date().toISOString() : null)
+      return {
+        ...t,
+        prazoFinal: t.prazoFinal
+          ? new Date(new Date(t.prazoFinal).getTime() + deltaMs).toISOString()
+          : null,
+        valorCobranca: valorBase,
+        dataPagamento: dataPgto,
+      }
+    })
   }
 
   if (erroConexao) {

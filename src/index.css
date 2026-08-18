@@ -95,14 +95,18 @@ body {
   }
 }
 
-/* Efeito de hover dourado nos elementos e nomes clicáveis de estatísticas */
+/* Efeito de hover dourado nos elementos e nomes clicáveis de estatísticas.
+   Em cartões/tiles com borda própria (ex.: métricas de atraso), a borda
+   assume a cor de destaque em vez de sublinhar o texto interno. */
 .item-clicavel-hover {
-  transition: color 0.15s ease;
+  transition:
+    color 0.15s ease,
+    border-color 0.25s ease;
 }
 
 .item-clicavel-hover:hover {
   color: var(--mantine-color-dourado-4, #cba556) !important;
-  text-decoration: underline;
+  border-color: var(--mantine-color-dourado-4, #cba556) !important;
 }
 
 /* Garantia de respiro (ao menos 5px, utilizando 12px) abaixo do header em TODOS os modais */
@@ -111,14 +115,21 @@ body {
   margin-bottom: 12px !important;
 }
 
-/* Remoção de bordas externas APENAS nos campos de input dentro de modais (transparência) */
+/* Bordas cinza claro visíveis em todos os campos de input e modais */
+.mantine-Input-input,
+.mantine-TextInput-input,
+.mantine-Select-input,
+.mantine-MultiSelect-input,
 .mantine-Modal-content .mantine-Input-input,
 .mantine-Modal-content .mantine-TextInput-input,
 .mantine-Modal-content .mantine-Select-input,
 .mantine-Modal-content .mantine-MultiSelect-input {
-  border-color: transparent !important;
+  border-color: var(--superficie-borda, rgba(255, 255, 255, 0.22)) !important;
 }
 
+.mantine-Input-input:focus,
+.mantine-Input-input:focus-within,
+.mantine-Input-input[data-expanded],
 .mantine-Modal-content .mantine-Input-input:focus,
 .mantine-Modal-content .mantine-Input-input:focus-within,
 .mantine-Modal-content .mantine-Input-input[data-expanded],

@@ -1,10 +1,11 @@
 import { Badge, Card, Group, Stack, Text, ThemeIcon, Title } from '@mantine/core'
 import { useMemo } from 'react'
-import type { EquipeAtendimento, Tarefa } from '../../types/domain'
+import type { Tarefa } from '../../types/domain'
 import { tarefaEstaAtrasada, tarefaFoiConcluidaComAtraso } from '../../utils/tarefasMetrics'
 
 interface ResumoCalculistaEquipeProps {
-  equipe: EquipeAtendimento
+  /** Rótulo de exibição — nome da equipe ou do slot de supervisor (ex.: "Handerson Salles" combina 2 equipes). */
+  equipe: string
   tarefas: Tarefa[]
 }
 

@@ -1,0 +1,84 @@
+.conteudo {
+  width: 92%;
+  margin-inline: auto;
+  padding-block: var(--mantine-spacing-lg);
+}
+
+.titulo {
+  color: var(--mantine-color-text);
+}
+
+/* Grade de cards de equipe — a AnimatedList da tela. */
+.grade {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--mantine-spacing-md);
+}
+
+.card {
+  cursor: pointer;
+  background-color: var(--superficie);
+  border: 1px solid var(--superficie-borda);
+  transition:
+    transform 150ms ease,
+    border-color 150ms ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  border-color: var(--mantine-color-dourado-4);
+}
+
+.cardNovo {
+  cursor: pointer;
+  border: 1px dashed var(--superficie-borda);
+  background-color: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 128px;
+  color: var(--mantine-color-text);
+  opacity: 0.7;
+  transition:
+    opacity 150ms ease,
+    border-color 150ms ease;
+}
+
+.cardNovo:hover {
+  opacity: 1;
+  border-color: var(--mantine-color-dourado-4);
+}
+
+.campoEdicao {
+  padding: 14px 16px;
+  border-radius: var(--mantine-radius-md);
+  background-color: var(--superficie, rgba(255, 255, 255, 0.02));
+  border: 1px solid var(--superficie-borda, rgba(255, 255, 255, 0.08));
+}
+
+.inputModal {
+  background-color: var(--superficie);
+  border-color: transparent !important;
+  color: var(--mantine-color-text);
+  transition:
+    background-color 0.25s ease,
+    border-color 120ms ease,
+    color 0.25s ease;
+}
+
+.inputModal:hover {
+  filter: brightness(1.05);
+}
+
+.inputModal:focus,
+.inputModal:focus-within,
+.inputModal[data-expanded] {
+  border-color: var(--mantine-color-dourado-4) !important;
+  filter: brightness(1.05);
+}
+
+.labelCampo {
+  color: var(--mantine-color-text);
+  font-weight: 600;
+  font-size: 14px;
+}

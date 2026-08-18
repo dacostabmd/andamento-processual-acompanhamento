@@ -4,6 +4,7 @@ import {
   Card,
   Group,
   Paper,
+  Select,
   Stack,
   Text,
   Textarea,
@@ -18,7 +19,9 @@ import {
   criarComentarioApi,
   editarComentarioApi,
   excluirComentarioApi,
+  listarDiasComComentarios,
   type ComentarioForumApi,
+  type DiaComComentarios,
   type SolicitanteAcao,
 } from '../../services/comentariosApi'
 import { ehCaioMarques, equipeSupervisionadaPeloNome } from '../../utils/pessoas'
@@ -109,6 +112,9 @@ export function ComentariosForum({ colaborador }: ComentariosForumProps) {
   const [idEdicaoAtiva, setIdEdicaoAtiva] = useState<string | null>(null)
   const [textoEdicaoInput, setTextoEdicaoInput] = useState('')
   const snapshotInfo = useSnapshotInfo()
+  const [diasDisponiveis, setDiasDisponiveis] = useState<DiaComComentarios[]>([])
+  /** null = segue o dia da sincronização vigente; um valor = dia escolhido no filtro. */
+  const [diaSelecionado, setDiaSelecionado] = useState<string | null>(null)
 
   // Autores dos comentários/respostas já carregados, mais o próprio usuário
   // logado (que aparece no formulário de novo comentário antes de publicar
@@ -126,7 +132,9 @@ export function ComentariosForum({ colaborador }: ComentariosForumProps) {
   }, [comentarios, colaborador])
   const fotos = useFotosColaboradores(idsColaboradores)
 
-  const diaSyncId = snapshotInfo?.syncedAt ?? 'sem-sincronizacao'
+  const diaAtualId = snapshotInfo?.syncedAt ?? 'sem-sincronizacao'
+  const diaSyncId = diaSelecionado ?? diaAtualId
+  const visualizandoDiaPassado = diaSelecionado !== null && diaSelecionado !== diaAtualId
 
   // Reconhece o usuário logado como moderador: qualquer uma das 4
   // supervisoras (por nome, ver equipeSupervisionadaPeloNome) ou o admin
@@ -149,6 +157,21 @@ export function ComentariosForum({ colaborador }: ComentariosForumProps) {
 
   useEffect(() => {
     let cancelado = false
+    listarDiasComComentarios()
+      .then((dias) => {
+        if (!cancelado) setDiasDisponiveis(dias)
+      })
+      .catch(() => {
+        // Filtro de dias é um extra sobre o dia atual — falhar aqui não deve
+        // impedir a leitura/publicação de comentários do dia vigente.
+      })
+    return () => {
+      cancelado = true
+    }
+  }, [])
+
+  useEffect(() => {
+    let cancelado = false
     setCarregando(true)
     setErro(null)
     buscarComentariosDoDia(diaSyncId)
@@ -167,6 +190,7 @@ export function ComentariosForum({ colaborador }: ComentariosForumProps) {
   }, [diaSyncId])
 
   function podeModerar(item: ComentarioForumApi): boolean {
+    if (visualizandoDiaPassado) return false
     if (!colaborador) return false
     if (souModerador) return true
     if (item.autorId != null) return item.autorId === colaborador.id
@@ -185,6 +209,9 @@ export function ComentariosForum({ colaborador }: ComentariosForumProps) {
       setNovoTexto('')
       const itens = await buscarComentariosDoDia(diaSyncId)
       setComentarios(agruparEmArvore(itens))
+      listarDiasComComentarios()
+        .then(setDiasDisponiveis)
+        .catch(() => undefined)
     } catch {
       setErro('Não foi possível publicar o comentário. Tente novamente.')
     }
@@ -332,7 +359,7 @@ export function ComentariosForum({ colaborador }: ComentariosForumProps) {
       mt="xl"
     >
       <Stack gap="md">
-        <Group justify="space-between" align="center">
+        <Group justify="space-between" align="flex-end" wrap="wrap">
           <div>
             <Title order={3}>Fórum de Acompanhamento Diário</Title>
             <Text size="xs" c="dimmed">
@@ -340,6 +367,20 @@ export function ComentariosForum({ colaborador }: ComentariosForumProps) {
               diárias entre os gestores e equipes.
             </Text>
           </div>
+          {diasDisponiveis.length > 1 && (
+            <Select
+              label="Ver dia"
+              size="xs"
+              w={260}
+              data={diasDisponiveis.map((d) => ({
+                value: d.diaSyncId,
+                label: `${formatarRotuloDia(d.diaSyncId)}${d.total > 0 ? ` (${d.total})` : ''}`,
+              }))}
+              value={diaSyncId}
+              onChange={(valor) => setDiaSelecionado(valor === diaAtualId ? null : valor)}
+              allowDeselect={false}
+            />
+          )}
         </Group>
 
         {erro && (
@@ -348,43 +389,57 @@ export function ComentariosForum({ colaborador }: ComentariosForumProps) {
           </Text>
         )}
 
-        {/* Formulário de Novo Comentário */}
-        <Paper
-          p="sm"
-          radius="md"
-          withBorder
-          style={{ backgroundColor: 'rgba(255, 255, 255, 0.02)' }}
-        >
-          <Stack gap="xs">
-            <Group gap="xs">
-              <UserAvatar
-                nome={colaborador?.nome ?? '?'}
-                fotoUrl={colaborador ? fotos.get(colaborador.id) : undefined}
-                size={28}
+        {/* Formulário de Novo Comentário — só no dia vigente; dias passados são só leitura */}
+        {visualizandoDiaPassado ? (
+          <Paper
+            p="sm"
+            radius="md"
+            withBorder
+            style={{ backgroundColor: 'rgba(255, 255, 255, 0.02)' }}
+          >
+            <Text size="xs" c="dimmed">
+              Visualizando um dia anterior — somente leitura. Volte para "
+              {formatarRotuloDia(diaAtualId)}" para publicar um novo comentário.
+            </Text>
+          </Paper>
+        ) : (
+          <Paper
+            p="sm"
+            radius="md"
+            withBorder
+            style={{ backgroundColor: 'rgba(255, 255, 255, 0.02)' }}
+          >
+            <Stack gap="xs">
+              <Group gap="xs">
+                <UserAvatar
+                  nome={colaborador?.nome ?? '?'}
+                  fotoUrl={colaborador ? fotos.get(colaborador.id) : undefined}
+                  size={28}
+                />
+                <Text size="sm" fw={600}>
+                  {colaborador?.nome ?? 'Identificando usuário…'}
+                </Text>
+              </Group>
+              <Textarea
+                placeholder="Escreva um comentário ou orientação sobre o desempenho do dia..."
+                value={novoTexto}
+                onChange={(e) => setNovoTexto(e.currentTarget.value)}
+                minRows={2}
+                autosize
               />
-              <Text size="sm" fw={600}>
-                {colaborador?.nome ?? 'Identificando usuário…'}
-              </Text>
-            </Group>
-            <Textarea
-              placeholder="Escreva um comentário ou orientação sobre o desempenho do dia..."
-              value={novoTexto}
-              onChange={(e) => setNovoTexto(e.currentTarget.value)}
-              minRows={2}
-              autosize
-            />
-            <Group justify="flex-end">
-              <Button
-                size="xs"
-                color="blue"
-                onClick={aoEnviarComentario}
-                disabled={!novoTexto.trim() || !colaborador}
-              >
-                Publicar Comentário
-              </Button>
-            </Group>
-          </Stack>
-        </Paper>
+              <Group justify="flex-end">
+                <Button
+                  size="xs"
+                  color="blue"
+                  onClick={aoEnviarComentario}
+                  disabled={!novoTexto.trim() || !colaborador}
+                >
+                  Publicar Comentário
+                </Button>
+              </Group>
+            </Stack>
+          </Paper>
+        )}
 
         {/* Lista de Dias de sincronização / Comentários / Threads */}
         {carregando ? (
@@ -436,30 +491,32 @@ export function ComentariosForum({ colaborador }: ComentariosForumProps) {
                       )}
 
                       <Group justify="flex-start" mt={4}>
-                        <Button
-                          variant="subtle"
-                          size="xs"
-                          color="gray"
-                          onClick={() =>
-                            setIdRespostaAtiva(idRespostaAtiva === item.id ? null : item.id)
-                          }
-                          leftSection={
-                            <svg
-                              width="14"
-                              height="14"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            >
-                              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                            </svg>
-                          }
-                        >
-                          Responder ({item.respostas.length})
-                        </Button>
+                        {!visualizandoDiaPassado && (
+                          <Button
+                            variant="subtle"
+                            size="xs"
+                            color="gray"
+                            onClick={() =>
+                              setIdRespostaAtiva(idRespostaAtiva === item.id ? null : item.id)
+                            }
+                            leftSection={
+                              <svg
+                                width="14"
+                                height="14"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                              </svg>
+                            }
+                          >
+                            Responder ({item.respostas.length})
+                          </Button>
+                        )}
                       </Group>
 
                       {/* Sub-threads / Respostas */}

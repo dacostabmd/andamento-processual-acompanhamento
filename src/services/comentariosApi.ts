@@ -27,6 +27,23 @@ export async function buscarComentariosDoDia(diaSyncId: string): Promise<Comenta
   return dados.comentarios ?? []
 }
 
+export interface DiaComComentarios {
+  diaSyncId: string
+  total: number
+  primeiroEm: string
+  ultimoEm: string
+}
+
+/** Dias de sincronização navegáveis no fórum — sempre inclui o dia atual, mesmo sem comentário ainda. */
+export async function listarDiasComComentarios(): Promise<DiaComComentarios[]> {
+  const resposta = await fetchSyncApi('/comentarios/dias/disponiveis')
+  if (!resposta.ok) {
+    throw new Error(`Erro ao listar dias com comentários (HTTP ${resposta.status}).`)
+  }
+  const dados = await resposta.json()
+  return dados.dias ?? []
+}
+
 export async function criarComentarioApi(input: {
   diaSyncId: string
   comentarioPaiId?: string | null

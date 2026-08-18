@@ -1,8 +1,7 @@
-import { Button, Center, Group, Loader, Stack, Title } from '@mantine/core'
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { Center, Group, Loader, Stack, Title, Button } from '@mantine/core'
+import { useEffect, useState, type ReactNode } from 'react'
 import { EstadoVazio } from '../components/EstadoVazio'
 import { ThemeToggle } from '../components/ThemeToggle'
-import { AiAssistantChat } from '../components/dashboard/AiAssistantChat'
 import { AvisoSincronizacao } from '../components/dashboard/AvisoSincronizacao'
 import {
   ColaboradorTarefasModal,
@@ -12,19 +11,27 @@ import { ComentariosForum } from '../components/dashboard/ComentariosForum'
 import { AuditoriaCadastroBotao } from '../components/dashboard/AuditoriaCadastroBotao'
 import { AuditoriaCadastroPanel } from '../components/dashboard/AuditoriaCadastroPanel'
 import { ConfiguracoesCadastroBotao } from '../components/dashboard/ConfiguracoesCadastroBotao'
-import { ConfiguracoesCadastroPanel } from '../components/dashboard/ConfiguracoesCadastroPanel'
+import { EquipesCadastroPanel } from '../components/dashboard/EquipesCadastroPanel'
 import { DebugBitrixPanel } from '../components/dashboard/DebugBitrixPanel'
-import { FiltrosPainel } from '../components/dashboard/FiltrosPainel'
-import { GraficosInteligencia } from '../components/dashboard/GraficosInteligencia'
+import { DesempenhoEquipesRipple } from '../components/dashboard/DesempenhoEquipesRipple'
+import { DesempenhoIndividualConclusao } from '../components/dashboard/DesempenhoIndividualConclusao'
+import { FechamentoEquipesTabs } from '../components/dashboard/FechamentoEquipesTabs'
+import { InfograficoAtrasoTarefas } from '../components/dashboard/InfograficoAtrasoTarefas'
 import {
   MetricaTarefasModal,
   type MetricaSelecionada,
 } from '../components/dashboard/MetricaTarefasModal'
 import { MetricasCards } from '../components/dashboard/MetricasCards'
+import { MediasEquipeIndividualTabs } from '../components/dashboard/MediasEquipeIndividualTabs'
 import { NavegacaoSecoesDashboard } from '../components/dashboard/NavegacaoSecoesDashboard'
 import { PainelSupervisorEquipe } from '../components/dashboard/PainelSupervisorEquipe'
-import { RankingFechadores } from '../components/dashboard/RankingFechadores'
+import { ProjecaoTarefasInfografico } from '../components/dashboard/ProjecaoTarefasInfografico'
+import { RankingRapidezConclusao } from '../components/dashboard/RankingRapidezConclusao'
+import { FechamentosSemComentariosSection } from '../components/dashboard/FechamentosSemComentariosSection'
+import { FaturamentoVigenteSection } from '../components/dashboard/FaturamentoVigenteSection'
 import { SupervisorAcessoBotoes } from '../components/dashboard/SupervisorAcessoBotoes'
+import { TendenciaDiariaTarefas } from '../components/dashboard/TendenciaDiariaTarefas'
+import { UltimasTarefasBox } from '../components/dashboard/UltimasTarefasBox'
 import { VERSAO_ATUAL, VersaoModal } from '../components/dashboard/VersaoModal'
 import { useSessaoUsuario } from '../hooks/useSessaoUsuario'
 import {
@@ -32,20 +39,17 @@ import {
   obterMetricasFiltradas,
   obterMetricasPorEquipeFiltradas,
   obterPacotesAtendimento,
-  obterRankingFechadores,
   obterTarefasFiltradas,
 } from '../services/dashboardService'
 import {
   filtrosVazios,
-  type EquipeAtendimento,
   type FiltrosDashboard,
   type MetricasPorEquipe,
   type MetricasTarefas,
   type PacoteAtendimento,
-  type RankingFechadores as DadosRankingFechadores,
   type Tarefa,
 } from '../types/domain'
-import { equipeSupervisionadaPeloNome } from '../utils/pessoas'
+import type { SlotSupervisor } from '../utils/pessoas'
 import classes from './DashboardPage.module.css'
 
 // Grupo "Acompanhamento Mensal" — marcado por padrão na segmentação de
@@ -62,16 +66,13 @@ export function DashboardPage() {
   const [metricas, setMetricas] = useState<MetricasTarefas | null>(null)
   const [metricasPorEquipe, setMetricasPorEquipe] = useState<MetricasPorEquipe[]>([])
   const [pacotes, setPacotes] = useState<PacoteAtendimento[] | null>(null)
-  const [rankingFechadores, setRankingFechadores] = useState<DadosRankingFechadores | null>(null)
   const [tarefasFiltradas, setTarefasFiltradas] = useState<Tarefa[]>([])
   const [colaboradorSelecionado, setColaboradorSelecionado] =
     useState<ColaboradorSelecionado | null>(null)
   const [erroDados, setErroDados] = useState<string | null>(null)
   const [carregandoFiltro, setCarregandoFiltro] = useState(false)
   const [modalVersaoAberto, setModalVersaoAberto] = useState<boolean | undefined>(undefined)
-  const [equipeSupervisorAberta, setEquipeSupervisorAberta] = useState<EquipeAtendimento | null>(
-    null,
-  )
+  const [slotSupervisorAberto, setSlotSupervisorAberto] = useState<SlotSupervisor | null>(null)
   const [metricaSelecionada, setMetricaSelecionada] = useState<MetricaSelecionada | null>(null)
   const [configuracoesAbertas, setConfiguracoesAbertas] = useState(false)
   const [auditoriaAberta, setAuditoriaAberta] = useState(false)
@@ -79,12 +80,6 @@ export function DashboardPage() {
   // para os números refletirem os vínculos novos sem depender de F5. O cache do
   // snapshot já foi descartado pelo painel de configurações.
   const [recargaCadastro, setRecargaCadastro] = useState(0)
-  // Reconhece o usuário logado no Bitrix como uma das 4 supervisoras pelo
-  // nome (ver equipeSupervisionadaPeloNome) — null para qualquer outro usuário.
-  const equipeDoUsuario = useMemo(
-    () => equipeSupervisionadaPeloNome(colaborador?.nome),
-    [colaborador],
-  )
   // projetosPermitidos resolvido no login não tem nome real quando a fonte é o
   // worker (acessoService devolve "Grupo {id}" — o nome real só existe no
   // metadata.groups do snapshot). Reaplicado a cada carga para refletir assim
@@ -99,16 +94,14 @@ export function DashboardPage() {
       obterMetricasFiltradas(filtros, projetosPermitidos, gruposSelecionados),
       obterMetricasPorEquipeFiltradas(filtros, projetosPermitidos, gruposSelecionados),
       obterPacotesAtendimento(filtros, projetosPermitidos, gruposSelecionados),
-      obterRankingFechadores(filtros, projetosPermitidos, gruposSelecionados),
       obterTarefasFiltradas(filtros, projetosPermitidos, gruposSelecionados),
     ])
-      .then(([novasMetricas, novasMetricasPorEquipe, novosPacotes, novoRanking, novasTarefas]) => {
+      .then(([novasMetricas, novasMetricasPorEquipe, novosPacotes, novasTarefas]) => {
         if (cancelado) return
         setErroDados(null)
         setMetricas(novasMetricas)
         setMetricasPorEquipe(novasMetricasPorEquipe)
         setPacotes(novosPacotes)
-        setRankingFechadores(novoRanking)
         setTarefasFiltradas(novasTarefas)
         setProjetosComNomes(comNomesReais(projetosPermitidos))
       })
@@ -193,52 +186,120 @@ export function DashboardPage() {
             <EstadoVazio titulo="Não foi possível carregar os dados" descricao={erroDados} />
           ) : (
             <>
-              <FiltrosPainel
-                filtros={filtros}
-                onChange={aoMudarFiltros}
-                projetosPermitidos={projetosComNomes}
-                gruposSelecionados={gruposSelecionados}
-                onMudarGrupos={setGruposSelecionados}
-              />
-
               <MetricasCards
                 titulo="Métricas Gerais"
                 metricas={metricas}
                 metricasPorEquipe={metricasPorEquipe}
+                tarefasFiltradas={tarefasFiltradas}
+                onSelecionarMetrica={setMetricaSelecionada}
               />
 
-              <div id="secao-ranking">
+              <div id="secao-tendencia-diaria">
+                {pacotes && (
+                  <TendenciaDiariaTarefas
+                    pacotes={pacotes}
+                    onSelecionarMetrica={setMetricaSelecionada}
+                  />
+                )}
+              </div>
+
+              <div id="secao-ultimas-tarefas">
                 <Title order={3} mb="md">
-                  Quem está fechando mais tarefas
+                  Últimas tarefas — últimos 30 dias
                 </Title>
-                {rankingFechadores && (
-                  <RankingFechadores
-                    dados={rankingFechadores}
-                    tarefas={tarefasFiltradas}
+                <UltimasTarefasBox
+                  tarefasFiltradas={tarefasFiltradas}
+                  metricas={metricas}
+                  pacotes={pacotes}
+                  filtros={filtros}
+                  onChangeFiltros={aoMudarFiltros}
+                  projetosPermitidos={projetosComNomes}
+                  gruposSelecionados={gruposSelecionados}
+                  onMudarGrupos={setGruposSelecionados}
+                />
+              </div>
+
+              <div id="secao-projecao-ia">
+                {pacotes && <ProjecaoTarefasInfografico pacotes={pacotes} />}
+              </div>
+
+              <FaturamentoVigenteSection
+                tarefas={tarefasFiltradas}
+                visao="executora"
+                aoSelecionarColaborador={setColaboradorSelecionado}
+              />
+
+              <div id="secao-fechamento-equipes">
+                <Title order={3} mb="md">
+                  Fechamento e responsabilidade por colaborador
+                </Title>
+                <FechamentoEquipesTabs
+                  tarefasFiltradas={tarefasFiltradas}
+                  pacotes={pacotes ?? []}
+                  onSelecionarColaborador={setColaboradorSelecionado}
+                />
+              </div>
+
+              <div id="secao-atraso">
+                <Title order={3} mb="md">
+                  Métricas de atraso
+                </Title>
+                {pacotes && (
+                  <InfograficoAtrasoTarefas
+                    pacotes={pacotes}
+                    onSelecionarMetrica={setMetricaSelecionada}
+                  />
+                )}
+              </div>
+
+              <div id="secao-desempenho-individual">
+                <Title order={3} mb="md">
+                  Desempenho individual de conclusão
+                </Title>
+                <DesempenhoIndividualConclusao
+                  tarefasFiltradas={tarefasFiltradas}
+                  onSelecionarColaborador={setColaboradorSelecionado}
+                />
+              </div>
+
+              <div id="secao-rapidez-conclusao">
+                <RankingRapidezConclusao
+                  tarefasFiltradas={tarefasFiltradas}
+                  onSelecionarColaborador={setColaboradorSelecionado}
+                />
+              </div>
+
+              <div id="secao-sem-comentarios">
+                <FechamentosSemComentariosSection tarefasFiltradas={tarefasFiltradas} />
+              </div>
+
+              <div id="secao-desempenho-equipes">
+                <Title order={3} mb="md">
+                  Desempenho de equipes
+                </Title>
+                {pacotes && (
+                  <DesempenhoEquipesRipple
+                    pacotes={pacotes}
+                    tarefasFiltradas={tarefasFiltradas}
                     onSelecionarColaborador={setColaboradorSelecionado}
                   />
                 )}
               </div>
 
-              <div id="secao-inteligencia">
+              <div id="secao-medias-equipes">
                 <Title order={3} mb="md">
-                  Inteligência — visão por equipe de atendimento
+                  Desempenho individual por pessoa
                 </Title>
-                <Stack gap="md">
-                  {pacotes && (
-                    <GraficosInteligencia
-                      pacotes={pacotes}
-                      tarefasFiltradas={tarefasFiltradas}
-                      onSelecionarColaborador={setColaboradorSelecionado}
-                      onSelecionarMetrica={setMetricaSelecionada}
-                    />
-                  )}
-                </Stack>
+                {pacotes && (
+                  <MediasEquipeIndividualTabs
+                    pacotes={pacotes}
+                    tarefasFiltradas={tarefasFiltradas}
+                    onSelecionarColaborador={setColaboradorSelecionado}
+                  />
+                )}
               </div>
 
-              <div id="secao-comentarios">
-                <ComentariosForum colaborador={colaborador} />
-              </div>
+              <ComentariosForum colaborador={colaborador} />
             </>
           )}
         </Stack>
@@ -251,10 +312,9 @@ export function DashboardPage() {
       {carregandoFiltro && <div className={classes.loadingBar} />}
       <ThemeToggle />
       <SupervisorAcessoBotoes
-        equipeDoUsuario={equipeDoUsuario}
         nomeUsuario={colaborador?.nome}
         idUsuario={colaborador?.id}
-        onAbrirEquipe={setEquipeSupervisorAberta}
+        onAbrirSlot={setSlotSupervisorAberto}
       />
       <ConfiguracoesCadastroBotao
         nomeUsuario={colaborador?.nome}
@@ -270,9 +330,17 @@ export function DashboardPage() {
       {estado === 'ok' && !erroDados && (
         <NavegacaoSecoesDashboard
           secoes={[
-            { id: 'secao-ranking', rotulo: 'Ranking' },
-            { id: 'secao-inteligencia', rotulo: 'Inteligência' },
-            { id: 'secao-comentarios', rotulo: 'Comentários' },
+            { id: 'secao-tendencia-diaria', rotulo: 'Tarefas por dia' },
+            { id: 'secao-ultimas-tarefas', rotulo: 'Últimas tarefas' },
+            { id: 'secao-projecao-ia', rotulo: 'Projeção IA' },
+            { id: 'secao-faturamento-vigente', rotulo: 'Faturamento' },
+            { id: 'secao-fechamento-equipes', rotulo: 'Fechamento' },
+            { id: 'secao-atraso', rotulo: 'Atraso' },
+            { id: 'secao-desempenho-individual', rotulo: 'Desempenho individual' },
+            { id: 'secao-rapidez-conclusao', rotulo: 'Rapidez' },
+            { id: 'secao-sem-comentarios', rotulo: 'Sem comentário' },
+            { id: 'secao-desempenho-equipes', rotulo: 'Desempenho de equipes' },
+            { id: 'secao-medias-equipes', rotulo: 'Médias de equipes' },
           ]}
         />
       )}
@@ -283,20 +351,22 @@ export function DashboardPage() {
       <ColaboradorTarefasModal
         colaborador={colaboradorSelecionado}
         aoFechar={() => setColaboradorSelecionado(null)}
+        usuarioLogadoNome={colaborador?.nome}
+        usuarioLogadoId={colaborador?.id}
       />
       <MetricaTarefasModal
         metrica={metricaSelecionada}
         aoFechar={() => setMetricaSelecionada(null)}
       />
       <PainelSupervisorEquipe
-        equipe={equipeSupervisorAberta}
+        slot={slotSupervisorAberto}
         pacotes={pacotes ?? []}
         tarefasFiltradas={tarefasFiltradas}
         metricasPorEquipe={metricasPorEquipe}
-        onFechar={() => setEquipeSupervisorAberta(null)}
+        onFechar={() => setSlotSupervisorAberto(null)}
         onSelecionarColaborador={setColaboradorSelecionado}
       />
-      <ConfiguracoesCadastroPanel
+      <EquipesCadastroPanel
         aberto={configuracoesAbertas}
         colaborador={colaborador}
         onFechar={() => setConfiguracoesAbertas(false)}
@@ -307,7 +377,6 @@ export function DashboardPage() {
         colaborador={colaborador}
         onFechar={() => setAuditoriaAberta(false)}
       />
-      <AiAssistantChat metricas={metricas} pacotes={pacotes} filtros={filtros} />
       <DebugBitrixPanel />
     </div>
   )

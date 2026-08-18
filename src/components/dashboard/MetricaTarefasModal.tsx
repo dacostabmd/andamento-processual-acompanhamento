@@ -1,6 +1,7 @@
 import {
   ActionIcon,
   Badge,
+  Group,
   Modal,
   Stack,
   Text,
@@ -13,6 +14,7 @@ import { montarCaminhoTarefaBitrix, montarUrlTarefaBitrix } from '../../services
 import { abrirNoPortal } from '../../services/bitrixSdk'
 import { STATUS_LABELS, type Tarefa } from '../../types/domain'
 import { tarefaFoiConcluidaComAtraso } from '../../utils/tarefasMetrics'
+import { BotaoExportarWhatsApp } from './BotaoExportarWhatsApp'
 import { CabecalhoOrdenavel } from './CabecalhoOrdenavel'
 import { pesoSituacao } from './ColaboradorTarefasModal'
 import { compararData, compararNumero, compararTexto, useOrdenacaoTabela } from './ordenacao'
@@ -33,7 +35,7 @@ interface MetricaTarefasModalProps {
   aoFechar: () => void
 }
 
-type ColunaMetrica = 'titulo' | 'situacao' | 'prazo' | 'finalizado'
+type ColunaMetrica = 'titulo' | 'responsavel' | 'equipe' | 'situacao' | 'prazo' | 'finalizado'
 
 function normalizarBusca(texto: string): string {
   return texto.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
@@ -62,6 +64,14 @@ export function MetricaTarefasModal({ metrica, aoFechar }: MetricaTarefasModalPr
       switch (chave) {
         case 'titulo':
           return compararTexto(a.titulo, b.titulo, direcao)
+        case 'responsavel':
+          return compararTexto(
+            a.responsavelAtendimentoNome || a.responsavelNome || 'Não informado',
+            b.responsavelAtendimentoNome || b.responsavelNome || 'Não informado',
+            direcao,
+          )
+        case 'equipe':
+          return compararTexto(a.equipeAtendimento, b.equipeAtendimento, direcao)
         case 'prazo':
           return compararData(a.prazoFinal, b.prazoFinal, direcao)
         case 'finalizado':
@@ -78,7 +88,14 @@ export function MetricaTarefasModal({ metrica, aoFechar }: MetricaTarefasModalPr
   const tarefasFiltradas = useMemo(() => {
     const termo = normalizarBusca(busca)
     if (!termo) return tarefasOrdenadas
-    return tarefasOrdenadas.filter((t) => normalizarBusca(t.titulo).includes(termo))
+    return tarefasOrdenadas.filter((t) => {
+      const tituloMatch = normalizarBusca(t.titulo ?? '').includes(termo)
+      const respMatch = normalizarBusca(
+        t.responsavelAtendimentoNome || t.responsavelNome || '',
+      ).includes(termo)
+      const equipeMatch = normalizarBusca(t.equipeAtendimento ?? '').includes(termo)
+      return tituloMatch || respMatch || equipeMatch
+    })
   }, [tarefasOrdenadas, busca])
 
   return (
@@ -94,16 +111,19 @@ export function MetricaTarefasModal({ metrica, aoFechar }: MetricaTarefasModalPr
         title={metrica?.titulo ?? 'Tarefas'}
         centered
         size="auto"
-        styles={{ content: { width: 'min(900px, calc(100vw - 2rem))' } }}
+        styles={{ content: { width: 'min(1050px, calc(100vw - 2rem))' } }}
         radius="md"
         transitionProps={{ transition: 'slide-up', duration: 250 }}
       >
         {metrica && (
           <Stack gap="md">
-            <Text size="xs" c="dimmed">
-              {metrica.subtitulo ??
-                `${metrica.tarefas.length} tarefa(s) no recorte de filtros atual`}
-            </Text>
+            <Group justify="space-between" align="center" wrap="wrap">
+              <Text size="xs" c="dimmed">
+                {metrica.subtitulo ??
+                  `${metrica.tarefas.length} tarefa(s) no recorte de filtros atual`}
+              </Text>
+              <BotaoExportarWhatsApp titulo={metrica.titulo} tarefas={metrica.tarefas} />
+            </Group>
 
             {tarefasOrdenadas.length === 0 ? (
               <EstadoVazio
@@ -113,7 +133,7 @@ export function MetricaTarefasModal({ metrica, aoFechar }: MetricaTarefasModalPr
             ) : (
               <Stack gap="sm">
                 <TextInput
-                  placeholder="Buscar por título da tarefa…"
+                  placeholder="Buscar por título, responsável ou equipe…"
                   value={busca}
                   onChange={(e) => setBusca(e.currentTarget.value)}
                   size="xs"
@@ -125,14 +145,15 @@ export function MetricaTarefasModal({ metrica, aoFechar }: MetricaTarefasModalPr
                   </Text>
                 ) : (
                   <div className="max-h-[420px] overflow-y-auto overflow-x-auto pr-1">
-                    <table className="w-full min-w-[700px] border-collapse text-sm table-fixed">
+                    <table className="w-full min-w-[850px] border-collapse text-sm table-fixed">
                       <colgroup>
                         <col />
+                        <col className="w-44" />
                         <col className="w-36" />
-                        <col className="w-24" />
+                        <col className="w-36" />
+                        <col className="w-28" />
                         <col className="w-32" />
-                        <col className="w-32" />
-                        <col className="w-12" />
+                        <col className="w-16" />
                       </colgroup>
                       <thead
                         className="sticky top-0 z-10"
@@ -145,7 +166,18 @@ export function MetricaTarefasModal({ metrica, aoFechar }: MetricaTarefasModalPr
                             ordem={ordem}
                             aoOrdenar={alternar}
                           />
-                          <th className="px-2 py-2 text-left font-semibold opacity-70">Equipe</th>
+                          <CabecalhoOrdenavel
+                            chave="responsavel"
+                            rotulo="Responsável"
+                            ordem={ordem}
+                            aoOrdenar={alternar}
+                          />
+                          <CabecalhoOrdenavel
+                            chave="equipe"
+                            rotulo="Equipe do Resp."
+                            ordem={ordem}
+                            aoOrdenar={alternar}
+                          />
                           <CabecalhoOrdenavel
                             chave="situacao"
                             rotulo="Status"
@@ -174,11 +206,15 @@ export function MetricaTarefasModal({ metrica, aoFechar }: MetricaTarefasModalPr
                             tarefa.id,
                             tarefa.projetoId,
                             tarefa.responsavelId,
+                            tarefa.fechadoPorId,
+                            tarefa.responsavelAtendimentoId,
                           )
                           const caminhoBitrix = montarCaminhoTarefaBitrix(
                             tarefa.id,
                             tarefa.projetoId,
                             tarefa.responsavelId,
+                            tarefa.fechadoPorId,
+                            tarefa.responsavelAtendimentoId,
                           )
                           return (
                             <tr
@@ -196,6 +232,13 @@ export function MetricaTarefasModal({ metrica, aoFechar }: MetricaTarefasModalPr
                                     {tarefa.titulo}
                                   </Text>
                                 </UnstyledButton>
+                              </td>
+                              <td className="px-2 py-2">
+                                <Text size="sm" lineClamp={1} fw={500}>
+                                  {tarefa.responsavelAtendimentoNome ||
+                                    tarefa.responsavelNome ||
+                                    'Não informado'}
+                                </Text>
                               </td>
                               <td className="px-2 py-2">
                                 <Badge

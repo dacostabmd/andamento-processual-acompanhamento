@@ -1,0 +1,58 @@
+/* Infográfico de urgência: cartão de alarme (vencidas) + grade de tiles menores.
+   Segue a mesma linguagem visual de superfície/borda usada em
+   GraficosInteligencia.module.css. */
+
+.cartaoAlarme {
+  border-radius: var(--mantine-radius-md);
+  border: 1px solid var(--superficie-borda);
+  background-color: var(--superficie);
+  padding: var(--mantine-spacing-lg);
+  box-shadow: 0 4px 16px var(--sombra-contraste);
+  transition:
+    background-color 0.25s ease,
+    border-color 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+/* Realce quando há tarefas vencidas: borda e sombra assumem a cor de alarme
+   injetada via --cor-alarme (COR_POR_SITUACAO.atrasadas). */
+.cartaoAlarme.comAlarme {
+  border-color: var(--cor-alarme);
+  box-shadow: 0 0 0 1px var(--cor-alarme, transparent);
+}
+
+.numeroAlarme {
+  font-size: 3rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--cor-alarme, var(--mantine-color-text));
+  font-variant-numeric: tabular-nums;
+}
+
+.tile {
+  display: flex;
+  align-items: center;
+  gap: var(--mantine-spacing-sm);
+  border: 1px solid var(--superficie-borda);
+  border-radius: var(--mantine-radius-md);
+  background-color: var(--superficie);
+  padding: var(--mantine-spacing-sm) var(--mantine-spacing-md);
+  transition: border-color 0.25s ease;
+}
+
+.iconeCirculo {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  background-color: var(--cor-icone-fundo, var(--superficie-borda));
+  color: var(--cor-icone-texto, var(--mantine-color-text));
+}
+
+.valorTile {
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
