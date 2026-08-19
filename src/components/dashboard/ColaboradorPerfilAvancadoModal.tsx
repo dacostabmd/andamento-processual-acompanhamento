@@ -220,10 +220,8 @@ export function ColaboradorPerfilAvancadoModal({
         ultimaAtividade: null,
         tempoMedioHoras: 0,
         pctConcluidasAtrasadas: 0,
-        pctConcluidasSemComentario: 0,
         totalConcluidas: 0,
         totalAtrasadas: 0,
-        totalSemComentario: 0,
       }
     }
 
@@ -269,14 +267,10 @@ export function ColaboradorPerfilAvancadoModal({
     let somaHoras = 0
     let countComDatas = 0
     let countAtrasadas = 0
-    let countSemComentario = 0
 
     concluidas.forEach((t) => {
       if (tarefaFoiConcluidaComAtraso(t)) {
         countAtrasadas++
-      }
-      if (!t.comentariosCount || t.comentariosCount === 0) {
-        countSemComentario++
       }
       if (t.criadoEm && t.finalizadoEm) {
         const inicio = new Date(t.criadoEm).getTime()
@@ -291,8 +285,6 @@ export function ColaboradorPerfilAvancadoModal({
     const tempoMedioHoras = countComDatas > 0 ? somaHoras / countComDatas : 0
     const pctConcluidasAtrasadas =
       totalConcluidas > 0 ? (countAtrasadas / totalConcluidas) * 100 : 0
-    const pctConcluidasSemComentario =
-      totalConcluidas > 0 ? (countSemComentario / totalConcluidas) * 100 : 0
 
     return {
       departamentos,
@@ -300,10 +292,8 @@ export function ColaboradorPerfilAvancadoModal({
       ultimaAtividade,
       tempoMedioHoras,
       pctConcluidasAtrasadas,
-      pctConcluidasSemComentario,
       totalConcluidas,
       totalAtrasadas: countAtrasadas,
-      totalSemComentario: countSemComentario,
     }
   }, [colaborador])
 
@@ -500,20 +490,6 @@ export function ColaboradorPerfilAvancadoModal({
                   </Text>
                   <Text size="xs" c="dimmed">
                     ({metricasCalculadas.totalAtrasadas} de {metricasCalculadas.totalConcluidas})
-                  </Text>
-                </Group>
-              </div>
-              <div>
-                <Text size="xs" c="dimmed">
-                  Sem comentários/atividades:
-                </Text>
-                <Group gap="xs" align="center">
-                  <Text fw={700} size="sm" c="red">
-                    {metricasCalculadas.pctConcluidasSemComentario.toFixed(1)}%
-                  </Text>
-                  <Text size="xs" c="dimmed">
-                    ({metricasCalculadas.totalSemComentario} de {metricasCalculadas.totalConcluidas}
-                    )
                   </Text>
                 </Group>
               </div>
