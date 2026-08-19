@@ -81,7 +81,7 @@ export function TarefaDetalheModal({ tarefa, aoFechar }: TarefaDetalheModalProps
     if (caminhoBitrix && urlBitrix) {
       abrirNoPortal(caminhoBitrix, urlBitrix)
     } else if (urlBitrix) {
-      window.open(urlBitrix, '_blank')
+      window.open(urlBitrix, '_self')
     }
   }
 
@@ -99,22 +99,9 @@ export function TarefaDetalheModal({ tarefa, aoFechar }: TarefaDetalheModalProps
     >
       <Stack gap="md">
         <Stack gap="xs">
-          <Group justify="space-between" align="flex-start">
-            <Text fw={700} size="lg" mt={4} style={{ flex: 1 }}>
-              {tarefa.titulo}
-            </Text>
-            {urlBitrix && (
-              <Button
-                size="xs"
-                variant="light"
-                color="blue"
-                leftSection={<ExternalLink size={14} />}
-                onClick={handleAbrirBitrix}
-              >
-                Abrir no Bitrix24
-              </Button>
-            )}
-          </Group>
+          <Text fw={700} size="lg" mt={4}>
+            {tarefa.titulo}
+          </Text>
           <Group gap="xs" wrap="nowrap">
             <Badge color={corDaPrioridade(tarefa.prioridade)} variant="filled">
               {PRIORIDADE_LABELS[tarefa.prioridade]}
@@ -140,11 +127,7 @@ export function TarefaDetalheModal({ tarefa, aoFechar }: TarefaDetalheModalProps
           <Campo rotulo="Fechado por" valor={tarefa.fechadoPorNome ?? '—'} />
           <Campo rotulo="Finalizado em" valor={formatarDataHora(tarefa.finalizadoEm)} />
           <Campo rotulo="Setor(es)" valor={tarefa.fechadoPorDepartamentos.join(', ') || '—'} />
-          <Campo
-            rotulo="ID no Bitrix"
-            valor={`#${tarefa.id} — Ver no Bitrix ↗`}
-            link={urlBitrix ?? undefined}
-          />
+          <Campo rotulo="ID no Bitrix" valor={`#${tarefa.id}`} />
         </SimpleGrid>
 
         <Divider />
