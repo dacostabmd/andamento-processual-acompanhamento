@@ -1,4 +1,4 @@
-import { Badge, Button, SimpleGrid, Text, useComputedColorScheme } from '@mantine/core'
+import { Badge, Button, Group, SimpleGrid, Text, useComputedColorScheme } from '@mantine/core'
 import {
   CategoryScale,
   Chart as ChartJS,
@@ -200,12 +200,12 @@ export function ProjecaoTarefasInfografico({ pacotes }: ProjecaoTarefasInfografi
   )
 
   return (
-    <div className={classes.cartao}>
-      <Text className={classes.tituloCartao} fw={700} size="lg">
-        Projeção de andamento — próximos 30 dias
-      </Text>
+    <div>
       <Text className={classes.subtitulo} size="xs">
-        Projeção calculada por IA a partir dos últimos {tendencia.length} dias com dado disponível.
+        Projeção calculada por IA (GPT-4o) a partir dos últimos {tendencia.length} dias com dado
+        disponível. Cálculo: o modelo recebe a série diária (data, total, concluídas) e devolve
+        projeção diária/semanal com JSON estruturado; o cliente aplica um fator de 0,15x nos finais
+        de semana e recalcula os totais semanais em cima disso.
       </Text>
 
       <div className={classes.areaGrafico}>
@@ -213,14 +213,11 @@ export function ProjecaoTarefasInfografico({ pacotes }: ProjecaoTarefasInfografi
       </div>
 
       {!projecao && (
-        <Button
-          className={classes.botaoGerar}
-          mt="md"
-          loading={carregando}
-          onClick={aoGerarProjecao}
-        >
-          Gerar projeção com IA
-        </Button>
+        <Group justify="flex-end" mt="md">
+          <Button className={classes.botaoGerar} loading={carregando} onClick={aoGerarProjecao}>
+            Gerar projeção com IA
+          </Button>
+        </Group>
       )}
 
       {erro && (

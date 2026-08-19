@@ -25,7 +25,7 @@ import { MetricasCards } from '../components/dashboard/MetricasCards'
 import { MediasEquipeIndividualTabs } from '../components/dashboard/MediasEquipeIndividualTabs'
 import { NavegacaoSecoesDashboard } from '../components/dashboard/NavegacaoSecoesDashboard'
 import { PainelSupervisorEquipe } from '../components/dashboard/PainelSupervisorEquipe'
-import { ProjecaoTarefasInfografico } from '../components/dashboard/ProjecaoTarefasInfografico'
+import { ProjecaoTabs } from '../components/dashboard/ProjecaoTabs'
 import { RankingRapidezConclusao } from '../components/dashboard/RankingRapidezConclusao'
 import { FechamentosSemComentariosSection } from '../components/dashboard/FechamentosSemComentariosSection'
 import { FaturamentoVigenteSection } from '../components/dashboard/FaturamentoVigenteSection'
@@ -220,7 +220,9 @@ export function DashboardPage() {
               </div>
 
               <div id="secao-projecao-ia">
-                {pacotes && <ProjecaoTarefasInfografico pacotes={pacotes} />}
+                {pacotes && (
+                  <ProjecaoTabs pacotes={pacotes} tarefasFiltradas={tarefasFiltradas} />
+                )}
               </div>
 
               <FaturamentoVigenteSection

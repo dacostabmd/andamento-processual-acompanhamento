@@ -841,6 +841,45 @@ export function calcularTendenciaDiariaCriadas(
   }))
 }
 
+/**
+ * Série dos últimos N dias de tarefas em atendimento geral: cards criados
+ * naquele dia (criadoEm) que já entraram com um responsável de atendimento
+ * atribuído (responsavelAtendimentoId), somando todas as equipes — alimenta a
+ * projeção de "Previsão de atendimento".
+ */
+export function calcularTendenciaDiariaAtendimento(
+  pacotes: PacoteAtendimento[],
+  agora: Date,
+  dias: number = DIAS_TENDENCIA,
+): PontoSerieDiariaSimples[] {
+  const chaves: string[] = []
+  const cursor = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate())
+  for (let i = dias - 1; i >= 0; i--) {
+    const d = new Date(cursor)
+    d.setDate(d.getDate() - i)
+    chaves.push(chaveDia(d))
+  }
+
+  const porDia = new Map<string, number>()
+  chaves.forEach((c) => porDia.set(c, 0))
+
+  pacotes.forEach((pacote) => {
+    pacote.cards.forEach((card) => {
+      if (!card.criadoEm || card.responsavelAtendimentoId === null) return
+      const chave = chaveDia(new Date(card.criadoEm))
+      const bucketAtual = porDia.get(chave)
+      if (bucketAtual === undefined) return // fora da janela de dias considerada
+      porDia.set(chave, bucketAtual + 1)
+    })
+  })
+
+  return chaves.map((chave) => ({
+    dia: chave,
+    label: rotuloDia(chave),
+    valor: porDia.get(chave)!,
+  }))
+}
+
 /** Agrupa as tarefas por setor (fechadoPorDepartamentos) e calcula as métricas de cada grupo. */
 export function calcularMetricasPorSetor(tarefas: Tarefa[]): MetricasPorSetor[] {
   const tarefasPorSetor = new Map<string, Tarefa[]>()
