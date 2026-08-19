@@ -82,6 +82,7 @@ function tarefa(op: OpcoesTarefa = {}): Tarefa {
     // é o estado do processo. Null aqui: nenhum caso deste arquivo depende dela.
     ufFechador: null,
     ufAtendimento: null,
+    criadoEm: null,
   }
 }
 
