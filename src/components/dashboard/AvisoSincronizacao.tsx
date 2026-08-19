@@ -18,7 +18,9 @@ function formatarRelativo(iso: string): string {
 /**
  * Aviso fixo no topo do dashboard explicando, em linguagem simples, de onde
  * vêm os dados — pedido do usuário para deixar explícito que o painel NÃO é
- * uma conexão em tempo real com o Bitrix24.
+ * uma conexão em tempo real com o Bitrix24. O chip "Vigência: últimos N dias"
+ * no cabeçalho existe para destacar esse número sem exigir ler o parágrafo
+ * inteiro — pedido do usuário em 2026-08-19 ao trocar a janela de 10 para 14.
  *
  * Fatos por trás do texto (worker-nodejs-andamento/src/sync.ts e config.ts):
  * a sincronização roda automaticamente 1x por dia, de madrugada (mira meia-
@@ -46,10 +48,13 @@ export function AvisoSincronizacao() {
         <path d="M12 16v-4" />
         <path d="M12 8h.01" />
       </svg>
-      <div>
-        <Text size="sm" fw={600}>
-          Como os dados deste painel são atualizados
-        </Text>
+      <div className={classes.corpo}>
+        <div className={classes.cabecalho}>
+          <Text size="sm" fw={600}>
+            Como os dados deste painel são atualizados
+          </Text>
+          <span className={classes.badgeVigencia}>Vigência: últimos {JANELA_PADRAO_DIAS} dias</span>
+        </div>
         <Text size="xs" c="dimmed">
           Uma vez por dia, de madrugada, o sistema busca automaticamente no Bitrix24 as tarefas dos
           últimos {JANELA_PADRAO_DIAS} dias e atualiza os números aqui — não é uma conexão em tempo

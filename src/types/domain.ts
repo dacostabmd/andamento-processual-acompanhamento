@@ -632,14 +632,15 @@ export interface FiltrosDashboard {
 /**
  * Janela de dias retroativos que o worker mantém sincronizada com o Bitrix
  * (`CONFIG.SYNC_DIAS_JANELA` em worker-nodejs-andamento/src/config.ts, hoje
- * 10 — reduzida de 90 em 2026-07-31 a pedido do usuário). Tarefas criadas
- * antes disso nunca chegam ao snapshot, então não há filtro de data que as
- * traga de volta. A API não expõe essa janela no metadata do snapshot (só o
- * início/fim da EXECUÇÃO do sync, não da janela de dados) — por isso este
- * número é um literal, não algo lido dinamicamente. Se `SYNC_DIAS_JANELA`
- * mudar no worker, atualizar aqui também. Consumido por AvisoSincronizacao.tsx.
+ * 14 — reduzida de 90 para 10 em 2026-07-31, ampliada para 14 em 2026-08-19,
+ * ambas a pedido do usuário). Tarefas criadas antes disso nunca chegam ao
+ * snapshot, então não há filtro de data que as traga de volta. A API não
+ * expõe essa janela no metadata do snapshot (só o início/fim da EXECUÇÃO do
+ * sync, não da janela de dados) — por isso este número é um literal, não algo
+ * lido dinamicamente. Se `SYNC_DIAS_JANELA` mudar no worker, atualizar aqui
+ * também. Consumido por AvisoSincronizacao.tsx e VigenciaBadge.tsx.
  */
-export const JANELA_PADRAO_DIAS = 10
+export const JANELA_PADRAO_DIAS = 14
 
 /** Filtros vazios sem restrição inicial de data por padrão. */
 export function filtrosVazios(_agora?: Date): FiltrosDashboard {

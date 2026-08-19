@@ -27,7 +27,6 @@ import { NavegacaoSecoesDashboard } from '../components/dashboard/NavegacaoSecoe
 import { PainelSupervisorEquipe } from '../components/dashboard/PainelSupervisorEquipe'
 import { ProjecaoTabs } from '../components/dashboard/ProjecaoTabs'
 import { RankingRapidezConclusao } from '../components/dashboard/RankingRapidezConclusao'
-import { FechamentosSemComentariosSection } from '../components/dashboard/FechamentosSemComentariosSection'
 import { FaturamentoVigenteSection } from '../components/dashboard/FaturamentoVigenteSection'
 import { SupervisorAcessoBotoes } from '../components/dashboard/SupervisorAcessoBotoes'
 import { TendenciaDiariaTarefas } from '../components/dashboard/TendenciaDiariaTarefas'
@@ -271,10 +270,6 @@ export function DashboardPage() {
                 />
               </div>
 
-              <div id="secao-sem-comentarios">
-                <FechamentosSemComentariosSection tarefasFiltradas={tarefasFiltradas} />
-              </div>
-
               <div id="secao-desempenho-equipes">
                 <Title order={3} mb="md">
                   Desempenho de equipes
@@ -340,7 +335,6 @@ export function DashboardPage() {
             { id: 'secao-atraso', rotulo: 'Atraso' },
             { id: 'secao-desempenho-individual', rotulo: 'Desempenho individual' },
             { id: 'secao-rapidez-conclusao', rotulo: 'Rapidez' },
-            { id: 'secao-sem-comentarios', rotulo: 'Sem comentário' },
             { id: 'secao-desempenho-equipes', rotulo: 'Desempenho de equipes' },
             { id: 'secao-medias-equipes', rotulo: 'Médias de equipes' },
           ]}
