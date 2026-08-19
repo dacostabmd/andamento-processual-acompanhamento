@@ -7,8 +7,107 @@ import {
   calcularRankingFechadores,
   equipeExecutoraDaTarefa,
   tarefaFoiConcluidaComAtraso,
+  calcularFaturamentoVigente,
 } from './tarefasMetrics'
 import type { Tarefa } from '../types/domain'
+
+describe('calcularFaturamentoVigente', () => {
+  // Bug real que motivou a reescrita: o critério antigo usava valorCobranca
+  // ("[A] Valor da cobrança"), um campo manual quase nunca preenchido pelos
+  // atendentes — o card "Faturamento Vigente" mostrava ~R$380 de um único
+  // card mesmo com milhares de processos ativos. A fonte correta é a
+  // Situação Financeira do Asaas, lida do item de CRM vinculado.
+  it('ignora tarefas sem situação financeira (sem item de CRM Asaas vinculado)', () => {
+    const tarefas = [
+      { id: 1, status: 5, situacaoFinanceira: null, valorCobranca: 999 },
+    ] as unknown as Tarefa[]
+
+    const dados = calcularFaturamentoVigente(tarefas)
+    expect(dados.totalGeral).toBe(0)
+    expect(dados.qtdPagos).toBe(0)
+    expect(dados.qtdPendentes).toBe(0)
+  })
+
+  it('conta ADIMPLENTE como Realizado pelo valor recebido no Asaas', () => {
+    const tarefas = [
+      {
+        id: 1,
+        status: 5,
+        situacaoFinanceira: 'ADIMPLENTE',
+        valorRecebidoAsaas: 1500,
+        valorInadimplente: null,
+        fechadoPorNome: 'Gabriela Nunes',
+        equipeFechador: 'Cinthia Filgueiras',
+        equipeAtendimento: 'Cinthia Filgueiras',
+      },
+    ] as unknown as Tarefa[]
+
+    const dados = calcularFaturamentoVigente(tarefas, 'executora')
+    expect(dados.totalRealizado).toBe(1500)
+    expect(dados.totalPendente).toBe(0)
+    expect(dados.qtdPagos).toBe(1)
+  })
+
+  it('conta INADIMPLENTE como Pendente pelo valor inadimplente do Asaas', () => {
+    const tarefas = [
+      {
+        id: 1,
+        status: 3,
+        situacaoFinanceira: 'INADIMPLENTE',
+        valorRecebidoAsaas: null,
+        valorInadimplente: 7910,
+        fechadoPorNome: 'José da Silva',
+        equipeFechador: 'Simone Freitas',
+        equipeAtendimento: 'Simone Freitas',
+      },
+    ] as unknown as Tarefa[]
+
+    const dados = calcularFaturamentoVigente(tarefas, 'executora')
+    expect(dados.totalPendente).toBe(7910)
+    expect(dados.totalRealizado).toBe(0)
+    expect(dados.qtdPendentes).toBe(1)
+  })
+
+  it('ignora ADIMPLENTE sem valor recebido e INADIMPLENTE sem valor inadimplente (valor <= 0)', () => {
+    const tarefas = [
+      { id: 1, status: 5, situacaoFinanceira: 'ADIMPLENTE', valorRecebidoAsaas: null },
+      { id: 2, status: 3, situacaoFinanceira: 'INADIMPLENTE', valorInadimplente: 0 },
+    ] as unknown as Tarefa[]
+
+    const dados = calcularFaturamentoVigente(tarefas)
+    expect(dados.totalGeral).toBe(0)
+  })
+
+  it('soma corretamente Realizado + Pendente no total geral e por equipe', () => {
+    const tarefas = [
+      {
+        id: 1,
+        status: 5,
+        situacaoFinanceira: 'ADIMPLENTE',
+        valorRecebidoAsaas: 300,
+        fechadoPorNome: 'A',
+        equipeFechador: 'Cinthia Filgueiras',
+        equipeAtendimento: 'Cinthia Filgueiras',
+      },
+      {
+        id: 2,
+        status: 3,
+        situacaoFinanceira: 'INADIMPLENTE',
+        valorInadimplente: 700,
+        fechadoPorNome: 'B',
+        equipeFechador: 'Cinthia Filgueiras',
+        equipeAtendimento: 'Cinthia Filgueiras',
+      },
+    ] as unknown as Tarefa[]
+
+    const dados = calcularFaturamentoVigente(tarefas, 'executora')
+    expect(dados.totalGeral).toBe(1000)
+    const equipe = dados.porEquipe.find((e) => e.equipe === 'Cinthia Filgueiras')
+    expect(equipe?.pago).toBe(300)
+    expect(equipe?.pendente).toBe(700)
+    expect(equipe?.total).toBe(1000)
+  })
+})
 
 describe('calcularTopFechadoPor', () => {
   // Bug real: o gráfico "Fechado por" era calculado a partir de `pacotes`

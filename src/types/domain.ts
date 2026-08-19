@@ -112,6 +112,19 @@ export interface Tarefa {
   /** Campos personalizados de Faturamento Vigente do Bitrix24 (Valor da cobrança e Data de Pagamento) */
   valorCobranca?: number | null
   dataPagamento?: string | null
+  /**
+   * Faturamento Vigente (Asaas) — lido do item de CRM "ANDAMENTO PROCESSUAL"
+   * vinculado à tarefa, não de um campo da própria tarefa. Substitui
+   * valorCobranca/dataPagamento (campos manuais quase nunca preenchidos) como
+   * fonte de `calcularFaturamentoVigente`. Null quando a tarefa não tem esse
+   * item de CRM vinculado (ex.: tarefas de COBRANÇA MENSAL, que apontam para
+   * um Deal clássico sem esse campo) ou o campo nunca foi preenchido lá.
+   */
+  situacaoFinanceira?: 'ADIMPLENTE' | 'INADIMPLENTE' | null
+  /** "[Asaas] VALOR INADIMPLENTE": total vencido e não pago, direto do CRM. */
+  valorInadimplente?: number | null
+  /** Soma das cobranças com status RECEBIDA no texto "[Asaas] Cobranças" do item de CRM. */
+  valorRecebidoAsaas?: number | null
 }
 
 // ─── Cadastro de pessoas (tela de configurações) ───────────────────────────

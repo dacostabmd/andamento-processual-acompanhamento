@@ -798,6 +798,49 @@ export function calcularTendenciaDiaria(
   })
 }
 
+export interface PontoSerieDiariaSimples {
+  dia: string
+  label: string
+  valor: number
+}
+
+/**
+ * Série dos últimos N dias por data de criação do card (criadoEm/CREATED_DATE),
+ * independente de status — alimenta a projeção de "tarefas criadas".
+ */
+export function calcularTendenciaDiariaCriadas(
+  pacotes: PacoteAtendimento[],
+  agora: Date,
+  dias: number = DIAS_TENDENCIA,
+): PontoSerieDiariaSimples[] {
+  const chaves: string[] = []
+  const cursor = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate())
+  for (let i = dias - 1; i >= 0; i--) {
+    const d = new Date(cursor)
+    d.setDate(d.getDate() - i)
+    chaves.push(chaveDia(d))
+  }
+
+  const porDia = new Map<string, number>()
+  chaves.forEach((c) => porDia.set(c, 0))
+
+  pacotes.forEach((pacote) => {
+    pacote.cards.forEach((card) => {
+      if (!card.criadoEm) return
+      const chave = chaveDia(new Date(card.criadoEm))
+      const bucketAtual = porDia.get(chave)
+      if (bucketAtual === undefined) return // fora da janela de dias considerada
+      porDia.set(chave, bucketAtual + 1)
+    })
+  })
+
+  return chaves.map((chave) => ({
+    dia: chave,
+    label: rotuloDia(chave),
+    valor: porDia.get(chave)!,
+  }))
+}
+
 /** Agrupa as tarefas por setor (fechadoPorDepartamentos) e calcula as métricas de cada grupo. */
 export function calcularMetricasPorSetor(tarefas: Tarefa[]): MetricasPorSetor[] {
   const tarefasPorSetor = new Map<string, Tarefa[]>()
@@ -863,8 +906,21 @@ export interface DadosFaturamentoVigente {
 }
 
 /**
- * Calcula os cruzamentos de Faturamento Vigente (Valor da cobrança e Data de Pagamento)
- * com tarefas, equipes e colaboradores/fechadores.
+ * Calcula os cruzamentos de Faturamento Vigente com tarefas, equipes e
+ * colaboradores/fechadores.
+ *
+ * Fonte: Situação Financeira do Asaas (`situacaoFinanceira`), lida do item de
+ * CRM "ANDAMENTO PROCESSUAL" vinculado à tarefa — não os campos manuais
+ * "[A] Valor da cobrança"/"[A] Data de Pagamento" (`valorCobranca`/
+ * `dataPagamento`), que na prática quase nunca são preenchidos pelos
+ * atendentes e faziam este card mostrar quase zero mesmo com milhares de
+ * processos ativos. INADIMPLENTE conta como Pendente pelo valor vencido
+ * (`valorInadimplente`, campo estruturado do Asaas); ADIMPLENTE conta como
+ * Realizado pela soma das cobranças com status RECEBIDA no histórico do
+ * Asaas (`valorRecebidoAsaas`, extraído do texto "[Asaas] Cobranças" — ver
+ * asaas.ts no worker). Tarefas sem `situacaoFinanceira` (sem item de CRM
+ * vinculado, ou vinculado a um Deal clássico sem esse campo — caso do grupo
+ * COBRANÇA MENSAL) ficam de fora, como antes.
  */
 export function calcularFaturamentoVigente(
   tarefas: Tarefa[],
@@ -890,11 +946,13 @@ export function calcularFaturamentoVigente(
   const faturadoresMap = new Map<string, FaturadorRanking>()
 
   tarefas.forEach((tarefa) => {
-    const valor = tarefa.valorCobranca ?? 0
+    if (!tarefa.situacaoFinanceira) return
+
+    const ehPago = tarefa.situacaoFinanceira === 'ADIMPLENTE'
+    const valor = ehPago ? (tarefa.valorRecebidoAsaas ?? 0) : (tarefa.valorInadimplente ?? 0)
     if (valor <= 0) return
 
     const equipe = equipeDaTarefa(tarefa, visao)
-    const ehPago = Boolean(tarefa.dataPagamento) || tarefaEstaConcluida(tarefa)
 
     if (ehPago) {
       totalRealizado += valor
