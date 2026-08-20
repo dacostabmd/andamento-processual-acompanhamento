@@ -14,7 +14,7 @@ import {
   Title,
 } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
-import { Check, ShieldAlert } from 'lucide-react'
+import { Check } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { salvarPermissoesMetricas } from '../../services/permissoesApi'
 import type { CargoRole, Colaborador, PerfilVisibilidadeMetricas, PermissoesMetricas } from '../../types/domain'

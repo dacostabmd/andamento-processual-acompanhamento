@@ -38,7 +38,7 @@ const LABEL_DATASET_PROJECAO: Record<MetodoEstatistico, string> = {
   'monte-carlo': 'Projeção (Monte Carlo - P50)',
 }
 
-const EXPLICACAO_METODO: Record<MetodoEstatistico, string> = {
+export const EXPLICACAO_METODO: Record<MetodoEstatistico, string> = {
   'regressao-linear':
     'Cálculo: Regressão Linear por Mínimos Quadrados Ordinários (OLS y = ax + b). ' +
     'Calcula a tendência matemática constante da série histórica recente e projeta a inclinação ' +

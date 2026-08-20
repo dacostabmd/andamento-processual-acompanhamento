@@ -14,7 +14,7 @@ const PERMISSOES_PADRAO_TOTAL: PermissoesMetricas = {
   auditoriaAlteracoes: true,
 }
 
-export function useVisibilidadeMetricas(colaborador: Colaborador | null, cargoRoleSelecionado?: CargoRole) {
+export function useVisibilidadeMetricas(_colaborador: Colaborador | null, cargoRoleSelecionado?: CargoRole) {
   const [perfis, setPerfis] = useState<PerfilVisibilidadeMetricas[]>([])
   const [carregando, setCarregando] = useState(true)
 

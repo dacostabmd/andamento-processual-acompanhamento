@@ -4,7 +4,7 @@
  * VITE_BITRIX_API_URL (webhook REST com token) — opcional, sem ela os links
  * simplesmente não aparecem.
  */
-function basePortalUrl(): string {
+export function basePortalUrl(): string {
   const portalBruta = import.meta.env.VITE_BITRIX_PORTAL_URL?.trim()
   if (portalBruta) return portalBruta.endsWith('/') ? portalBruta.slice(0, -1) : portalBruta
 
