@@ -1,16 +1,14 @@
 import { Center, Group, Loader, Stack, Title, Button } from '@mantine/core'
 import { useEffect, useState, type ReactNode } from 'react'
 import { EstadoVazio } from '../components/EstadoVazio'
-import { ThemeToggle } from '../components/ThemeToggle'
+import { BarraAcoesFlutuantes } from '../components/dashboard/BarraAcoesFlutuantes'
 import { AvisoSincronizacao } from '../components/dashboard/AvisoSincronizacao'
 import {
   ColaboradorTarefasModal,
   type ColaboradorSelecionado,
 } from '../components/dashboard/ColaboradorTarefasModal'
 import { ComentariosForum } from '../components/dashboard/ComentariosForum'
-import { AuditoriaCadastroBotao } from '../components/dashboard/AuditoriaCadastroBotao'
 import { AuditoriaCadastroPanel } from '../components/dashboard/AuditoriaCadastroPanel'
-import { ConfiguracoesCadastroBotao } from '../components/dashboard/ConfiguracoesCadastroBotao'
 import { EquipesCadastroPanel } from '../components/dashboard/EquipesCadastroPanel'
 import { DebugBitrixPanel } from '../components/dashboard/DebugBitrixPanel'
 import { DesempenhoEquipesRipple } from '../components/dashboard/DesempenhoEquipesRipple'
@@ -27,9 +25,7 @@ import { PainelSupervisorEquipe } from '../components/dashboard/PainelSupervisor
 import { ProjecaoTabs } from '../components/dashboard/ProjecaoTabs'
 import { RankingRapidezConclusao } from '../components/dashboard/RankingRapidezConclusao'
 import { FaturamentoVigenteSection } from '../components/dashboard/FaturamentoVigenteSection'
-import { PermissoesMetricasBotao } from '../components/dashboard/PermissoesMetricasBotao'
 import { PermissoesMetricasPanel } from '../components/dashboard/PermissoesMetricasPanel'
-import { SupervisorAcessoBotoes } from '../components/dashboard/SupervisorAcessoBotoes'
 import { TendenciaDiariaTarefas } from '../components/dashboard/TendenciaDiariaTarefas'
 import { UltimasTarefasBox } from '../components/dashboard/UltimasTarefasBox'
 import { VERSAO_ATUAL, VersaoModal } from '../components/dashboard/VersaoModal'
@@ -308,26 +304,13 @@ export function DashboardPage() {
   return (
     <div className={classes.page}>
       {carregandoFiltro && <div className={classes.loadingBar} />}
-      <ThemeToggle />
-      <SupervisorAcessoBotoes
+      <BarraAcoesFlutuantes
         nomeUsuario={colaborador?.nome}
         idUsuario={colaborador?.id}
-        onAbrirSlot={setSlotSupervisorAberto}
-      />
-      <ConfiguracoesCadastroBotao
-        nomeUsuario={colaborador?.nome}
-        idUsuario={colaborador?.id}
-        onAbrir={() => setConfiguracoesAbertas(true)}
-      />
-      <AuditoriaCadastroBotao
-        nomeUsuario={colaborador?.nome}
-        idUsuario={colaborador?.id}
-        onAbrir={() => setAuditoriaAberta(true)}
-      />
-      <PermissoesMetricasBotao
-        nomeUsuario={colaborador?.nome}
-        idUsuario={colaborador?.id}
-        onAbrir={() => setPermissoesAberta(true)}
+        onAbrirConfiguracoes={() => setConfiguracoesAbertas(true)}
+        onAbrirAuditoria={() => setAuditoriaAberta(true)}
+        onAbrirPermissoes={() => setPermissoesAberta(true)}
+        onAbrirSlotSupervisor={setSlotSupervisorAberto}
       />
       {conteudo}
       {estado === 'ok' && !erroDados && (

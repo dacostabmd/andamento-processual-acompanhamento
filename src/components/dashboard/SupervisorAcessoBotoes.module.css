@@ -1,12 +1,7 @@
-/* Empilhado abaixo do botão de tema (fixo em top:16px/left:16px, ~42px de
-   altura) — mesmo canto, mesmo z-index, só um degrau mais abaixo. */
 .pilha {
-  position: fixed;
-  top: 68px;
-  left: 16px;
-  z-index: 100;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: center;
   gap: 8px;
 }
 

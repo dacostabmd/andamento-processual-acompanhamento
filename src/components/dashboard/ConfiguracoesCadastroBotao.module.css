@@ -1,13 +1,4 @@
-/* Ao LADO do ThemeToggle, no mesmo canto superior esquerdo: mesmas medidas (top
-   16px, raio, sombra) e mesmo z-index, para os dois lerem como um par de
-   controles. O deslocamento de 58px é a largura do ActionIcon size="lg" (34px)
-   mais 8px de respiro — na MESMA linha de propósito, para não empurrar a pilha
-   de botões de supervisor, que é fixa em top:68px/left:16px logo abaixo. */
 .botao {
-  position: fixed;
-  top: 16px;
-  left: 58px;
-  z-index: 100;
   border-color: var(--superficie-borda);
   box-shadow: 0 2px 8px var(--sombra-contraste);
   transition:
@@ -24,9 +15,6 @@
   transition: transform 0.4s ease;
 }
 
-/* A engrenagem gira no hover — a única affordance que diferencia este ícone do
-   de tema à distância, já que ambos são um contorno claro de 18px no mesmo
-   tamanho de botão. */
 .botao:hover svg {
   transform: rotate(60deg);
 }

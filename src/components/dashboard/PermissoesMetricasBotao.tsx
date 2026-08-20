@@ -26,7 +26,6 @@ export function PermissoesMetricasBotao({
       onClick={onAbrir}
       aria-label="Abrir gestão de visibilidade de métricas"
       title="Permissões & Visibilidade de Métricas por Perfil"
-      style={{ top: '150px' }} // Posiciona abaixo dos outros botões flutuantes do canto
     >
       <ShieldCheck size={18} />
     </ActionIcon>
