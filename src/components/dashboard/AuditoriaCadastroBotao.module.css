@@ -1,15 +1,4 @@
-/* Terceiro botão da mesma fileira do canto superior esquerdo: tema (left 16px),
-   engrenagem (left 58px) e este (left 100px) — 34px de ActionIcon size="lg" mais
-   8px de respiro entre eles. Mesma medida de topo, raio e z-index dos outros dois
-   para lerem como um grupo de controles, e não como três decisões separadas.
-
-   Ficam todos na MESMA linha de propósito: a pilha de botões de supervisor é fixa
-   em top:68px/left:16px logo abaixo, e crescer para baixo a empurraria. */
 .botao {
-  position: fixed;
-  top: 16px;
-  left: 100px;
-  z-index: 100;
   border-color: var(--superficie-borda);
   box-shadow: 0 2px 8px var(--sombra-contraste);
   transition:

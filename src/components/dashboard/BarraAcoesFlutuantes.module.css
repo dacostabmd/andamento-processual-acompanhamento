@@ -1,29 +1,30 @@
 .dockContainer {
   position: fixed;
   top: 16px;
-  right: 16px;
+  left: 16px;
   z-index: 1000;
   display: flex;
+  flex-direction: row;
   align-items: center;
   gap: 8px;
   padding: 6px 12px;
   border-radius: 30px;
-  background-color: rgba(20, 20, 25, 0.75);
+  background-color: rgba(20, 20, 25, 0.85);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--superficie-borda, rgba(255, 255, 255, 0.12));
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--superficie-borda, rgba(255, 255, 255, 0.15));
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
   transition: all 0.2s ease;
 }
 
 .dockContainer:hover {
-  border-color: rgba(255, 255, 255, 0.22);
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
 }
 
 .divisor {
   width: 1px;
   height: 22px;
-  background-color: var(--superficie-borda, rgba(255, 255, 255, 0.15));
+  background-color: var(--superficie-borda, rgba(255, 255, 255, 0.18));
   margin: 0 2px;
 }
