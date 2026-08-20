@@ -84,7 +84,7 @@ export function SupervisorAcessoBotoes({
           <ActionIcon
             key={slot.chave}
             variant="default"
-            size={43}
+            size="lg"
             radius="xl"
             className={classes.botao}
             style={{
