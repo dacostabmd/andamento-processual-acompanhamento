@@ -1,8 +1,7 @@
-import { SimpleGrid, Tabs, Text } from '@mantine/core'
+import { Tabs, Text } from '@mantine/core'
 import { useMemo } from 'react'
 import type { PacoteAtendimento, Tarefa } from '../../types/domain'
 import {
-  calcularFaturamentoVigente,
   calcularTendenciaDiaria,
   calcularTendenciaDiariaAtendimento,
   calcularTendenciaDiariaCriadas,
@@ -14,14 +13,6 @@ import { COR_POR_SITUACAO } from './tarefaApresentacao'
 const COR_CRIADAS = COR_POR_SITUACAO.noPrazo
 const COR_CONCLUIDAS = COR_POR_SITUACAO.concluidas
 const COR_ATENDIMENTO = '#d6336c'
-
-function formatarMoeda(valor: number): string {
-  return valor.toLocaleString('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-    maximumFractionDigits: 0,
-  })
-}
 
 /** Recorta o início da série para o primeiro dia com dado real (evita mostrar dias zerados fora da janela de sync). */
 function recortarParaDadoReal<T extends { valor: number }>(brutos: T[]): T[] {
@@ -40,7 +31,7 @@ interface ProjecaoTabsProps {
  * Abas de projeção de andamento baseadas em métodos estatísticos para fluxo de trabalho (Kanban/Bitrix):
  * Regressão Linear (OLS), Média Móvel e Simulação de Monte Carlo por Throughput.
  */
-export function ProjecaoTabs({ pacotes, tarefasFiltradas }: ProjecaoTabsProps) {
+export function ProjecaoTabs({ pacotes }: ProjecaoTabsProps) {
   const criadas = useMemo(
     () => recortarParaDadoReal(calcularTendenciaDiariaCriadas(pacotes, new Date())),
     [pacotes],
@@ -70,11 +61,6 @@ export function ProjecaoTabs({ pacotes, tarefasFiltradas }: ProjecaoTabsProps) {
     [concluidas],
   )
 
-  const faturamento = useMemo(
-    () => calcularFaturamentoVigente(tarefasFiltradas, 'executora'),
-    [tarefasFiltradas],
-  )
-
   return (
     <div className={classes.cartao}>
       <Text className={classes.tituloCartao} fw={700} size="lg">
@@ -90,7 +76,6 @@ export function ProjecaoTabs({ pacotes, tarefasFiltradas }: ProjecaoTabsProps) {
           <Tabs.Tab value="criadas">Tarefas criadas</Tabs.Tab>
           <Tabs.Tab value="concluidas">Tarefas concluídas</Tabs.Tab>
           <Tabs.Tab value="atendimento">Previsão de atendimento</Tabs.Tab>
-          <Tabs.Tab value="faturamento">Faturamento</Tabs.Tab>
         </Tabs.List>
 
         <Tabs.Panel value="criadas" pt="md">
@@ -205,50 +190,6 @@ export function ProjecaoTabs({ pacotes, tarefasFiltradas }: ProjecaoTabsProps) {
               />
             </Tabs.Panel>
           </Tabs>
-        </Tabs.Panel>
-
-        <Tabs.Panel value="faturamento" pt="md">
-          <Text size="sm" mt="xs">
-            Sem projeção temporal para o momento: os valores do Asaas (situação financeira,
-            recebido e inadimplente) são totais agregados por tarefa, sem uma data diária de
-            referência — não há como distribuí-los dia a dia. Abaixo está o total atual do
-            Faturamento Vigente.
-          </Text>
-
-          <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="sm" mt="md">
-            <div>
-              <Text size="xl" fw={700} style={{ color: COR_POR_SITUACAO.concluidas }}>
-                {formatarMoeda(faturamento.totalRealizado)}
-              </Text>
-              <Text size="xs" c="dimmed">
-                Realizado ({faturamento.qtdPagos} tarefa(s))
-              </Text>
-            </div>
-            <div>
-              <Text size="xl" fw={700} style={{ color: COR_POR_SITUACAO.atrasadas }}>
-                {formatarMoeda(faturamento.totalPendente)}
-              </Text>
-              <Text size="xs" c="dimmed">
-                Pendente ({faturamento.qtdPendentes} tarefa(s))
-              </Text>
-            </div>
-            <div>
-              <Text size="xl" fw={700}>
-                {formatarMoeda(faturamento.totalGeral)}
-              </Text>
-              <Text size="xs" c="dimmed">
-                Total geral
-              </Text>
-            </div>
-            <div>
-              <Text size="xl" fw={700}>
-                {formatarMoeda(faturamento.ticketMedio)}
-              </Text>
-              <Text size="xs" c="dimmed">
-                Ticket médio
-              </Text>
-            </div>
-          </SimpleGrid>
         </Tabs.Panel>
       </Tabs>
     </div>
