@@ -4,7 +4,6 @@ import {
   Button,
   Card,
   Group,
-  Loader,
   Modal,
   SimpleGrid,
   Stack,
@@ -14,7 +13,18 @@ import {
   Title,
 } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
-import { Check } from 'lucide-react'
+import {
+  BarChart3,
+  Briefcase,
+  Check,
+  ClipboardList,
+  Crown,
+  DollarSign,
+  Laptop,
+  Settings,
+  ShieldCheck,
+  TrendingUp,
+} from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { salvarPermissoesMetricas } from '../../services/permissoesApi'
 import type { CargoRole, Colaborador, PerfilVisibilidadeMetricas, PermissoesMetricas } from '../../types/domain'
@@ -93,6 +103,7 @@ export function PermissoesMetricasPanel({
       onClose={onFechar}
       title={
         <Group gap="xs">
+          <ShieldCheck size={20} color="var(--mantine-color-grape-4)" />
           <Title order={4}>Visibilidade de Métricas & Permissões</Title>
           <Badge color="grape" variant="light">
             Super Admin
@@ -110,13 +121,21 @@ export function PermissoesMetricasPanel({
 
       <Tabs value={cargoAtivo} onChange={(val) => setCargoAtivo(val as CargoRole)}>
         <Tabs.List mb="md">
-          <Tabs.Tab value="ceo">👑 CEO</Tabs.Tab>
-          <Tabs.Tab value="diretor">👔 Diretor</Tabs.Tab>
-          <Tabs.Tab value="coordenador">📋 Coordenador</Tabs.Tab>
-          <Tabs.Tab value="operacional">💻 Operacional</Tabs.Tab>
+          <Tabs.Tab value="ceo" leftSection={<Crown size={15} color="#eab308" />}>
+            CEO
+          </Tabs.Tab>
+          <Tabs.Tab value="diretor" leftSection={<Briefcase size={15} color="#3b82f6" />}>
+            Diretor
+          </Tabs.Tab>
+          <Tabs.Tab value="coordenador" leftSection={<ClipboardList size={15} color="#10b981" />}>
+            Coordenador
+          </Tabs.Tab>
+          <Tabs.Tab value="operacional" leftSection={<Laptop size={15} color="#8b5cf6" />}>
+            Operacional
+          </Tabs.Tab>
         </Tabs.List>
 
-        {permissoesAtuais ? (
+        {permissoesAtuais && (
           <Stack gap="md">
             <Alert color="indigo" variant="light">
               <Text size="xs" fw={700}>
@@ -125,12 +144,15 @@ export function PermissoesMetricasPanel({
               <Text size="xs">{DESCRICAO_CARGO[cargoAtivo]}</Text>
             </Alert>
 
-            <Text size="sm" fw={700} mt="xs">
-              💰 Métricas Financeiras
-            </Text>
+            <Group gap="xs" mt="xs">
+              <DollarSign size={16} color="#eab308" />
+              <Text size="sm" fw={700}>
+                Métricas Financeiras
+              </Text>
+            </Group>
 
             <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
-              <Card padding="sm" radius="sm" withBorder>
+              <Card padding="sm" radius="sm">
                 <Switch
                   label="Faturamento Vigente Total"
                   description="Exibe totais realizados, pendentes e ticket médio"
@@ -139,7 +161,7 @@ export function PermissoesMetricasPanel({
                 />
               </Card>
 
-              <Card padding="sm" radius="sm" withBorder>
+              <Card padding="sm" radius="sm">
                 <Switch
                   label="Detalhamento Asaas"
                   description="Exibe cobranças recebidas e pendentes do CRM"
@@ -149,12 +171,15 @@ export function PermissoesMetricasPanel({
               </Card>
             </SimpleGrid>
 
-            <Text size="sm" fw={700} mt="xs">
-              📊 Métricas de Desempenho & Produção
-            </Text>
+            <Group gap="xs" mt="xs">
+              <BarChart3 size={16} color="#3b82f6" />
+              <Text size="sm" fw={700}>
+                Métricas de Desempenho & Produção
+              </Text>
+            </Group>
 
             <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
-              <Card padding="sm" radius="sm" withBorder>
+              <Card padding="sm" radius="sm">
                 <Switch
                   label="Ranking Geral de Fechadores"
                   description="Tabela completa com volume e pontualidade de fechamento"
@@ -163,7 +188,7 @@ export function PermissoesMetricasPanel({
                 />
               </Card>
 
-              <Card padding="sm" radius="sm" withBorder>
+              <Card padding="sm" radius="sm">
                 <Switch
                   label="Desempenho Individual"
                   description="Cartões individuais por responsável no prazo vs com atraso"
@@ -173,12 +198,15 @@ export function PermissoesMetricasPanel({
               </Card>
             </SimpleGrid>
 
-            <Text size="sm" fw={700} mt="xs">
-              📈 Projeções Estatísticas & Tendências
-            </Text>
+            <Group gap="xs" mt="xs">
+              <TrendingUp size={16} color="#10b981" />
+              <Text size="sm" fw={700}>
+                Projeções Estatísticas & Tendências
+              </Text>
+            </Group>
 
             <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="sm">
-              <Card padding="sm" radius="sm" withBorder>
+              <Card padding="sm" radius="sm">
                 <Switch
                   label="Simulação Monte Carlo"
                   description="Previsão probabilística P10/P50/P90"
@@ -187,7 +215,7 @@ export function PermissoesMetricasPanel({
                 />
               </Card>
 
-              <Card padding="sm" radius="sm" withBorder>
+              <Card padding="sm" radius="sm">
                 <Switch
                   label="Regressão Linear (OLS)"
                   description="Tendência matemática constante y=ax+b"
@@ -198,7 +226,7 @@ export function PermissoesMetricasPanel({
                 />
               </Card>
 
-              <Card padding="sm" radius="sm" withBorder>
+              <Card padding="sm" radius="sm">
                 <Switch
                   label="Média Móvel"
                   description="Linha de referência constante recente"
@@ -208,12 +236,15 @@ export function PermissoesMetricasPanel({
               </Card>
             </SimpleGrid>
 
-            <Text size="sm" fw={700} mt="xs">
-              ⚙️ Painéis de Gestão e Auditoria
-            </Text>
+            <Group gap="xs" mt="xs">
+              <Settings size={16} color="#8b5cf6" />
+              <Text size="sm" fw={700}>
+                Painéis de Gestão e Auditoria
+              </Text>
+            </Group>
 
             <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
-              <Card padding="sm" radius="sm" withBorder>
+              <Card padding="sm" radius="sm">
                 <Switch
                   label="Gestão de Cadastro de Equipes"
                   description="Permite criar, editar e organizar equipes"
@@ -222,7 +253,7 @@ export function PermissoesMetricasPanel({
                 />
               </Card>
 
-              <Card padding="sm" radius="sm" withBorder>
+              <Card padding="sm" radius="sm">
                 <Switch
                   label="Auditoria de Alterações"
                   description="Log completo de alterações no cadastro"
@@ -241,10 +272,6 @@ export function PermissoesMetricasPanel({
               </Button>
             </Group>
           </Stack>
-        ) : (
-          <Group justify="center" py="xl">
-            <Loader size="md" />
-          </Group>
         )}
       </Tabs>
     </Modal>

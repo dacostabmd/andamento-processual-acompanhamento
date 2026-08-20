@@ -43,7 +43,13 @@ export function TendenciaDiariaTarefas({
   const scheme = useComputedColorScheme('dark', { getInitialValueInEffect: true })
   const cores = useMemo(() => coresChrome(scheme), [scheme])
 
-  const tendencia = useMemo(() => calcularTendenciaDiaria(pacotes, new Date()), [pacotes])
+  const tendenciaBruta = useMemo(() => calcularTendenciaDiaria(pacotes, new Date()), [pacotes])
+  const tendencia = useMemo(() => {
+    const primeiro = tendenciaBruta.findIndex((p) => p.concluidas > 0)
+    if (primeiro <= 0) return tendenciaBruta
+    const inicio = Math.max(0, primeiro - 1)
+    return tendenciaBruta.slice(inicio)
+  }, [tendenciaBruta])
   const cardsTotais = useMemo(() => pacotes.flatMap((p) => p.cards), [pacotes])
 
   const aoClicarPonto = useCallback(

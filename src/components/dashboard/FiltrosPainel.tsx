@@ -262,14 +262,6 @@ export function FiltrosPainel({
             </Tooltip>
           </Group>
 
-          <Checkbox
-            classNames={{ input: classes.checkboxInput, label: classes.checkboxLabel }}
-            label="Ocultar sem responsável"
-            checked={filtros.ocultarSemResponsavel ?? false}
-            onChange={(evento) =>
-              onChange({ ...filtros, ocultarSemResponsavel: evento.currentTarget.checked })
-            }
-          />
         </Group>
 
         <button

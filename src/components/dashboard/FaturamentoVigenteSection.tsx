@@ -83,6 +83,30 @@ export function FaturamentoVigenteSection({
           </Badge>
         </Group>
 
+        {/* Banner de Explicação do Cálculo em Verde */}
+        <Paper
+          p="sm"
+          radius="md"
+          style={{
+            backgroundColor: 'rgba(16, 185, 129, 0.08)',
+            border: '1px solid rgba(16, 185, 129, 0.3)',
+          }}
+        >
+          <Group gap="xs" align="flex-start" wrap="nowrap">
+            <ThemeIcon size="sm" color="teal" variant="light" radius="xl" style={{ marginTop: 2 }}>
+              <CircleDollarSign size={14} />
+            </ThemeIcon>
+            <Stack gap={2}>
+              <Text size="xs" fw={700} c="teal.4" tt="uppercase">
+                Como o Faturamento é Calculado
+              </Text>
+              <Text size="xs" c="teal.3">
+                O <strong>Faturamento Realizado</strong> soma os valores com pagamento confirmado no Asaas no CRM ou o valor de cobrança de tarefas concluídas. O <strong>Faturamento Pendente</strong> soma os valores de cobrança com pagamentos em aberto. O <strong>Ticket Médio</strong> divide o total realizado pela quantidade de tarefas pagas.
+              </Text>
+            </Stack>
+          </Group>
+        </Paper>
+
         {/* 4 Cards de Métricas Principais */}
         <SimpleGrid cols={{ base: 1, xs: 2, md: 4 }} spacing="md">
           {/* Card 1: Realizado */}
