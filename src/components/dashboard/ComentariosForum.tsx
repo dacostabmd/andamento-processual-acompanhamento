@@ -354,7 +354,6 @@ export function ComentariosForum({ colaborador }: ComentariosForumProps) {
     <Card
       padding="lg"
       radius="md"
-      withBorder
       style={{ backgroundColor: 'var(--superficie)' }}
       mt="xl"
     >
@@ -394,7 +393,6 @@ export function ComentariosForum({ colaborador }: ComentariosForumProps) {
           <Paper
             p="sm"
             radius="md"
-            withBorder
             style={{ backgroundColor: 'rgba(255, 255, 255, 0.02)' }}
           >
             <Text size="xs" c="dimmed">
@@ -455,7 +453,7 @@ export function ComentariosForum({ colaborador }: ComentariosForumProps) {
                 </Text>
 
                 {dia.comentarios.map((item) => (
-                  <Paper key={item.id} p="md" radius="md" withBorder>
+                  <Paper key={item.id} p="md" radius="md">
                     <Stack gap="xs">
                       <Group justify="space-between" align="center">
                         <Group gap="xs">
@@ -567,7 +565,7 @@ export function ComentariosForum({ colaborador }: ComentariosForumProps) {
 
                       {/* Formulário de Resposta no Thread */}
                       {idRespostaAtiva === item.id && (
-                        <Paper p="xs" radius="sm" ml="lg" mt="xs" withBorder>
+                        <Paper p="xs" radius="sm" ml="lg" mt="xs">
                           <Stack gap="xs">
                             <Textarea
                               placeholder={`Responder para ${item.autorNome}...`}
