@@ -1,4 +1,4 @@
-import { Center, Group, Loader, Stack, Title, Button } from '@mantine/core'
+import { Center, Group, Loader, Stack, Title, Text, Button } from '@mantine/core'
 import { useEffect, useState, type ReactNode } from 'react'
 import { EstadoVazio } from '../components/EstadoVazio'
 import { BarraAcoesFlutuantes } from '../components/dashboard/BarraAcoesFlutuantes'
@@ -150,33 +150,50 @@ export function DashboardPage() {
     conteudo = (
       <div className={classes.conteudo}>
         <Stack gap="xl">
-          <Group justify="flex-end" align="center">
-            <Button
-              variant="subtle"
-              color="yellow"
-              size="xs"
-              style={{
-                borderRadius: '16px',
-                border: '1px solid rgba(203, 165, 86, 0.4)',
-                backgroundColor: 'rgba(203, 165, 86, 0.1)',
-                color: '#cba556',
-                fontWeight: 600,
-              }}
-              onClick={() => setModalVersaoAberto(true)}
-            >
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                style={{ marginRight: '6px' }}
+          <Group justify="space-between" align="center" wrap="wrap" gap="md">
+            <div>
+              <Title order={2}>Dashboard de Andamento Processual</Title>
+              <Text size="xs" c="dimmed">
+                Acompanhamento operacional de prazos, distribuição por equipe e gargalos.
+              </Text>
+            </div>
+
+            <Group gap="xs" align="center" wrap="nowrap">
+              <BarraAcoesFlutuantes
+                nomeUsuario={colaborador?.nome}
+                idUsuario={colaborador?.id}
+                onAbrirConfiguracoes={() => setConfiguracoesAbertas(true)}
+                onAbrirAuditoria={() => setAuditoriaAberta(true)}
+                onAbrirPermissoes={() => setPermissoesAberta(true)}
+                onAbrirSlotSupervisor={setSlotSupervisorAberto}
+              />
+              <Button
+                variant="subtle"
+                color="yellow"
+                size="xs"
+                style={{
+                  borderRadius: '16px',
+                  border: '1px solid rgba(203, 165, 86, 0.4)',
+                  backgroundColor: 'rgba(203, 165, 86, 0.1)',
+                  color: '#cba556',
+                  fontWeight: 600,
+                }}
+                onClick={() => setModalVersaoAberto(true)}
               >
-                <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
-              </svg>
-              Novidades v{VERSAO_ATUAL}
-            </Button>
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  style={{ marginRight: '6px' }}
+                >
+                  <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
+                </svg>
+                Novidades v{VERSAO_ATUAL}
+              </Button>
+            </Group>
           </Group>
 
           {erroDados ? (
@@ -304,14 +321,6 @@ export function DashboardPage() {
   return (
     <div className={classes.page}>
       {carregandoFiltro && <div className={classes.loadingBar} />}
-      <BarraAcoesFlutuantes
-        nomeUsuario={colaborador?.nome}
-        idUsuario={colaborador?.id}
-        onAbrirConfiguracoes={() => setConfiguracoesAbertas(true)}
-        onAbrirAuditoria={() => setAuditoriaAberta(true)}
-        onAbrirPermissoes={() => setPermissoesAberta(true)}
-        onAbrirSlotSupervisor={setSlotSupervisorAberto}
-      />
       {conteudo}
       {estado === 'ok' && !erroDados && (
         <NavegacaoSecoesDashboard

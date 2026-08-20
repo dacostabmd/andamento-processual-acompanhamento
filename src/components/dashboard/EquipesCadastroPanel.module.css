@@ -53,7 +53,7 @@
   padding: 14px 16px;
   border-radius: var(--mantine-radius-md);
   background-color: var(--superficie, rgba(255, 255, 255, 0.02));
-  border: 1px solid var(--superficie-borda, rgba(255, 255, 255, 0.08));
+  border: none;
 }
 
 .inputModal {
