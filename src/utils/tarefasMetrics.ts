@@ -1020,9 +1020,22 @@ export function calcularFaturamentoVigente(
     dadoseq.total += valor
     porEquipeMap.set(equipe, dadoseq)
 
-    // Agrupa por fechador / colaborador
-    const nomeFechador =
-      tarefa.fechadoPorNome || tarefa.responsavelAtendimentoNome || tarefa.responsavelNome
+    // Agrupa por fechador / colaborador respeitando a visão e ignorando robôs em pendentes
+    let nomeFechador: string | null = null
+    if (visao === 'executora') {
+      if (tarefa.fechadoPorNome && ehNomeDePessoa(tarefa.fechadoPorNome)) {
+        nomeFechador = tarefa.fechadoPorNome
+      } else if (tarefa.responsavelNome && ehNomeDePessoa(tarefa.responsavelNome)) {
+        nomeFechador = tarefa.responsavelNome
+      }
+    } else {
+      if (tarefa.responsavelAtendimentoNome && ehNomeDePessoa(tarefa.responsavelAtendimentoNome)) {
+        nomeFechador = tarefa.responsavelAtendimentoNome
+      } else if (tarefa.responsavelNome && ehNomeDePessoa(tarefa.responsavelNome)) {
+        nomeFechador = tarefa.responsavelNome
+      }
+    }
+
     if (nomeFechador && ehNomeDePessoa(nomeFechador)) {
       const faturador = faturadoresMap.get(nomeFechador) ?? {
         nome: nomeFechador,
