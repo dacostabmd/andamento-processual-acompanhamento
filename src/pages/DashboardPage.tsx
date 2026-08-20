@@ -183,15 +183,13 @@ export function DashboardPage() {
             </Button>
           </Group>
 
-          <AvisoSincronizacao />
-
           {erroDados ? (
             <EstadoVazio titulo="Não foi possível carregar os dados" descricao={erroDados} />
           ) : (
             <>
               <div id="secao-ultimas-tarefas">
                 <Title order={3} mb="md">
-                  Últimas tarefas — últimos 30 dias
+                  Filtros, Pesquisa e Tarefas
                 </Title>
                 <UltimasTarefasBox
                   tarefasFiltradas={tarefasFiltradas}
@@ -204,6 +202,8 @@ export function DashboardPage() {
                   onMudarGrupos={setGruposSelecionados}
                 />
               </div>
+
+              <AvisoSincronizacao />
 
               <MetricasCards
                 titulo="Métricas Gerais"
