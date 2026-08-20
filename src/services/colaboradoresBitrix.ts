@@ -91,6 +91,9 @@ export function formatarUrlFoto(urlBruta: string | null | undefined): string | n
   }
 
   const base = basePortalUrl()
+  if (/^\d+$/.test(url)) {
+    return `${base}/bitrix/tools/main.file.show.php?FILE_ID=${url}`
+  }
   const caminho = url.startsWith('/') ? url : `/${url}`
   return `${base}${caminho}`
 }

@@ -22,7 +22,6 @@ import {
   type MetricaSelecionada,
 } from '../components/dashboard/MetricaTarefasModal'
 import { MetricasCards } from '../components/dashboard/MetricasCards'
-import { MediasEquipeIndividualTabs } from '../components/dashboard/MediasEquipeIndividualTabs'
 import { NavegacaoSecoesDashboard } from '../components/dashboard/NavegacaoSecoesDashboard'
 import { PainelSupervisorEquipe } from '../components/dashboard/PainelSupervisorEquipe'
 import { ProjecaoTabs } from '../components/dashboard/ProjecaoTabs'
@@ -298,19 +297,6 @@ export function DashboardPage() {
                 )}
               </div>
 
-              <div id="secao-medias-equipes">
-                <Title order={3} mb="md">
-                  Desempenho individual por pessoa
-                </Title>
-                {pacotes && (
-                  <MediasEquipeIndividualTabs
-                    pacotes={pacotes}
-                    tarefasFiltradas={tarefasFiltradas}
-                    onSelecionarColaborador={setColaboradorSelecionado}
-                  />
-                )}
-              </div>
-
               <ComentariosForum colaborador={colaborador} />
             </>
           )}
@@ -356,7 +342,6 @@ export function DashboardPage() {
             { id: 'secao-desempenho-individual', rotulo: 'Desempenho individual' },
             { id: 'secao-rapidez-conclusao', rotulo: 'Rapidez' },
             { id: 'secao-desempenho-equipes', rotulo: 'Desempenho de equipes' },
-            { id: 'secao-medias-equipes', rotulo: 'Médias de equipes' },
           ]}
         />
       )}

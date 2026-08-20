@@ -1,5 +1,6 @@
-import { Badge, Card, Group, SimpleGrid, Stack, Text, UnstyledButton } from '@mantine/core'
-import { useMemo } from 'react'
+import { Badge, Button, Card, Group, SimpleGrid, Stack, Text, UnstyledButton } from '@mantine/core'
+import { ChevronDown, ChevronUp } from 'lucide-react'
+import { useMemo, useState } from 'react'
 import { useFotosColaboradores } from '../../hooks/useFotosColaboradores'
 import type { RankingFechador, Tarefa } from '../../types/domain'
 import { idsColaboradoresDasTarefas } from '../../utils/pessoas'
@@ -17,10 +18,8 @@ interface DesempenhoIndividualConclusaoProps {
   onSelecionarColaborador: (colaborador: ColaboradorSelecionado) => void
 }
 
-/** Quantas pessoas aparecem na grade de destaque — as demais seguem só no ranking completo (fora deste componente). */
 const TOP_INDIVIDUOS = 6
 
-/** Badge da equipe com a mesma paleta fixa usada em todo o dashboard (nunca uma cor nova). */
 function BadgeEquipe({ linha }: { linha: RankingFechador }) {
   return (
     <Badge
@@ -42,24 +41,28 @@ function BadgeEquipe({ linha }: { linha: RankingFechador }) {
 }
 
 /**
- * Recorte de desempenho individual por conclusão: pontualidade geral do
- * recorte + os indivíduos com mais volume de fechamento, cada um com o
- * detalhamento no-prazo x com-atraso. Mesmas fontes de `RankingFechadores.tsx`
- * (a tabela completa), mas em formato de cartões de destaque.
+ * Componente unificado de Desempenho Individual de Conclusão.
+ * Exibe a pontualidade geral de conclusão, os cartões dos destaques e permite expandir
+ * para ver o ranking completo de todas as pessoas.
  */
 export function DesempenhoIndividualConclusao({
   tarefasFiltradas,
   onSelecionarColaborador,
 }: DesempenhoIndividualConclusaoProps) {
+  const [mostrarTodos, setMostrarTodos] = useState(false)
   const ranking = useMemo(() => calcularRankingFechadores(tarefasFiltradas), [tarefasFiltradas])
   const pontualidade = useMemo(
     () => calcularPontualidadeFechamento(tarefasFiltradas),
     [tarefasFiltradas],
   )
-  const idsColaboradores = useMemo(
-    () => idsColaboradoresDasTarefas(tarefasFiltradas),
-    [tarefasFiltradas],
-  )
+  const idsColaboradores = useMemo(() => {
+    const ids = idsColaboradoresDasTarefas(tarefasFiltradas)
+    ranking.linhas.forEach((l) => {
+      if (l.fechadoPorId !== null) ids.push(l.fechadoPorId)
+    })
+    return ids
+  }, [tarefasFiltradas, ranking.linhas])
+
   const fotos = useFotosColaboradores(idsColaboradores)
 
   if (ranking.linhas.length === 0) {
@@ -71,11 +74,11 @@ export function DesempenhoIndividualConclusao({
     )
   }
 
-  const destaques = ranking.linhas.slice(0, TOP_INDIVIDUOS)
+  const linhasExibidas = mostrarTodos ? ranking.linhas : ranking.linhas.slice(0, TOP_INDIVIDUOS)
 
   return (
     <Stack gap="md">
-      <Card padding="md" radius="md" withBorder>
+      <Card padding="md" radius="md" style={{ backgroundColor: 'var(--superficie)' }}>
         <Group justify="space-between" align="center" wrap="wrap">
           <div>
             <Text size="xs" c="dimmed" tt="uppercase" fw={700}>
@@ -119,7 +122,7 @@ export function DesempenhoIndividualConclusao({
       </Card>
 
       <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="md">
-        {destaques.map((linha, index) => (
+        {linhasExibidas.map((linha, index) => (
           <UnstyledButton
             key={linha.fechadoPorId}
             onClick={() =>
@@ -131,7 +134,12 @@ export function DesempenhoIndividualConclusao({
               })
             }
           >
-            <Card padding="md" radius="md" withBorder className="item-clicavel-hover">
+            <Card
+              padding="md"
+              radius="md"
+              className="item-clicavel-hover"
+              style={{ backgroundColor: 'var(--superficie)' }}
+            >
               <Group gap="sm" wrap="nowrap" align="center">
                 <Text size="xs" fw={700} c="dimmed" style={{ minWidth: 24, textAlign: 'right' }}>
                   {index + 1}º
@@ -167,6 +175,22 @@ export function DesempenhoIndividualConclusao({
           </UnstyledButton>
         ))}
       </SimpleGrid>
+
+      {ranking.linhas.length > TOP_INDIVIDUOS && (
+        <Group justify="center" mt="xs">
+          <Button
+            variant="subtle"
+            size="xs"
+            color="gray"
+            leftSection={mostrarTodos ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            onClick={() => setMostrarTodos((prev) => !prev)}
+          >
+            {mostrarTodos
+              ? 'Mostrar apenas os destaques'
+              : `Ver ranking completo (${ranking.linhas.length} pessoas)`}
+          </Button>
+        </Group>
+      )}
     </Stack>
   )
 }
