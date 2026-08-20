@@ -28,10 +28,13 @@ import { PainelSupervisorEquipe } from '../components/dashboard/PainelSupervisor
 import { ProjecaoTabs } from '../components/dashboard/ProjecaoTabs'
 import { RankingRapidezConclusao } from '../components/dashboard/RankingRapidezConclusao'
 import { FaturamentoVigenteSection } from '../components/dashboard/FaturamentoVigenteSection'
+import { PermissoesMetricasBotao } from '../components/dashboard/PermissoesMetricasBotao'
+import { PermissoesMetricasPanel } from '../components/dashboard/PermissoesMetricasPanel'
 import { SupervisorAcessoBotoes } from '../components/dashboard/SupervisorAcessoBotoes'
 import { TendenciaDiariaTarefas } from '../components/dashboard/TendenciaDiariaTarefas'
 import { UltimasTarefasBox } from '../components/dashboard/UltimasTarefasBox'
 import { VERSAO_ATUAL, VersaoModal } from '../components/dashboard/VersaoModal'
+import { useVisibilidadeMetricas } from '../hooks/useVisibilidadeMetricas'
 import { useSessaoUsuario } from '../hooks/useSessaoUsuario'
 import {
   comNomesReais,
@@ -57,6 +60,7 @@ const GRUPO_PADRAO_ACOMPANHAMENTO_MENSAL = 86
 
 export function DashboardPage() {
   const { estado, colaborador, projetosPermitidos, mensagemErro } = useSessaoUsuario()
+  const visibilidade = useVisibilidadeMetricas(colaborador)
 
   const [filtros, setFiltros] = useState<FiltrosDashboard>(() => filtrosVazios(new Date()))
   const [gruposSelecionados, setGruposSelecionados] = useState<number[]>([
@@ -75,6 +79,7 @@ export function DashboardPage() {
   const [metricaSelecionada, setMetricaSelecionada] = useState<MetricaSelecionada | null>(null)
   const [configuracoesAbertas, setConfiguracoesAbertas] = useState(false)
   const [auditoriaAberta, setAuditoriaAberta] = useState(false)
+  const [permissoesAberta, setPermissoesAberta] = useState(false)
   // Incrementado quando o cadastro de pessoas muda: reexecuta o efeito de carga
   // para os números refletirem os vínculos novos sem depender de F5. O cache do
   // snapshot já foi descartado pelo painel de configurações.
@@ -185,6 +190,22 @@ export function DashboardPage() {
             <EstadoVazio titulo="Não foi possível carregar os dados" descricao={erroDados} />
           ) : (
             <>
+              <div id="secao-ultimas-tarefas">
+                <Title order={3} mb="md">
+                  Últimas tarefas — últimos 30 dias
+                </Title>
+                <UltimasTarefasBox
+                  tarefasFiltradas={tarefasFiltradas}
+                  metricas={metricas}
+                  pacotes={pacotes}
+                  filtros={filtros}
+                  onChangeFiltros={aoMudarFiltros}
+                  projetosPermitidos={projetosComNomes}
+                  gruposSelecionados={gruposSelecionados}
+                  onMudarGrupos={setGruposSelecionados}
+                />
+              </div>
+
               <MetricasCards
                 titulo="Métricas Gerais"
                 metricas={metricas}
@@ -202,44 +223,36 @@ export function DashboardPage() {
                 )}
               </div>
 
-              <div id="secao-ultimas-tarefas">
-                <Title order={3} mb="md">
-                  Últimas tarefas — últimos 30 dias
-                </Title>
-                <UltimasTarefasBox
-                  tarefasFiltradas={tarefasFiltradas}
-                  metricas={metricas}
-                  pacotes={pacotes}
-                  filtros={filtros}
-                  onChangeFiltros={aoMudarFiltros}
-                  projetosPermitidos={projetosComNomes}
-                  gruposSelecionados={gruposSelecionados}
-                  onMudarGrupos={setGruposSelecionados}
+              {(visibilidade.podeVerProjecaoMonteCarlo ||
+                visibilidade.podeVerProjecaoRegressaoLinear ||
+                visibilidade.podeVerProjecaoMediaMovel) && (
+                <div id="secao-projecao-ia">
+                  {pacotes && (
+                    <ProjecaoTabs pacotes={pacotes} tarefasFiltradas={tarefasFiltradas} />
+                  )}
+                </div>
+              )}
+
+              {visibilidade.podeVerFaturamento && (
+                <FaturamentoVigenteSection
+                  tarefas={tarefasFiltradas}
+                  visao="executora"
+                  aoSelecionarColaborador={setColaboradorSelecionado}
                 />
-              </div>
+              )}
 
-              <div id="secao-projecao-ia">
-                {pacotes && (
-                  <ProjecaoTabs pacotes={pacotes} tarefasFiltradas={tarefasFiltradas} />
-                )}
-              </div>
-
-              <FaturamentoVigenteSection
-                tarefas={tarefasFiltradas}
-                visao="executora"
-                aoSelecionarColaborador={setColaboradorSelecionado}
-              />
-
-              <div id="secao-fechamento-equipes">
-                <Title order={3} mb="md">
-                  Fechamento e responsabilidade por colaborador
-                </Title>
-                <FechamentoEquipesTabs
-                  tarefasFiltradas={tarefasFiltradas}
-                  pacotes={pacotes ?? []}
-                  onSelecionarColaborador={setColaboradorSelecionado}
-                />
-              </div>
+              {visibilidade.podeVerRankingFechadores && (
+                <div id="secao-fechamento-equipes">
+                  <Title order={3} mb="md">
+                    Fechamento e responsabilidade por colaborador
+                  </Title>
+                  <FechamentoEquipesTabs
+                    tarefasFiltradas={tarefasFiltradas}
+                    pacotes={pacotes ?? []}
+                    onSelecionarColaborador={setColaboradorSelecionado}
+                  />
+                </div>
+              )}
 
               <div id="secao-atraso">
                 <Title order={3} mb="md">
@@ -253,15 +266,17 @@ export function DashboardPage() {
                 )}
               </div>
 
-              <div id="secao-desempenho-individual">
-                <Title order={3} mb="md">
-                  Desempenho individual de conclusão
-                </Title>
-                <DesempenhoIndividualConclusao
-                  tarefasFiltradas={tarefasFiltradas}
-                  onSelecionarColaborador={setColaboradorSelecionado}
-                />
-              </div>
+              {visibilidade.podeVerDesempenhoIndividual && (
+                <div id="secao-desempenho-individual">
+                  <Title order={3} mb="md">
+                    Desempenho individual de conclusão
+                  </Title>
+                  <DesempenhoIndividualConclusao
+                    tarefasFiltradas={tarefasFiltradas}
+                    onSelecionarColaborador={setColaboradorSelecionado}
+                  />
+                </div>
+              )}
 
               <div id="secao-rapidez-conclusao">
                 <RankingRapidezConclusao
@@ -323,13 +338,18 @@ export function DashboardPage() {
         idUsuario={colaborador?.id}
         onAbrir={() => setAuditoriaAberta(true)}
       />
+      <PermissoesMetricasBotao
+        nomeUsuario={colaborador?.nome}
+        idUsuario={colaborador?.id}
+        onAbrir={() => setPermissoesAberta(true)}
+      />
       {conteudo}
       {estado === 'ok' && !erroDados && (
         <NavegacaoSecoesDashboard
           secoes={[
+            { id: 'secao-ultimas-tarefas', rotulo: 'Últimas tarefas e filtros' },
             { id: 'secao-tendencia-diaria', rotulo: 'Tarefas por dia' },
-            { id: 'secao-ultimas-tarefas', rotulo: 'Últimas tarefas' },
-            { id: 'secao-projecao-ia', rotulo: 'Projeção IA' },
+            { id: 'secao-projecao-ia', rotulo: 'Projeções' },
             { id: 'secao-faturamento-vigente', rotulo: 'Faturamento' },
             { id: 'secao-fechamento-equipes', rotulo: 'Fechamento' },
             { id: 'secao-atraso', rotulo: 'Atraso' },
@@ -372,6 +392,16 @@ export function DashboardPage() {
         aberto={auditoriaAberta}
         colaborador={colaborador}
         onFechar={() => setAuditoriaAberta(false)}
+      />
+      <PermissoesMetricasPanel
+        aberto={permissoesAberta}
+        colaborador={colaborador}
+        perfis={visibilidade.perfis}
+        onFechar={() => setPermissoesAberta(false)}
+        onAtualizado={() => {
+          setPermissoesAberta(false)
+          void visibilidade.recarregar()
+        }}
       />
       <DebugBitrixPanel />
     </div>

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Avatar, type AvatarProps } from '@mantine/core'
 
 interface UserAvatarProps extends Omit<AvatarProps, 'src'> {
@@ -25,17 +26,21 @@ function extrairIniciais(nome: string): string {
 }
 
 export function UserAvatar({ nome, fotoUrl, size = 32, ...props }: UserAvatarProps) {
+  const [erroFoto, setErroFoto] = useState(false)
   const corFundo = gerarCorDoNome(nome)
   const iniciais = extrairIniciais(nome)
 
+  const srcValido = fotoUrl && !erroFoto ? fotoUrl : null
+
   return (
     <Avatar
-      src={fotoUrl || null}
+      src={srcValido}
       alt={nome}
       size={size}
       radius="xl"
+      onError={() => setErroFoto(true)}
       style={{
-        backgroundColor: fotoUrl ? undefined : corFundo,
+        backgroundColor: srcValido ? undefined : corFundo,
         color: '#ffffff',
         fontWeight: 700,
         fontSize: typeof size === 'number' ? Math.max(10, size * 0.4) : '0.8rem',

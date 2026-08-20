@@ -640,7 +640,7 @@ export interface FiltrosDashboard {
  * lido dinamicamente. Se `SYNC_DIAS_JANELA` mudar no worker, atualizar aqui
  * também. Consumido por AvisoSincronizacao.tsx e VigenciaBadge.tsx.
  */
-export const JANELA_PADRAO_DIAS = 14
+export const JANELA_PADRAO_DIAS = 30
 
 /** Filtros vazios sem restrição inicial de data por padrão. */
 export function filtrosVazios(_agora?: Date): FiltrosDashboard {
@@ -691,4 +691,27 @@ export interface MetricasPorSetor {
 export interface MetricasPorEquipe {
   equipe: EquipeAtendimento
   metricas: MetricasTarefas
+}
+
+export type CargoRole = 'ceo' | 'diretor' | 'coordenador' | 'operacional'
+
+export interface PermissoesMetricas {
+  faturamentoVigente: boolean
+  detalhamentoAsaas: boolean
+  rankingFechadores: boolean
+  desempenhoIndividual: boolean
+  projecaoMonteCarlo: boolean
+  projecaoRegressaoLinear: boolean
+  projecaoMediaMovel: boolean
+  gestaoEquipes: boolean
+  auditoriaAlteracoes: boolean
+}
+
+export interface PerfilVisibilidadeMetricas {
+  id: number
+  cargoRole: CargoRole
+  descricao: string
+  permissoes: PermissoesMetricas
+  updatedAt: string
+  atualizadoPor: string | null
 }

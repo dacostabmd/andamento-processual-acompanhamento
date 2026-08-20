@@ -327,7 +327,7 @@ export function ColaboradorPerfilAvancadoModal({
     >
       <Stack gap="lg">
         {/* Cabeçalho do Colaborador */}
-        <Paper p="md" radius="md" withBorder style={{ backgroundColor: 'var(--superficie)' }}>
+        <Paper p="md" radius="md" style={{ backgroundColor: 'var(--superficie)' }}>
           <Group justify="space-between" align="center" wrap="wrap">
             <Group gap="md">
               <UserAvatar nome={colaborador.nome} fotoUrl={fotoUrl} size={54} />
@@ -377,7 +377,6 @@ export function ColaboradorPerfilAvancadoModal({
           <Card
             padding="md"
             radius="md"
-            withBorder
             style={{ backgroundColor: 'var(--superficie)' }}
           >
             <Stack gap="xs">
@@ -435,7 +434,6 @@ export function ColaboradorPerfilAvancadoModal({
           <Card
             padding="md"
             radius="md"
-            withBorder
             style={{ backgroundColor: 'var(--superficie)' }}
           >
             <Stack gap="xs">
@@ -470,7 +468,6 @@ export function ColaboradorPerfilAvancadoModal({
           <Card
             padding="md"
             radius="md"
-            withBorder
             style={{ backgroundColor: 'var(--superficie)' }}
           >
             <Stack gap="xs">
@@ -498,7 +495,7 @@ export function ColaboradorPerfilAvancadoModal({
         </SimpleGrid>
 
         {podeConfigurar && (
-          <Paper p="md" radius="md" withBorder style={{ backgroundColor: 'var(--superficie)' }}>
+          <div>
             <Text size="xs" c="dimmed" mb={6}>
               Departamentos de estado (Andamento):
             </Text>
@@ -514,7 +511,7 @@ export function ColaboradorPerfilAvancadoModal({
               comboboxProps={{ zIndex: 1300, withinPortal: true }}
               onChange={(ids) => void aoTrocarEstados(ids)}
             />
-          </Paper>
+          </div>
         )}
 
         <Divider />
@@ -537,27 +534,25 @@ export function ColaboradorPerfilAvancadoModal({
 
           {podeVerComentarios ? (
             <Stack gap="md">
-              <Paper p="sm" radius="md" withBorder style={{ backgroundColor: 'var(--superficie)' }}>
-                <Stack gap="xs">
-                  <Textarea
-                    placeholder="Adicionar nova observação ou nota de acompanhamento do colaborador…"
-                    value={novaAnotacao}
-                    onChange={(e) => setNovaAnotacao(e.currentTarget.value)}
-                    minRows={2}
+              <Stack gap="xs">
+                <Textarea
+                  placeholder="Adicionar nova observação ou nota de acompanhamento do colaborador…"
+                  value={novaAnotacao}
+                  onChange={(e) => setNovaAnotacao(e.currentTarget.value)}
+                  minRows={2}
+                  size="xs"
+                />
+                <Group justify="flex-end">
+                  <Button
                     size="xs"
-                  />
-                  <Group justify="flex-end">
-                    <Button
-                      size="xs"
-                      color="teal"
-                      disabled={!novaAnotacao.trim()}
-                      onClick={handleAdicionarAnotacao}
-                    >
-                      Salvar Observação
-                    </Button>
-                  </Group>
-                </Stack>
-              </Paper>
+                    color="teal"
+                    disabled={!novaAnotacao.trim()}
+                    onClick={handleAdicionarAnotacao}
+                  >
+                    Salvar Observação
+                  </Button>
+                </Group>
+              </Stack>
 
               {anotacoes.length === 0 ? (
                 <Text size="xs" c="dimmed" style={{ fontStyle: 'italic' }}>

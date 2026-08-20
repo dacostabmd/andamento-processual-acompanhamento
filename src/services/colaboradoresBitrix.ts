@@ -79,11 +79,27 @@ let idsPendentes = new Set<number>()
 let resolucoesPendentes: Array<() => void> = []
 let vooEmAndamento: Promise<void> | null = null
 
+import { basePortalUrl } from './bitrixPortal'
+
+export function formatarUrlFoto(urlBruta: string | null | undefined): string | null {
+  if (!urlBruta) return null
+  const url = String(urlBruta).trim()
+  if (!url || url === '0' || url === 'null' || url === 'undefined') return null
+
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url
+  }
+
+  const base = basePortalUrl()
+  const caminho = url.startsWith('/') ? url : `/${url}`
+  return `${base}${caminho}`
+}
+
 function carregarDoStoragePersistido(): void {
   const doStorage = lerCachePersistido<Record<string, string | null>>(CHAVE_CACHE_FOTOS)
   if (!doStorage) return
   Object.entries(doStorage).forEach(([id, url]) => {
-    if (!fotosPorId.has(Number(id))) fotosPorId.set(Number(id), url)
+    if (!fotosPorId.has(Number(id))) fotosPorId.set(Number(id), formatarUrlFoto(url))
   })
 }
 
@@ -113,7 +129,7 @@ async function resolverPendentes(): Promise<void> {
         const id = Number(u.ID)
         if (!Number.isFinite(id)) return
         encontrados.add(id)
-        fotosPorId.set(id, u.PERSONAL_PHOTO || null)
+        fotosPorId.set(id, formatarUrlFoto(u.PERSONAL_PHOTO))
       })
       // IDs pedidos mas ausentes na resposta (usuário inativo/excluído): marca
       // como "sem foto" para não tentar de novo a cada render.

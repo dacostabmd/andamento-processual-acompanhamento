@@ -403,12 +403,7 @@ export function ComentariosForum({ colaborador }: ComentariosForumProps) {
             </Text>
           </Paper>
         ) : (
-          <Paper
-            p="sm"
-            radius="md"
-            withBorder
-            style={{ backgroundColor: 'rgba(255, 255, 255, 0.02)' }}
-          >
+          <div>
             <Stack gap="xs">
               <Group gap="xs">
                 <UserAvatar
@@ -438,7 +433,7 @@ export function ComentariosForum({ colaborador }: ComentariosForumProps) {
                 </Button>
               </Group>
             </Stack>
-          </Paper>
+          </div>
         )}
 
         {/* Lista de Dias de sincronização / Comentários / Threads */}

@@ -1,6 +1,8 @@
 import { Badge, Group, Text, UnstyledButton } from '@mantine/core'
 import { useMemo } from 'react'
-import { type PacoteAtendimento, type Tarefa } from '../../types/domain'
+import { useFotosColaboradores } from '../../hooks/useFotosColaboradores'
+import type { PacoteAtendimento, Tarefa } from '../../types/domain'
+import { idsColaboradoresDasTarefas } from '../../utils/pessoas'
 import { calcularRankingFechadores } from '../../utils/tarefasMetrics'
 import { EstadoVazio } from '../EstadoVazio'
 import { UserAvatar } from '../UserAvatar'
@@ -19,6 +21,11 @@ export function MediasEquipeIndividualTabs({
   onSelecionarColaborador,
 }: MediasEquipeIndividualTabsProps) {
   const ranking = useMemo(() => calcularRankingFechadores(tarefasFiltradas), [tarefasFiltradas])
+  const idsColaboradores = useMemo(
+    () => idsColaboradoresDasTarefas(tarefasFiltradas),
+    [tarefasFiltradas],
+  )
+  const fotos = useFotosColaboradores(idsColaboradores)
 
   if (pacotes.length === 0) {
     return (
@@ -55,7 +62,7 @@ export function MediasEquipeIndividualTabs({
                 <Text size="xs" fw={700} c="dimmed" style={{ minWidth: 24, textAlign: 'right' }}>
                   {index + 1}º
                 </Text>
-                <UserAvatar nome={linha.nome} size={30} />
+                <UserAvatar nome={linha.nome} fotoUrl={fotos.get(linha.fechadoPorId)} size={30} />
                 <Text size="sm" lineClamp={1} style={{ minWidth: 0 }}>
                   {linha.nome}
                 </Text>

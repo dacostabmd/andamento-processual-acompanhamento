@@ -1,4 +1,4 @@
-import { Badge, SimpleGrid, Text, useComputedColorScheme } from '@mantine/core'
+import { Alert, Badge, SimpleGrid, Text, useComputedColorScheme } from '@mantine/core'
 import {
   CategoryScale,
   Chart as ChartJS,
@@ -10,11 +10,13 @@ import {
   type ChartData,
   type ChartOptions,
 } from 'chart.js'
+import { AlertTriangle } from 'lucide-react'
 import { useMemo } from 'react'
 import { Line } from 'react-chartjs-2'
 import {
-  projetarFibonacci,
   projetarMediaMovel,
+  projetarMonteCarlo,
+  projetarRegressaoLinear,
   type PontoSerieNumerica,
   type ResultadoProjecaoEstatistica,
 } from '../../utils/projecaoEstatistica'
@@ -22,30 +24,32 @@ import classes from './ProjecaoTarefasInfografico.module.css'
 
 ChartJS.register(CategoryScale, LinearScale, LineElement, PointElement, Legend, Tooltip)
 
-export type MetodoEstatistico = 'fibonacci' | 'media-movel'
+export type MetodoEstatistico = 'regressao-linear' | 'media-movel' | 'monte-carlo'
 
 const COR_POR_METODO: Record<MetodoEstatistico, string> = {
-  fibonacci: '#8a4fd6',
+  'regressao-linear': '#228be6',
   'media-movel': '#b8791a',
+  'monte-carlo': '#12b886',
 }
 
 const LABEL_DATASET_PROJECAO: Record<MetodoEstatistico, string> = {
-  fibonacci: 'Projeção (Fibonacci φ)',
+  'regressao-linear': 'Projeção (Regressão Linear)',
   'media-movel': 'Projeção (Média Móvel)',
+  'monte-carlo': 'Projeção (Monte Carlo - P50)',
 }
 
 const EXPLICACAO_METODO: Record<MetodoEstatistico, string> = {
-  fibonacci:
-    'Cálculo: suavização exponencial com peso (1/φ)^d por dia de distância d ' +
-    '(φ ≈ 1,618, a razão áurea — dias recentes pesam mais, em progressão ' +
-    'decrescente: 1 ; 0,618 ; 0,382 ; 0,236 ...). O nível e a tendência (inclinação) ' +
-    'são estimados por regressão linear ponderada por esses pesos, e a projeção ' +
-    'estende nível + tendência dia a dia. Determinístico e auditável — não depende de IA.',
+  'regressao-linear':
+    'Cálculo: Regressão Linear por Mínimos Quadrados Ordinários (OLS y = ax + b). ' +
+    'Calcula a tendência matemática constante da série histórica recente e projeta a inclinação ' +
+    'de entregas para os próximos 30 dias.',
   'media-movel':
-    'Cálculo: média aritmética simples dos últimos 7 dias com dado disponível, ' +
-    'repetida como valor constante para todos os dias futuros. Não captura ' +
-    'tendência de alta/baixa nem sazonalidade — serve como referência de ' +
-    'comparação (baseline) para os demais métodos.',
+    'Cálculo: Média móvel ponderada da janela recente (7 a 14 dias), mantida constante para ' +
+    'os próximos 30 dias. Serve como baseline estável sem interferência de picos isolados.',
+  'monte-carlo':
+    'Cálculo: Simulação estocástica de Monte Carlo (1.000 iterações) baseada na distribuição real ' +
+    'de Throughput (vazão diária). Gera cenários probabilísticos: P50 (Mediana/Esperado), ' +
+    'P10 (Conservador com 90% de confiança) e P90 (Otimista).',
 }
 
 function coresChrome(scheme: 'light' | 'dark') {
@@ -82,7 +86,9 @@ export function ProjecaoEstatisticaInfografico({
   const corProjecao = COR_POR_METODO[metodo]
 
   const resultado = useMemo<ResultadoProjecaoEstatistica>(() => {
-    return metodo === 'fibonacci' ? projetarFibonacci(serie) : projetarMediaMovel(serie)
+    if (metodo === 'regressao-linear') return projetarRegressaoLinear(serie)
+    if (metodo === 'monte-carlo') return projetarMonteCarlo(serie)
+    return projetarMediaMovel(serie)
   }, [metodo, serie])
 
   const dados = useMemo<ChartData<'line'>>(() => {
@@ -91,33 +97,67 @@ export function ProjecaoEstatisticaInfografico({
     const labelsProjecao = resultado.projecaoDiaria.map((p) => rotuloDeData(p.dia))
     const ultimoHistorico = valoresHistorico[valoresHistorico.length - 1] ?? null
 
+    const datasets: ChartData<'line'>['datasets'] = [
+      {
+        label: labelHistorico,
+        data: [...valoresHistorico, ...labelsProjecao.map(() => null)],
+        borderColor: corHistorico,
+        backgroundColor: corHistorico,
+        tension: 0.3,
+        pointRadius: 2,
+        fill: false,
+      },
+      {
+        label: LABEL_DATASET_PROJECAO[metodo],
+        data: [
+          ...valoresHistorico.map(() => null),
+          ultimoHistorico,
+          ...resultado.projecaoDiaria.slice(1).map((p) => p.valorProjetado),
+        ],
+        borderColor: corProjecao,
+        backgroundColor: corProjecao,
+        borderDash: [6, 4],
+        tension: 0.3,
+        pointRadius: 2,
+        fill: false,
+      },
+    ]
+
+    if (metodo === 'monte-carlo') {
+      datasets.push({
+        label: 'Monte Carlo (Conservador P10)',
+        data: [
+          ...valoresHistorico.map(() => null),
+          ultimoHistorico,
+          ...resultado.projecaoDiaria.slice(1).map((p) => p.valorConservador ?? p.valorProjetado),
+        ],
+        borderColor: '#fa5252',
+        backgroundColor: '#fa5252',
+        borderDash: [2, 2],
+        tension: 0.3,
+        pointRadius: 1,
+        fill: false,
+      })
+
+      datasets.push({
+        label: 'Monte Carlo (Otimista P90)',
+        data: [
+          ...valoresHistorico.map(() => null),
+          ultimoHistorico,
+          ...resultado.projecaoDiaria.slice(1).map((p) => p.valorOtimista ?? p.valorProjetado),
+        ],
+        borderColor: '#40c057',
+        backgroundColor: '#40c057',
+        borderDash: [2, 2],
+        tension: 0.3,
+        pointRadius: 1,
+        fill: false,
+      })
+    }
+
     return {
       labels: [...labelsHistorico, ...labelsProjecao],
-      datasets: [
-        {
-          label: labelHistorico,
-          data: [...valoresHistorico, ...labelsProjecao.map(() => null)],
-          borderColor: corHistorico,
-          backgroundColor: corHistorico,
-          tension: 0.3,
-          pointRadius: 2,
-          fill: false,
-        },
-        {
-          label: LABEL_DATASET_PROJECAO[metodo],
-          data: [
-            ...valoresHistorico.map(() => null),
-            ultimoHistorico,
-            ...resultado.projecaoDiaria.slice(1).map((p) => p.valorProjetado),
-          ],
-          borderColor: corProjecao,
-          backgroundColor: corProjecao,
-          borderDash: [6, 4],
-          tension: 0.3,
-          pointRadius: 2,
-          fill: false,
-        },
-      ],
+      datasets,
     }
   }, [serie, resultado, labelHistorico, corHistorico, corProjecao, metodo])
 
@@ -144,8 +184,24 @@ export function ProjecaoEstatisticaInfografico({
   return (
     <div>
       <Text className={classes.narrativa} size="sm">
-        {EXPLICACAO_METODO[metodo]}
+        {resultado.narrativa}
       </Text>
+
+      {resultado.meta.alertaHistoricoCurto && (
+        <Alert
+          icon={<AlertTriangle size={16} />}
+          color="yellow"
+          variant="light"
+          mt="xs"
+          title="Histórico reduzido de dados"
+        >
+          <Text size="xs">
+            A amostra histórica atual contém apenas {resultado.meta.amostraDias} dia(s). Projeções de
+            30 dias com amostras inferiores a 14 dias possuem maior margem de variação devido a
+            finais de semana e concentração pontual de prazos.
+          </Text>
+        </Alert>
+      )}
 
       <div className={classes.areaGrafico} style={{ marginTop: 'var(--mantine-spacing-md)' }}>
         <Line data={dados} options={opcoes} />
@@ -161,14 +217,25 @@ export function ProjecaoEstatisticaInfografico({
               <Text size="xs" c="dimmed">
                 {semana.semanaLabel}
               </Text>
+
+              {metodo === 'monte-carlo' && semana.totalConservador !== undefined && (
+                <Text size="xs" c="dimmed">
+                  P10: {semana.totalConservador} | P90: {semana.totalOtimista}
+                </Text>
+              )}
             </div>
           ))}
         </SimpleGrid>
       )}
 
-      <Badge mt="md" variant="light" color="grape">
-        Método: {metodo === 'fibonacci' ? 'Fibonacci (φ)' : 'Média Móvel (7 dias)'} · amostra de{' '}
-        {resultado.meta.amostraDias} dia(s)
+      <Badge mt="md" variant="light" color="blue">
+        Método:{' '}
+        {metodo === 'regressao-linear'
+          ? 'Regressão Linear (OLS)'
+          : metodo === 'monte-carlo'
+            ? 'Monte Carlo / Throughput (1.000 simulações)'
+            : 'Média Móvel'}
+        {' · '}amostra de {resultado.meta.amostraDias} dia(s)
       </Badge>
     </div>
   )

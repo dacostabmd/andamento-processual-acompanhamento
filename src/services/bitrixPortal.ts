@@ -5,9 +5,20 @@
  * simplesmente não aparecem.
  */
 function basePortalUrl(): string {
-  const bruta = import.meta.env.VITE_BITRIX_PORTAL_URL?.trim()
-  if (!bruta) return 'https://advocaciadias.bitrix24.com.br'
-  return bruta.endsWith('/') ? bruta.slice(0, -1) : bruta
+  const portalBruta = import.meta.env.VITE_BITRIX_PORTAL_URL?.trim()
+  if (portalBruta) return portalBruta.endsWith('/') ? portalBruta.slice(0, -1) : portalBruta
+
+  const apiBruta = import.meta.env.VITE_BITRIX_API_URL?.trim()
+  if (apiBruta) {
+    try {
+      const url = new URL(apiBruta)
+      return `${url.protocol}//${url.host}`
+    } catch {
+      // ignora se URL inválida
+    }
+  }
+
+  return 'https://bitrix.dapadvocacia.com.br'
 }
 
 /**

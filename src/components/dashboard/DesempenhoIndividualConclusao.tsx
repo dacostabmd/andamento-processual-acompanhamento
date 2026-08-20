@@ -1,6 +1,8 @@
 import { Badge, Card, Group, SimpleGrid, Stack, Text, UnstyledButton } from '@mantine/core'
 import { useMemo } from 'react'
+import { useFotosColaboradores } from '../../hooks/useFotosColaboradores'
 import type { RankingFechador, Tarefa } from '../../types/domain'
+import { idsColaboradoresDasTarefas } from '../../utils/pessoas'
 import {
   calcularPontualidadeFechamento,
   calcularRankingFechadores,
@@ -54,6 +56,11 @@ export function DesempenhoIndividualConclusao({
     () => calcularPontualidadeFechamento(tarefasFiltradas),
     [tarefasFiltradas],
   )
+  const idsColaboradores = useMemo(
+    () => idsColaboradoresDasTarefas(tarefasFiltradas),
+    [tarefasFiltradas],
+  )
+  const fotos = useFotosColaboradores(idsColaboradores)
 
   if (ranking.linhas.length === 0) {
     return (
@@ -129,7 +136,7 @@ export function DesempenhoIndividualConclusao({
                 <Text size="xs" fw={700} c="dimmed" style={{ minWidth: 24, textAlign: 'right' }}>
                   {index + 1}º
                 </Text>
-                <UserAvatar nome={linha.nome} size={40} />
+                <UserAvatar nome={linha.nome} fotoUrl={fotos.get(linha.fechadoPorId)} size={40} />
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <Text size="sm" fw={700} lineClamp={1}>
                     {linha.nome}

@@ -8,7 +8,6 @@ import {
   calcularTendenciaDiariaCriadas,
 } from '../../utils/tarefasMetrics'
 import { ProjecaoEstatisticaInfografico } from './ProjecaoEstatisticaInfografico'
-import { ProjecaoTarefasInfografico } from './ProjecaoTarefasInfografico'
 import classes from './ProjecaoTarefasInfografico.module.css'
 import { COR_POR_SITUACAO } from './tarefaApresentacao'
 
@@ -38,15 +37,8 @@ interface ProjecaoTabsProps {
 }
 
 /**
- * Duas dimensões de abas: métrica (tarefas criadas / concluídas / faturamento)
- * e, dentro de cada métrica, método de projeção (IA, Fibonacci, Média Móvel).
- * Só a métrica "Concluídas" tem o método de IA (única com integração ao
- * worker/GPT-4o hoje) — as demais oferecem os dois métodos estatísticos locais.
- *
- * Faturamento não tem série diária: os valores do Asaas (situacaoFinanceira/
- * valorRecebidoAsaas/valorInadimplente) são agregados por tarefa, sem data de
- * referência própria — por isso essa aba mostra só o total atual, sem gráfico
- * de projeção temporal.
+ * Abas de projeção de andamento baseadas em métodos estatísticos para fluxo de trabalho (Kanban/Bitrix):
+ * Regressão Linear (OLS), Média Móvel e Simulação de Monte Carlo por Throughput.
  */
 export function ProjecaoTabs({ pacotes, tarefasFiltradas }: ProjecaoTabsProps) {
   const criadas = useMemo(
@@ -73,6 +65,10 @@ export function ProjecaoTabs({ pacotes, tarefasFiltradas }: ProjecaoTabsProps) {
     () => atendimento.map((p) => ({ dia: p.dia, valor: p.valor })),
     [atendimento],
   )
+  const serieConcluidas = useMemo(
+    () => concluidas.map((p) => ({ dia: p.dia, valor: p.concluidas })),
+    [concluidas],
+  )
 
   const faturamento = useMemo(
     () => calcularFaturamentoVigente(tarefasFiltradas, 'executora'),
@@ -85,8 +81,8 @@ export function ProjecaoTabs({ pacotes, tarefasFiltradas }: ProjecaoTabsProps) {
         Projeção de andamento — próximos 30 dias
       </Text>
       <Text className={classes.subtitulo} size="xs">
-        Escolha a métrica e o método de projeção. Cada método explica, na própria aba, o cálculo
-        exato usado.
+        Selecione a métrica e o método estatístico de análise (Regressão Linear, Média Móvel ou Monte
+        Carlo).
       </Text>
 
       <Tabs defaultValue="concluidas" keepMounted={false} mt="md">
@@ -102,16 +98,17 @@ export function ProjecaoTabs({ pacotes, tarefasFiltradas }: ProjecaoTabsProps) {
             Série diária pela data de criação do card ({serieCriadas.length} dia(s) com dado
             disponível).
           </Text>
-          <Tabs defaultValue="fibonacci" keepMounted={false}>
+          <Tabs defaultValue="regressao-linear" keepMounted={false}>
             <Tabs.List>
-              <Tabs.Tab value="fibonacci">Fibonacci (φ)</Tabs.Tab>
+              <Tabs.Tab value="regressao-linear">Regressão Linear</Tabs.Tab>
               <Tabs.Tab value="media-movel">Média Móvel</Tabs.Tab>
+              <Tabs.Tab value="monte-carlo">Monte Carlo (Throughput)</Tabs.Tab>
             </Tabs.List>
-            <Tabs.Panel value="fibonacci" pt="md">
+            <Tabs.Panel value="regressao-linear" pt="md">
               <ProjecaoEstatisticaInfografico
-                metodo="fibonacci"
+                metodo="regressao-linear"
                 serie={serieCriadas}
-                labelHistorico="Criadas (últimos dias)"
+                labelHistorico="Criadas (histórico)"
                 corHistorico={COR_CRIADAS}
               />
             </Tabs.Panel>
@@ -119,7 +116,15 @@ export function ProjecaoTabs({ pacotes, tarefasFiltradas }: ProjecaoTabsProps) {
               <ProjecaoEstatisticaInfografico
                 metodo="media-movel"
                 serie={serieCriadas}
-                labelHistorico="Criadas (últimos dias)"
+                labelHistorico="Criadas (histórico)"
+                corHistorico={COR_CRIADAS}
+              />
+            </Tabs.Panel>
+            <Tabs.Panel value="monte-carlo" pt="md">
+              <ProjecaoEstatisticaInfografico
+                metodo="monte-carlo"
+                serie={serieCriadas}
+                labelHistorico="Criadas (histórico)"
                 corHistorico={COR_CRIADAS}
               />
             </Tabs.Panel>
@@ -128,31 +133,36 @@ export function ProjecaoTabs({ pacotes, tarefasFiltradas }: ProjecaoTabsProps) {
 
         <Tabs.Panel value="concluidas" pt="md">
           <Text size="xs" c="dimmed" mb="sm">
-            Série diária pelo prazo final das tarefas concluídas ({concluidas.length} dia(s) com
+            Série diária pelo prazo final das tarefas concluídas ({serieConcluidas.length} dia(s) com
             dado disponível).
           </Text>
-          <Tabs defaultValue="ia" keepMounted={false}>
+          <Tabs defaultValue="regressao-linear" keepMounted={false}>
             <Tabs.List>
-              <Tabs.Tab value="ia">IA (GPT-4o)</Tabs.Tab>
-              <Tabs.Tab value="fibonacci">Fibonacci (φ)</Tabs.Tab>
+              <Tabs.Tab value="regressao-linear">Regressão Linear</Tabs.Tab>
               <Tabs.Tab value="media-movel">Média Móvel</Tabs.Tab>
+              <Tabs.Tab value="monte-carlo">Monte Carlo (Throughput)</Tabs.Tab>
             </Tabs.List>
-            <Tabs.Panel value="ia" pt="md">
-              <ProjecaoTarefasInfografico pacotes={pacotes} />
-            </Tabs.Panel>
-            <Tabs.Panel value="fibonacci" pt="md">
+            <Tabs.Panel value="regressao-linear" pt="md">
               <ProjecaoEstatisticaInfografico
-                metodo="fibonacci"
-                serie={concluidas.map((p) => ({ dia: p.dia, valor: p.concluidas }))}
-                labelHistorico="Concluídas (últimos dias)"
+                metodo="regressao-linear"
+                serie={serieConcluidas}
+                labelHistorico="Concluídas (histórico)"
                 corHistorico={COR_CONCLUIDAS}
               />
             </Tabs.Panel>
             <Tabs.Panel value="media-movel" pt="md">
               <ProjecaoEstatisticaInfografico
                 metodo="media-movel"
-                serie={concluidas.map((p) => ({ dia: p.dia, valor: p.concluidas }))}
-                labelHistorico="Concluídas (últimos dias)"
+                serie={serieConcluidas}
+                labelHistorico="Concluídas (histórico)"
+                corHistorico={COR_CONCLUIDAS}
+              />
+            </Tabs.Panel>
+            <Tabs.Panel value="monte-carlo" pt="md">
+              <ProjecaoEstatisticaInfografico
+                metodo="monte-carlo"
+                serie={serieConcluidas}
+                labelHistorico="Concluídas (histórico)"
                 corHistorico={COR_CONCLUIDAS}
               />
             </Tabs.Panel>
@@ -161,20 +171,20 @@ export function ProjecaoTabs({ pacotes, tarefasFiltradas }: ProjecaoTabsProps) {
 
         <Tabs.Panel value="atendimento" pt="md">
           <Text size="xs" c="dimmed" mb="sm">
-            Série diária de tarefas em atendimento geral: cards criados naquele dia que já
-            entraram com um responsável de atendimento atribuído, somando todas as equipes (
-            {serieAtendimento.length} dia(s) com dado disponível).
+            Série diária de tarefas em atendimento geral ({serieAtendimento.length} dia(s) com dado
+            disponível).
           </Text>
-          <Tabs defaultValue="fibonacci" keepMounted={false}>
+          <Tabs defaultValue="regressao-linear" keepMounted={false}>
             <Tabs.List>
-              <Tabs.Tab value="fibonacci">Fibonacci (φ)</Tabs.Tab>
+              <Tabs.Tab value="regressao-linear">Regressão Linear</Tabs.Tab>
               <Tabs.Tab value="media-movel">Média Móvel</Tabs.Tab>
+              <Tabs.Tab value="monte-carlo">Monte Carlo (Throughput)</Tabs.Tab>
             </Tabs.List>
-            <Tabs.Panel value="fibonacci" pt="md">
+            <Tabs.Panel value="regressao-linear" pt="md">
               <ProjecaoEstatisticaInfografico
-                metodo="fibonacci"
+                metodo="regressao-linear"
                 serie={serieAtendimento}
-                labelHistorico="Atendimento (últimos dias)"
+                labelHistorico="Atendimento (histórico)"
                 corHistorico={COR_ATENDIMENTO}
               />
             </Tabs.Panel>
@@ -182,7 +192,15 @@ export function ProjecaoTabs({ pacotes, tarefasFiltradas }: ProjecaoTabsProps) {
               <ProjecaoEstatisticaInfografico
                 metodo="media-movel"
                 serie={serieAtendimento}
-                labelHistorico="Atendimento (últimos dias)"
+                labelHistorico="Atendimento (histórico)"
+                corHistorico={COR_ATENDIMENTO}
+              />
+            </Tabs.Panel>
+            <Tabs.Panel value="monte-carlo" pt="md">
+              <ProjecaoEstatisticaInfografico
+                metodo="monte-carlo"
+                serie={serieAtendimento}
+                labelHistorico="Atendimento (histórico)"
                 corHistorico={COR_ATENDIMENTO}
               />
             </Tabs.Panel>
